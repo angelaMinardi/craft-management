@@ -30,10 +30,13 @@ struct PatternDetailView: View {
     @State private var logTimeNote = ""
     @State private var showYarnColorSheet = false
     @State private var showStepEditor = false
+    @State private var showVoiceRowSheet = false
+    @State private var voiceRowSuccessMessage: String?
     @State private var junkFeedbackMessage: String?
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var progressStore = PatternProgressStore.shared
     @ObservedObject private var junkStore = JunkPhraseStore.shared
+    @StateObject private var voiceRowService = VoiceRowService()
 
     private var current: Pattern {
         store.patterns.first(where: { $0.id == pattern.id }) ?? pattern
@@ -542,7 +545,7 @@ struct PatternDetailView: View {
             : "This looks like pattern instructions; it wasn’t added. Remove only nav or ads."
     }
 
-    // MARK: - Floating tool palette + mascot peek (tappable: Log time, Yarn color)
+    // MARK: - Floating tool palette + mascot peek (tappable: Log time, Row, Yarn color)
 
     private var floatingToolPalette: some View {
         let yarnLabel = progressStore.progress(for: current.id)?.yarnColorName ?? "Color"
@@ -554,6 +557,12 @@ struct PatternDetailView: View {
                         toolPaletteChip(icon: "clock", label: "Log time")
                     }
                     .buttonStyle(.plain)
+                    Button { showVoiceRowSheet = true } label: {
+                        toolPaletteChip(icon: "mic.fill", label: "Row")
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Log row by voice")
+                    .accessibilityHint("Say your current row or round number")
                     Button { showYarnColorSheet = true } label: {
                         toolPaletteChip(icon: "paintpalette.fill", label: yarnLabel)
                     }
@@ -573,6 +582,7 @@ struct PatternDetailView: View {
         }
         .sheet(isPresented: $showLogTimeSheet) { logTimeSheet }
         .sheet(isPresented: $showYarnColorSheet) { yarnColorSheet }
+        .sheet(isPresented: $showVoiceRowSheet) { voiceRowSheet }
     }
 
     private var logTimeSheet: some View {
@@ -646,6 +656,126 @@ struct PatternDetailView: View {
                 }
             }
         }
+    }
+
+    private var voiceRowSheet: some View {
+        NavigationStack {
+            VStack(spacing: Theme.Spacing.xl) {
+                if voiceRowService.authorizationStatus != .authorized {
+                    VStack(spacing: Theme.Spacing.lg) {
+                        Image(systemName: "mic.slash")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Theme.deepPlum.opacity(0.4))
+                        Text("Voice row counting needs microphone and speech recognition.")
+                            .font(Theme.Typography.body)
+                            .foregroundStyle(Theme.deepPlum)
+                            .multilineTextAlignment(.center)
+                        if let msg = voiceRowService.errorMessage {
+                            Text(msg)
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.softCoral)
+                                .multilineTextAlignment(.center)
+                        }
+                        Button("Allow access") {
+                            Task { await voiceRowService.requestAuthorization() }
+                        }
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Theme.sageGreen)
+                        .clipShape(Capsule())
+                    }
+                    .padding(Theme.Spacing.xl)
+                } else if let success = voiceRowSuccessMessage {
+                    VStack(spacing: Theme.Spacing.md) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(Theme.sageGreen)
+                        Text(success)
+                            .font(Theme.Typography.title)
+                            .foregroundStyle(Theme.deepPlum)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    VStack(spacing: Theme.Spacing.xl) {
+                        if voiceRowService.isListening {
+                            Image(systemName: "waveform")
+                                .font(.system(size: 56))
+                                .foregroundStyle(Theme.softCoral)
+                                .symbolEffect(.variableColor.iterative)
+                            Text("Listening…")
+                                .font(Theme.Typography.title)
+                                .foregroundStyle(Theme.deepPlum)
+                            Text("Say \"row 12\" or \"round 5\"")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                        } else if let err = voiceRowService.errorMessage, !voiceRowService.isListening {
+                            Text(err)
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.softCoral)
+                                .multilineTextAlignment(.center)
+                            Text("Say \"row 12\" or \"round 5\"")
+                                .font(Theme.Typography.caption2)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                            Button("Try again") {
+                                Task { await runVoiceRowListening() }
+                            }
+                            .font(Theme.Typography.headline)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(Theme.softCoral)
+                            .clipShape(Capsule())
+                        } else {
+                            Text("Say your current row or round number")
+                                .font(Theme.Typography.body)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(Theme.screenGradient.ignoresSafeArea())
+            .navigationTitle("Voice row")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        voiceRowService.stopListening()
+                        showVoiceRowSheet = false
+                        voiceRowSuccessMessage = nil
+                    }
+                }
+            }
+            .onAppear {
+                voiceRowSuccessMessage = nil
+                if voiceRowService.authorizationStatus == .authorized {
+                    Task { await runVoiceRowListening() }
+                }
+            }
+        }
+    }
+
+    private func runVoiceRowListening() async {
+        let n = await voiceRowService.listenForRowNumber()
+        guard let n = n else {
+            return
+        }
+        let existingTotal = progressStore.progress(for: current.id)?.totalRows
+        progressStore.setRows(patternId: current.id, completed: n, total: existingTotal)
+        if let userId = auth.currentUserId {
+            let content = "Row \(n)"
+            Task {
+                _ = await noteStore.add(patternId: current.id, userId: userId, noteType: .progressUpdate, content: content, photoData: nil)
+            }
+        }
+        voiceRowSuccessMessage = "Got it, row \(n)!"
+        voiceRowService.speakConfirmation("Got it, row \(n)")
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        showVoiceRowSheet = false
+        voiceRowSuccessMessage = nil
     }
 
     private func toolPaletteChip(icon: String, label: String) -> some View {
@@ -1016,16 +1146,19 @@ struct PatternDetailView: View {
 
             if tagStore.patternTags.isEmpty {
                 Button { showTagPicker = true } label: {
-                    HStack(spacing: Theme.Spacing.sm) {
-                        Image(systemName: "tag")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Theme.deepPlum.opacity(0.3))
-                        Text("Add tags to organize this pattern")
-                            .font(Theme.Typography.body)
-                            .foregroundStyle(Theme.deepPlum.opacity(0.4))
-                        Spacer()
-                        Image(systemName: "plus")
-                            .font(.system(size: 12, weight: .semibold))
+                    HStack(spacing: Theme.Spacing.md) {
+                        SpriteMascotView.idle(size: 44)
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                            Text("Add tags to organize this pattern")
+                                .font(Theme.Typography.body)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                            Text("Tap to add tags")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.4))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 22))
                             .foregroundStyle(Theme.softCoral)
                     }
                     .padding(Theme.Spacing.lg)
@@ -1064,16 +1197,14 @@ struct PatternDetailView: View {
                 }
                 .padding(.vertical, Theme.Spacing.xl)
             } else if noteStore.notes.isEmpty {
-                VStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "note.text")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Theme.deepPlum.opacity(0.15))
+                VStack(spacing: Theme.Spacing.lg) {
+                    SpriteMascotView.pouty(size: 64)
                     Text("No notes yet")
                         .font(Theme.Typography.body)
-                        .foregroundStyle(Theme.deepPlum.opacity(0.4))
+                        .foregroundStyle(Theme.deepPlum.opacity(0.6))
                     Text("Tap \"Add\" to create your first note")
                         .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.deepPlum.opacity(0.3))
+                        .foregroundStyle(Theme.deepPlum.opacity(0.4))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Theme.Spacing.xl)

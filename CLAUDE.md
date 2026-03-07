@@ -58,13 +58,13 @@ iOS-only craft pattern organizer (Swift/SwiftUI + Supabase). No web app.
 ## Milestones
 - 1 (Auth): Complete
 - 2 (Patterns CRUD): Complete
-- 3 (Project Notes): Implemented, needs testing
-- 4 (Tags & Filters): Implemented, needs testing
-- 5 (Share Extension): Implemented with AI analysis, video/TikTok extraction, PDF support
-- 6 (Polish): In progress — Dashboard, PatternCardView, Theme redesigned; PatternDetailView polish next
+- 3 (Project Notes): Complete
+- 4 (Tags & Filters): Complete
+- 5 (Share Extension): Complete (AI analysis, video/TikTok extraction, PDF, Ravelry)
+- 6 (Polish): Complete — Dashboard, PatternCardView, Theme, PatternDetailView (empty states with mascot, Edit Steps, custom layout)
 
-## Planned (future)
-- **Hands-free row counting:** User speaks to the app (e.g. “row 12”) while working on a pattern; app uses speech recognition to capture the row/round number and updates progress (current row or progress_update note) so tracking is hands-free. Likely: Speech framework (SFSpeechRecognizer), tap-to-talk or short listening; map spoken numbers to pattern steps (PatternStepParser / existing progress model); optional spoken confirmation (“Got it, row 12”). Add after current Ravelry/PDF and polish work is stable.
+## Implemented (features)
+- **Hands-free row counting (done):** User speaks to the app (e.g. “row 12”) while working on a pattern; app uses speech recognition to capture the row/round number and updates progress (current row or progress_update note) so tracking is hands-free. Likely: Speech framework (SFSpeechRecognizer), tap-to-talk or short listening; map spoken numbers to pattern steps (PatternStepParser / existing progress model); optional spoken confirmation (“Got it, row 12”). Implemented: VoiceRowService; tap Row in pattern detail, say row/round number; updates progress + note, speaks confirmation.
 
 ## Gotchas
 - Git repo: `https://github.com/angelaMinardi/craft-management` — API keys use `$(ANTHROPIC_API_KEY)` xcconfig variable (never hardcode secrets in pbxproj)

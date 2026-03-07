@@ -12,6 +12,7 @@
 		B0010002 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010002 /* RootView.swift */; };
 		B0010003 /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010003 /* SupabaseManager.swift */; };
 		B0010004 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010004 /* AuthService.swift */; };
+		B0010010 /* VoiceRowService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010010 /* VoiceRowService.swift */; };
 		B0010005 /* AuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010005 /* AuthGateView.swift */; };
 		B0010006 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010006 /* LoginView.swift */; };
 		B0010007 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010007 /* SignUpView.swift */; };
@@ -103,6 +104,7 @@
 		F0010002 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		F0010003 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
 		F0010004 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		F0010010 /* VoiceRowService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRowService.swift; sourceTree = "<group>"; };
 		F0010005 /* AuthGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthGateView.swift; sourceTree = "<group>"; };
 		F0010006 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		F0010007 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
@@ -300,6 +302,7 @@
 			children = (
 				F0010003 /* SupabaseManager.swift */,
 				F0010004 /* AuthService.swift */,
+				F0010010 /* VoiceRowService.swift */,
 				F0020005 /* SourcePlatformHelper.swift */,
 				F0020013 /* MetadataService.swift */,
 			);
@@ -470,6 +473,7 @@
 				B0010002 /* RootView.swift in Sources */,
 				B0010003 /* SupabaseManager.swift in Sources */,
 				B0010004 /* AuthService.swift in Sources */,
+				B0010010 /* VoiceRowService.swift in Sources */,
 				B0010005 /* AuthGateView.swift in Sources */,
 				B0010006 /* LoginView.swift in Sources */,
 				B0010007 /* SignUpView.swift in Sources */,

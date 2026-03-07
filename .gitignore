@@ -1,0 +1,51 @@
+# Xcode
+DerivedData/
+build/
+*.xcuserdata
+*.xcworkspace/xcuserdata/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+Packages/
+Package.pins
+Package.resolved
+
+# CocoaPods (if used)
+Pods/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Secrets & config
+*.xcconfig
+!PatternVault/Config/SampleConfig.xcconfig
+
+# Environment
+.env
+.env.*
+
+# Firebase
+firebase-debug.log
+firebase-debug.*.log
+
+# Supabase local state
+**/supabase/.temp/
+
+# Claude
+.claude/
+
+# Dead code
+craft-management/

@@ -39,7 +39,7 @@ struct TagPickerView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Theme.warmCream)
+            .background(Theme.screenGradient.ignoresSafeArea())
             .navigationTitle("Tags")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

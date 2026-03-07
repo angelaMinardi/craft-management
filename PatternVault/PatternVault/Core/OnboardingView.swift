@@ -22,6 +22,8 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             Theme.warmCream.ignoresSafeArea()
+            SparkleBackgroundView()
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Top bar: app name + progress + skip
@@ -59,8 +61,8 @@ struct OnboardingView: View {
 
                 TabView(selection: $currentPage) {
                     onboardingPage(
-                        title: "Your craft buddy\nis here",
-                        subtitle: "One place for every pattern—organized, searchable, and always with you.",
+                        title: "Welcome to Pattern Vault!",
+                        subtitle: "Discover, organize, and manage your patterns with ease.",
                         heroImageName: nil
                     )
                     .tag(0)

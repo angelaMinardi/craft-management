@@ -96,3 +96,4 @@ The app collects only what it needs to function: your email (for your account), 
 - **Widgets** — A home screen widget showing your current in-progress projects
 - **Import/Export** — Bring in Ravelry favorites or export your collection as a backup
 - **Premium Tier** — Unlimited patterns, advanced organization features, priority support (free tier works great for casual users)
+

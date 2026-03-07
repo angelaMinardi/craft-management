@@ -136,7 +136,7 @@ struct AddPatternView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Theme.warmCream)
+            .background(Theme.screenGradient.ignoresSafeArea())
             .navigationTitle("Add Pattern")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -256,6 +256,8 @@ You can do this in Xcode in one of two ways.
 
 **Planned:** Design system (colors, typography, spacing), empty state improvements, loading skeletons, error toasts, accessibility (VoiceOver, Dynamic Type), haptic feedback.
 
+**Done:** Design system and Theme applied app-wide; Design checklist in CLAUDE.md. Key buttons have `.accessibilityLabel` and `.accessibilityHint` (e.g. Filters, Download Pattern, Dismiss continue card, Sign Out, Delete Account). Pattern list refreshes on app activate and on `patternListShouldRefresh` notification.
+
 **Edge case tests to plan for:**
 
 - [ ] VoiceOver enabled → all elements labeled

@@ -106,7 +106,7 @@ struct LoginView: View {
             }
             .padding(Theme.Spacing.xl)
         }
-        .background(Theme.cardBackground.ignoresSafeArea())
+        .background(Theme.screenGradient.ignoresSafeArea())
         .onTapGesture { focusedField = nil }
     }
 

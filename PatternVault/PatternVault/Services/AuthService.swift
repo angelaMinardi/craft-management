@@ -20,6 +20,15 @@ final class AuthService: ObservableObject {
 
     var isSignedIn: Bool { session != nil }
     var currentUserId: UUID? { session?.user.id }
+    var userEmail: String? { session?.user.email }
+    var displayName: String? {
+        if let meta = session?.user.userMetadata,
+           let name = meta["full_name"]?.stringValue,
+           !name.isEmpty {
+            return name
+        }
+        return nil
+    }
 
     private static let appGroupId = "group.com.patternvault.app"
     private let client = SupabaseManager.client

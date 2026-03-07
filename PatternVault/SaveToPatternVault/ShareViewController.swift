@@ -8,7 +8,9 @@
 import UIKit
 import UniformTypeIdentifiers
 
-// MARK: - Brand Colors (duplicated from Theme.swift since extension can't access main app assets)
+// MARK: - Brand Colors
+// Keep in sync with PatternVault/Theme.swift UIKit section (uiWarmCream, uiSoftCoral, uiDeepPlum, uiSageGreen).
+// Extension target cannot import main app Swift files.
 private extension UIColor {
     static let brandWarmCream = UIColor(red: 1.0, green: 0.973, blue: 0.941, alpha: 1.0)
     static let brandSoftCoral = UIColor(red: 0.910, green: 0.514, blue: 0.420, alpha: 1.0)
@@ -488,9 +490,61 @@ class ShareViewController: UIViewController {
                 }
             }
 
+            // Ravelry: use pattern PDF content instead of the listing page
+            if RavelryPatternExtractor.isRavelryPatternURL(urlString) {
+                loadingLabel.text = "Finding pattern PDF..."
+                if let ravelryContent = await RavelryPatternExtractor.extract(from: urlString) {
+                    self.extractedContent = ravelryContent
+                    if let ogImage = ravelryContent.ogImageUrl {
+                        await loadThumbnail(from: ogImage)
+                    }
+                    if let ogTitle = ravelryContent.ogTitle {
+                        await MainActor.run { titleField.text = ogTitle }
+                    }
+                    if let ogDesc = ravelryContent.ogDescription {
+                        await MainActor.run { descriptionView.text = ogDesc }
+                    }
+                    loadingLabel.text = "Analyzing pattern..."
+                    let result = await AIPatternAnalyzer.analyze(content: ravelryContent)
+                    self.aiResult = result
+                    await MainActor.run {
+                        if let result {
+                            titleField.text = result.title
+                            descriptionView.text = result.summary
+                            currentTags = result.tags
+                            refreshTagChips()
+                            if let d = result.difficulty {
+                                difficultyLabel.text = "Difficulty: \(d.capitalized)"
+                                difficultyLabel.isHidden = false
+                            }
+                            if let m = result.materials {
+                                materialsLabel.text = "Materials: \(m)"
+                                materialsLabel.isHidden = false
+                            }
+                        }
+                        loadingOverlay.isHidden = true
+                    }
+                    return
+                }
+                // No PDF found — fall back to page content (filter Ravelry nav/sidebar so we don't save it as pattern content)
+            }
+
             // Step 1: Extract web content
             loadingLabel.text = "Fetching page..."
-            let content = await WebContentExtractor.extract(from: urlString)
+            var content = await WebContentExtractor.extract(from: urlString)
+            if RavelryPatternExtractor.isRavelryPatternURL(urlString), let raw = content.pageText {
+                let filtered = RavelryPatternExtractor.filterRavelryChrome(from: raw)
+                content = ExtractedContent(
+                    ogTitle: content.ogTitle,
+                    ogDescription: content.ogDescription,
+                    ogImageUrl: content.ogImageUrl,
+                    additionalImageUrls: content.additionalImageUrls,
+                    pageText: filtered,
+                    sourceUrl: content.sourceUrl,
+                    videoUrls: content.videoUrls,
+                    patternPdfUrl: nil
+                )
+            }
             self.extractedContent = content
 
             // Show OG image immediately if available
@@ -640,6 +694,12 @@ class ShareViewController: UIViewController {
         let sourceUrlToSave = sharedPdfData != nil ? "file://pattern-vault/pdf" : urlString
         let platform = detectPlatform(from: sourceUrlToSave)
         let tags = currentTags
+        // When we used Ravelry PDF content, store the pattern PDF URL so "Download Pattern" opens the real PDF
+        let pdfUrlToSave = extractedContent?.patternPdfUrl
+        var sourceContentToSave = aiResult?.cleanedContent ?? extractedContent?.pageText
+        if platform == "Ravelry", RavelryPatternExtractor.looksLikeRavelryChrome(sourceContentToSave) {
+            sourceContentToSave = nil
+        }
 
         Task {
             do {
@@ -654,12 +714,13 @@ class ShareViewController: UIViewController {
                     difficulty: aiResult?.difficulty,
                     materials: aiResult?.materials,
                     craftType: aiResult?.craftType,
-                    sourceContent: aiResult?.cleanedContent ?? extractedContent?.pageText,
+                    sourceContent: sourceContentToSave,
                     videoUrl: aiResult?.videoUrl,
                     gauge: aiResult?.gauge,
                     needleHookSizes: aiResult?.needleHookSizes,
                     yarnWeightYardage: aiResult?.yarnWeightYardage,
                     techniques: aiResult?.techniques,
+                    pdfUrl: pdfUrlToSave,
                     pdfDataToUpload: sharedPdfData,
                     yarnLinks: aiResult?.yarnLinks.map { ($0.brandName, $0.officialUrl, $0.storeUrl) } ?? [],
                     imageUrls: extractedContent?.additionalImageUrls ?? [],

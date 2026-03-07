@@ -111,13 +111,14 @@ final class PatternRepository: ObservableObject {
         let needle_hook_sizes: String?
         let yarn_weight_yardage: String?
         let techniques: String?
+        let source_content: String?
         let updated_at: String
 
         enum CodingKeys: String, CodingKey {
             case title, description, status
             case difficulty, materials, craft_type
             case pdf_url, video_url, gauge, needle_hook_sizes, yarn_weight_yardage, techniques
-            case updated_at
+            case source_content, updated_at
         }
 
         func encode(to encoder: Encoder) throws {
@@ -134,11 +135,12 @@ final class PatternRepository: ObservableObject {
             try c.encodeIfPresent(needle_hook_sizes, forKey: .needle_hook_sizes)
             try c.encodeIfPresent(yarn_weight_yardage, forKey: .yarn_weight_yardage)
             try c.encodeIfPresent(techniques, forKey: .techniques)
+            try c.encodeIfPresent(source_content, forKey: .source_content)
             try c.encode(updated_at, forKey: .updated_at)
         }
     }
 
-    func updatePattern(id: UUID, userId: UUID, title: String?, description: String?, status: PatternStatus?, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil) async throws -> Pattern {
+    func updatePattern(id: UUID, userId: UUID, title: String?, description: String?, status: PatternStatus?, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil, sourceContent: String? = nil) async throws -> Pattern {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let payload = UpdatePayload(
@@ -154,6 +156,7 @@ final class PatternRepository: ObservableObject {
             needle_hook_sizes: needleHookSizes,
             yarn_weight_yardage: yarnWeightYardage,
             techniques: techniques,
+            source_content: sourceContent,
             updated_at: formatter.string(from: Date())
         )
         let response: Pattern = try await client

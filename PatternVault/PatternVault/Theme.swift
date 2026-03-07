@@ -220,6 +220,28 @@ struct AccentBorderedCardModifier: ViewModifier {
     }
 }
 
+// MARK: - Subtle sparkle overlay (welcome/onboarding backgrounds)
+
+struct SparkleBackgroundView: View {
+    private let positions: [(CGFloat, CGFloat)] = [
+        (0.12, 0.18), (0.88, 0.22), (0.25, 0.45), (0.72, 0.38), (0.5, 0.72), (0.15, 0.85),
+        (0.92, 0.78), (0.35, 0.28), (0.65, 0.62), (0.08, 0.55), (0.82, 0.12), (0.45, 0.92)
+    ]
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                ForEach(Array(positions.enumerated()), id: \.offset) { _, p in
+                    Circle()
+                        .fill(Theme.softCoral.opacity(0.06))
+                        .frame(width: 5, height: 5)
+                        .position(x: geo.size.width * p.0, y: geo.size.height * p.1)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+    }
+}
+
 // MARK: - Reusable Section Header (Luma-style: bold title + optional trailing action)
 
 struct SectionHeaderView: View {

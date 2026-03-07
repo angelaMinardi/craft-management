@@ -55,11 +55,12 @@ enum AIPatternAnalyzer {
         }
 
         let systemPrompt = """
-        You are a craft pattern analyzer. Given webpage content about a craft pattern (knitting, crochet, sewing, etc.), extract structured information. Respond ONLY with valid JSON, no markdown fences.
+        You are a craft pattern analyzer. Given webpage content about a craft pattern (knitting, crochet, sewing, etc.), extract structured information. Respond ONLY with valid JSON, no markdown fences. Output the short metadata fields first (title, summary, tags, craft_type, difficulty, materials, video_url, gauge, needle_hook_sizes, yarn_weight_yardage, techniques, yarn_links), then cleaned_content LAST so that if the response is truncated, the metadata is still captured.
         """
 
         let userPrompt = """
-        Analyze this craft pattern webpage and extract the following as JSON:
+        Analyze this craft pattern webpage and extract the following as JSON.
+        IMPORTANT: Output fields in EXACTLY this order (metadata first, cleaned_content LAST):
         {
           "title": "a short, catchy, friendly name for this pattern",
           "summary": "2-3 sentence description of the pattern",
@@ -67,13 +68,13 @@ enum AIPatternAnalyzer {
           "craft_type": "knitting/crochet/sewing/etc or null",
           "difficulty": "beginner/intermediate/advanced/expert or null",
           "materials": "brief materials summary or null",
-          "cleaned_content": "the relevant pattern content only (see rules below)",
           "video_url": "single best tutorial or pattern walkthrough URL from the page, or null",
           "gauge": "e.g. 22 sts x 30 rows = 4 in stockinette, or null",
           "needle_hook_sizes": "e.g. US 7 (4.5 mm), US 8 (5 mm), or null",
           "yarn_weight_yardage": "e.g. Worsted; 800-1200 yd or DK, 400 yd, or null",
           "techniques": "comma-separated skills e.g. cables, k2tog, short rows, or null",
-          "yarn_links": [{"brand_name": "Brand Name", "official_url": "https://... or null", "store_url": "https://... or null"}]
+          "yarn_links": [{"brand_name": "Brand Name", "official_url": "https://... or null", "store_url": "https://... or null"}],
+          "cleaned_content": "the relevant pattern content only (see rules below) — OUTPUT THIS FIELD LAST"
         }
         YARN_LINKS: From materials or page content, identify specific yarn BRAND names (e.g. Malabrigo, Lion Brand, Cascade). For each brand return brand_name and when possible official_url (brand website) and store_url (e.g. Ravelry, LoveCrafts, or main retailer). Use null when URL unknown. Do not link generic terms like worsted or DK. Max 8 entries.
 
@@ -103,7 +104,7 @@ enum AIPatternAnalyzer {
         - "You may also like" / related patterns, newsletter signups
         - Full blog narrative not about the pattern itself, unrelated product carousels
         - Promotional paragraphs that do not describe materials or construction
-        Use \\n\\n for paragraph breaks and \\n- for bullet items. Keep it concise but complete — err on the side of including useful pattern info.
+        Use \\n\\n for paragraph breaks and \\n- for bullet items. Be THOROUGH — include ALL useful pattern information. It is better to include too much useful content than to leave out important details like sizing tables, stitch counts, or construction notes. Do NOT summarize or abbreviate pattern instructions.
 
         Webpage content:
         \(pageContext)
@@ -111,7 +112,7 @@ enum AIPatternAnalyzer {
 
         let requestBody: [String: Any] = [
             "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 2000,
+            "max_tokens": 4096,
             "messages": [
                 ["role": "user", "content": userPrompt]
             ],
@@ -129,7 +130,7 @@ enum AIPatternAnalyzer {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.timeoutInterval = 20
+        request.timeoutInterval = 30
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -145,13 +146,16 @@ enum AIPatternAnalyzer {
                 return fallbackResult(from: content)
             }
 
-            return parseAIResponse(text, fallbackContent: content)
+            let stopReason = json?["stop_reason"] as? String
+            let wasTruncated = (stopReason == "max_tokens")
+
+            return parseAIResponse(text, fallbackContent: content, wasTruncated: wasTruncated)
         } catch {
             return fallbackResult(from: content)
         }
     }
 
-    private static func parseAIResponse(_ text: String, fallbackContent: ExtractedContent) -> AIPatternResult {
+    private static func parseAIResponse(_ text: String, fallbackContent: ExtractedContent, wasTruncated: Bool = false) -> AIPatternResult {
         // Strip markdown code fences if present
         var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleaned.hasPrefix("```") {
@@ -159,8 +163,18 @@ enum AIPatternAnalyzer {
             cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        guard let data = cleaned.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        // Try to parse as-is first
+        var json: [String: Any]?
+        if let data = cleaned.data(using: .utf8) {
+            json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        }
+
+        // If parsing failed (likely truncated JSON), try to repair it
+        if json == nil {
+            json = repairTruncatedJSON(cleaned)
+        }
+
+        guard let json else {
             return fallbackResult(from: fallbackContent) ?? AIPatternResult(
                 title: fallbackContent.ogTitle ?? "Untitled Pattern",
                 summary: fallbackContent.ogDescription ?? "",
@@ -176,13 +190,23 @@ enum AIPatternAnalyzer {
         let craftType = json["craft_type"] as? String
         let difficulty = json["difficulty"] as? String
         let materials = json["materials"] as? String
-        let cleanedContent = json["cleaned_content"] as? String
         let videoUrl = json["video_url"] as? String
         let gauge = json["gauge"] as? String
         let needleHookSizes = json["needle_hook_sizes"] as? String
         let yarnWeightYardage = json["yarn_weight_yardage"] as? String
         let techniques = json["techniques"] as? String
         let yarnLinks = parseYarnLinks(json["yarn_links"])
+
+        // If the response was truncated, cleaned_content is likely cut off or missing.
+        // Use the AI-extracted value only if it looks complete; otherwise fall back to pageText.
+        let aiCleanedContent = json["cleaned_content"] as? String
+        let cleanedContent: String?
+        if wasTruncated && (aiCleanedContent == nil || (aiCleanedContent?.count ?? 0) < 50) {
+            // Truncation cut off cleaned_content — use raw pageText as fallback
+            cleanedContent = fallbackContent.pageText
+        } else {
+            cleanedContent = aiCleanedContent
+        }
 
         return AIPatternResult(
             title: title, summary: summary, tags: tags,
@@ -192,6 +216,68 @@ enum AIPatternAnalyzer {
             yarnWeightYardage: yarnWeightYardage, techniques: techniques,
             yarnLinks: yarnLinks
         )
+    }
+
+    /// Attempts to repair truncated JSON by finding the last complete key-value pair
+    /// and closing the object. This lets us salvage metadata fields (title, tags, gauge, etc.)
+    /// even when cleaned_content was cut off mid-string.
+    private static func repairTruncatedJSON(_ text: String) -> [String: Any]? {
+        let repaired = text
+
+        // Strategy: find the last complete "key": value pair, trim everything after it, close the object.
+        // Look for the last complete string value ending with a quote followed by comma or nothing.
+        // Try progressively more aggressive truncation until we get valid JSON.
+
+        // First, try just closing open strings/arrays/objects
+        let closers: [String] = [
+            "\"]}",   // close string + array + object (inside yarn_links)
+            "\"}",    // close string + object
+            "}",      // close object
+            "]}",     // close array + object
+            "\"]}"    // close string + array + object
+        ]
+
+        for closer in closers {
+            // Find last comma before any incomplete value and truncate there
+            let candidate = repaired + closer
+            if let data = candidate.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                return json
+            }
+        }
+
+        // More aggressive: find the last `", "` or `",\n` (end of a complete key-value pair)
+        // and truncate everything after it, then close the object.
+        let lastCommaPatterns = ["\",", "null,", "true,", "false,", "],"]
+        for pattern in lastCommaPatterns {
+            if let lastRange = repaired.range(of: pattern, options: .backwards) {
+                let truncated = String(repaired[..<lastRange.upperBound])
+                // Remove the trailing comma and close
+                let withoutTrailingComma = truncated.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: ",$", with: "", options: .regularExpression)
+
+                // Count open braces/brackets and close them
+                var openBraces = 0
+                var openBrackets = 0
+                for char in withoutTrailingComma {
+                    if char == "{" { openBraces += 1 }
+                    else if char == "}" { openBraces -= 1 }
+                    else if char == "[" { openBrackets += 1 }
+                    else if char == "]" { openBrackets -= 1 }
+                }
+
+                var closed = withoutTrailingComma
+                for _ in 0..<max(0, openBrackets) { closed += "]" }
+                for _ in 0..<max(0, openBraces) { closed += "}" }
+
+                if let data = closed.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    return json
+                }
+            }
+        }
+
+        return nil
     }
 
     private static func parseYarnLinks(_ value: Any?) -> [YarnLinkEntry] {

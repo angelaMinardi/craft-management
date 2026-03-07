@@ -2,8 +2,8 @@
 //  DashboardView.swift
 //  PatternVault
 //
-//  Home screen: hero greeting with mascot, bordered stat cards,
-//  and polished recent patterns section.
+//  Home screen: personalized greeting with avatar, craft category
+//  shortcuts, bordered stat cards, and polished recent patterns.
 //
 
 import SwiftUI
@@ -22,6 +22,7 @@ struct DashboardView: View {
                         emptySection
                     } else {
                         heroGreeting
+                        craftCategoryRow
                         statsSection
                         recentSection
                     }
@@ -63,7 +64,6 @@ struct DashboardView: View {
         VStack(spacing: Theme.Spacing.xl) {
             Spacer().frame(height: 40)
 
-            // Branded empty card (Luma-style)
             VStack(spacing: Theme.Spacing.lg) {
                 SpriteMascotView.idle(size: 120)
 
@@ -84,34 +84,50 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Hero Greeting (mascot peeking, warm gradient card)
+    // MARK: - Hero Greeting (personalized, avatar, accent keyword)
 
     private var heroGreeting: some View {
-        ZStack(alignment: .trailing) {
-            // Content
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(greetingText)
+        HStack(alignment: .top, spacing: Theme.Spacing.lg) {
+            // Left: greeting content
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text(personalizedGreeting)
                     .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(Theme.softCoral)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
 
-                Text("Your Vault")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                // Accent keyword headline
+                (Text("Your ")
                     .foregroundStyle(Theme.deepPlum)
+                + Text("Vault")
+                    .foregroundStyle(Theme.softCoral)
+                )
+                .font(.system(size: 28, weight: .bold, design: .rounded))
 
                 Text("\(store.patterns.count) pattern\(store.patterns.count == 1 ? "" : "s") saved")
                     .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                    .foregroundStyle(Theme.deepPlum.opacity(0.45))
                     .padding(.top, 1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Theme.Spacing.xl)
-            .padding(.trailing, 80) // room for mascot
 
-            // Mascot peeking from right edge
-            SpriteMascotView.idle(size: 80)
-                .offset(x: 10, y: 4)
-                .padding(.trailing, Theme.Spacing.md)
+            Spacer(minLength: 0)
+
+            // Right: avatar circle
+            ZStack {
+                Circle()
+                    .fill(Theme.softCoral.opacity(0.12))
+                    .frame(width: 52, height: 52)
+
+                if let initial = userInitial {
+                    Text(initial)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.softCoral)
+                } else {
+                    SpriteMascotView.idle(size: 44)
+                        .clipShape(Circle())
+                }
+            }
+            .padding(.top, 2)
         }
+        .padding(Theme.Spacing.xl)
         .background(
             LinearGradient(
                 colors: [Theme.warmCream, Color(red: 1.0, green: 0.96, blue: 0.93)],
@@ -123,14 +139,97 @@ struct DashboardView: View {
         .staggeredAppear(index: 0)
     }
 
-    private var greetingText: String {
+    private var personalizedGreeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 { return "Good morning" }
-        if hour < 17 { return "Good afternoon" }
-        return "Good evening"
+        let timeOfDay: String
+        if hour < 12 { timeOfDay = "Good morning" }
+        else if hour < 17 { timeOfDay = "Good afternoon" }
+        else { timeOfDay = "Good evening" }
+
+        if let name = auth.displayName {
+            let firstName = name.components(separatedBy: " ").first ?? name
+            return "\(timeOfDay), \(firstName)"
+        }
+        return timeOfDay
     }
 
-    // MARK: - Stats (bordered cards with chevrons, Timespent-style)
+    private var userInitial: String? {
+        if let name = auth.displayName, let first = name.first {
+            return String(first).uppercased()
+        }
+        if let email = auth.userEmail, let first = email.first {
+            return String(first).uppercased()
+        }
+        return nil
+    }
+
+    // MARK: - Craft Category Quick-access (Newronation-style icon row)
+
+    private var craftCategoryRow: some View {
+        let categories = uniqueCraftTypes
+        if categories.isEmpty { return AnyView(EmptyView()) }
+
+        return AnyView(
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Spacing.lg) {
+                    ForEach(Array(categories.enumerated()), id: \.element) { index, craft in
+                        VStack(spacing: Theme.Spacing.xs) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                    .fill(craftCategoryColor(for: craft).opacity(0.1))
+                                    .frame(width: 56, height: 56)
+                                Image(systemName: craftCategoryIcon(for: craft))
+                                    .font(.system(size: 22, weight: .medium))
+                                    .foregroundStyle(craftCategoryColor(for: craft))
+                            }
+                            Text(craft.capitalized)
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                                .lineLimit(1)
+                        }
+                        .staggeredAppear(index: index + 1)
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
+        )
+    }
+
+    private var uniqueCraftTypes: [String] {
+        let types = store.patterns
+            .compactMap { $0.craftType }
+            .filter { !$0.isEmpty }
+        // Deduplicate while preserving order
+        var seen = Set<String>()
+        return types.filter { seen.insert($0.lowercased()).inserted }
+            .prefix(6)
+            .map { $0 }
+    }
+
+    private func craftCategoryIcon(for craft: String) -> String {
+        switch craft.lowercased() {
+        case let c where c.contains("knit"): return "scissors"
+        case let c where c.contains("crochet"): return "hurricane"
+        case let c where c.contains("sew"), let c where c.contains("quilt"): return "rectangle.split.2x2"
+        case let c where c.contains("embroider"): return "paintbrush.pointed"
+        case let c where c.contains("weav"): return "square.grid.3x3"
+        case let c where c.contains("macram"): return "circle.grid.cross"
+        default: return "sparkles"
+        }
+    }
+
+    private func craftCategoryColor(for craft: String) -> Color {
+        switch craft.lowercased() {
+        case let c where c.contains("knit"): return Theme.softCoral
+        case let c where c.contains("crochet"): return Theme.deepPlum
+        case let c where c.contains("sew"), let c where c.contains("quilt"): return Theme.sageGreen
+        case let c where c.contains("embroider"): return Theme.honey
+        case let c where c.contains("weav"): return Theme.dustyBlue
+        default: return Theme.softCoral
+        }
+    }
+
+    // MARK: - Stats (bordered cards, Timespent-style)
 
     private var statsSection: some View {
         VStack(spacing: Theme.Spacing.md) {
@@ -172,7 +271,6 @@ struct DashboardView: View {
     @ViewBuilder
     private func statCard(title: String, count: Int, icon: String, color: Color, index: Int) -> some View {
         HStack(spacing: Theme.Spacing.md) {
-            // Icon circle
             ZStack {
                 Circle()
                     .fill(color.opacity(0.12))

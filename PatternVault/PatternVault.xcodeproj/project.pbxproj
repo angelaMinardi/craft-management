@@ -20,9 +20,9 @@
 		B001000A /* PatternListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001000A /* PatternListView.swift */; };
 		B001000B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001000B /* SettingsView.swift */; };
 		B001000C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = P0010001 /* Supabase */; };
-		B001000F /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = P0010002 /* Lottie */; };
 		B001000D /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F001000F /* QuickLook.framework */; };
 		B001000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F001000E /* Assets.xcassets */; };
+		B001000F /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = P0010002 /* Lottie */; };
 		B0020001 /* Pattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020001 /* Pattern.swift */; };
 		B0020002 /* ProjectNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020002 /* ProjectNote.swift */; };
 		B0020003 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020003 /* Tag.swift */; };
@@ -42,6 +42,7 @@
 		B0020011 /* ProjectNoteRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020011 /* ProjectNoteRepository.swift */; };
 		B0020012 /* TagRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020012 /* TagRepository.swift */; };
 		B0020013 /* MetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020013 /* MetadataService.swift */; };
+		B0020014 /* PatternYarnLinkRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020014 /* PatternYarnLinkRepository.swift */; };
 		B0030001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030001 /* Theme.swift */; };
 		B0030002 /* PatternCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030002 /* PatternCardView.swift */; };
 		B0030003 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030003 /* OnboardingView.swift */; };
@@ -51,12 +52,16 @@
 		B0030007 /* InAppWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030007 /* InAppWebView.swift */; };
 		B0030008 /* PatternContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030008 /* PatternContentView.swift */; };
 		B0030009 /* PatternYarnLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030009 /* PatternYarnLink.swift */; };
-		B0020014 /* PatternYarnLinkRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020014 /* PatternYarnLinkRepository.swift */; };
 		B003000A /* PatternYarnLinkStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000A /* PatternYarnLinkStore.swift */; };
 		B003000B /* PDFViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000B /* PDFViewerView.swift */; };
+		B003000C /* PatternStepParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000C /* PatternStepParser.swift */; };
+		B003000D /* PatternProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000D /* PatternProgressStore.swift */; };
+		B003000E /* ContentBlockParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000E /* ContentBlockParser.swift */; };
+		B003000F /* JunkPhraseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000F /* JunkPhraseStore.swift */; };
+		B0030010 /* StepEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030010 /* StepEditorView.swift */; };
+		B0040001 /* EmptyPatterns.json in Resources */ = {isa = PBXBuildFile; fileRef = F0040001 /* EmptyPatterns.json */; };
 		B0040002 /* LottieAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040002 /* LottieAnimationView.swift */; };
 		B0040003 /* AnimatedCrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040003 /* AnimatedCrowView.swift */; };
-		B0040001 /* EmptyPatterns.json in Resources */ = {isa = PBXBuildFile; fileRef = F0040001 /* EmptyPatterns.json */; };
 		B0050001 /* OnboardingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050001 /* OnboardingMascotFrames */; };
 		B0050002 /* SpriteMascotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0050002 /* SpriteMascotView.swift */; };
 		B0050003 /* IdleMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050003 /* IdleMascotFrames */; };
@@ -127,6 +132,7 @@
 		F0020011 /* ProjectNoteRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectNoteRepository.swift; sourceTree = "<group>"; };
 		F0020012 /* TagRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagRepository.swift; sourceTree = "<group>"; };
 		F0020013 /* MetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataService.swift; sourceTree = "<group>"; };
+		F0020014 /* PatternYarnLinkRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternYarnLinkRepository.swift; sourceTree = "<group>"; };
 		F0030001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F0030002 /* PatternCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternCardView.swift; sourceTree = "<group>"; };
 		F0030003 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -136,9 +142,13 @@
 		F0030007 /* InAppWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppWebView.swift; sourceTree = "<group>"; };
 		F0030008 /* PatternContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternContentView.swift; sourceTree = "<group>"; };
 		F0030009 /* PatternYarnLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternYarnLink.swift; sourceTree = "<group>"; };
-		F0020014 /* PatternYarnLinkRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternYarnLinkRepository.swift; sourceTree = "<group>"; };
 		F003000A /* PatternYarnLinkStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternYarnLinkStore.swift; sourceTree = "<group>"; };
 		F003000B /* PDFViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewerView.swift; sourceTree = "<group>"; };
+		F003000C /* PatternStepParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStepParser.swift; sourceTree = "<group>"; };
+		F003000D /* PatternProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternProgressStore.swift; sourceTree = "<group>"; };
+		F003000E /* ContentBlockParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlockParser.swift; sourceTree = "<group>"; };
+		F003000F /* JunkPhraseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JunkPhraseStore.swift; sourceTree = "<group>"; };
+		F0030010 /* StepEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepEditorView.swift; sourceTree = "<group>"; };
 		F0040001 /* EmptyPatterns.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = EmptyPatterns.json; sourceTree = "<group>"; };
 		F0040002 /* LottieAnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieAnimationView.swift; sourceTree = "<group>"; };
 		F0040003 /* AnimatedCrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedCrowView.swift; sourceTree = "<group>"; };
@@ -186,12 +196,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		08832CC12F5C9FA400984121 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				F001000F /* QuickLook.framework */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		G0010000 = {
 			isa = PBXGroup;
 			children = (
 				G0010001 /* PatternVault */,
 				08C772022F5B374A00241E4E /* SaveToPatternVault */,
 				G0010002 /* Products */,
+				08832CC12F5C9FA400984121 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -264,6 +283,11 @@
 				F0030008 /* PatternContentView.swift */,
 				F003000A /* PatternYarnLinkStore.swift */,
 				F003000B /* PDFViewerView.swift */,
+				F003000C /* PatternStepParser.swift */,
+				F003000D /* PatternProgressStore.swift */,
+				F003000E /* ContentBlockParser.swift */,
+				F003000F /* JunkPhraseStore.swift */,
+				F0030010 /* StepEditorView.swift */,
 				F0040002 /* LottieAnimationView.swift */,
 				F0040003 /* AnimatedCrowView.swift */,
 				F0050002 /* SpriteMascotView.swift */,
@@ -483,6 +507,11 @@
 				B0020014 /* PatternYarnLinkRepository.swift in Sources */,
 				B003000A /* PatternYarnLinkStore.swift in Sources */,
 				B003000B /* PDFViewerView.swift in Sources */,
+				B003000C /* PatternStepParser.swift in Sources */,
+				B003000D /* PatternProgressStore.swift in Sources */,
+				B003000E /* ContentBlockParser.swift in Sources */,
+				B003000F /* JunkPhraseStore.swift in Sources */,
+				B0030010 /* StepEditorView.swift in Sources */,
 				B0040002 /* LottieAnimationView.swift in Sources */,
 				B0040003 /* AnimatedCrowView.swift in Sources */,
 				B0050002 /* SpriteMascotView.swift in Sources */,
@@ -504,6 +533,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ANTHROPIC_API_KEY = "$(ANTHROPIC_API_KEY)";
+				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
+				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
@@ -546,6 +577,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ANTHROPIC_API_KEY = "$(ANTHROPIC_API_KEY)";
+				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
+				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;

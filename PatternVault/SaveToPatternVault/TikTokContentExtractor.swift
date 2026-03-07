@@ -40,7 +40,8 @@ struct TikTokContentExtractor {
                 additionalImageUrls: [],
                 pageText: pageText,
                 sourceUrl: urlString,
-                videoUrls: [urlString]
+                videoUrls: [urlString],
+                patternPdfUrl: nil
             )
         } catch {
             return nil

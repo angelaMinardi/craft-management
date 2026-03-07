@@ -13,6 +13,8 @@ struct PatternCardView: View {
     var isNew: Bool = false
     /// Use for dashboard/recent; softer shadow and larger radius.
     var elevated: Bool = false
+    /// Optional subtitle (e.g. designer/source) below title for horizontal lists.
+    var subtitle: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -77,6 +79,13 @@ struct PatternCardView: View {
                         .foregroundStyle(.white)
                         .lineLimit(2)
                         .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: elevated ? 11 : 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
+                            .shadow(color: .black.opacity(0.25), radius: 1, x: 0, y: 1)
+                    }
                 }
                 .padding(Theme.Spacing.md)
             }

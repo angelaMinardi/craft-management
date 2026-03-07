@@ -16,13 +16,15 @@ struct ExtractedContent: Sendable {
     let sourceUrl: String
     /// Video URLs found on the page (og:video, YouTube/Vimeo links) for tutorial/walkthrough detection.
     let videoUrls: [String]
+    /// When content was derived from a pattern PDF (e.g. Ravelry), the PDF download URL to store as pattern.pdf_url.
+    let patternPdfUrl: String?
 }
 
 enum WebContentExtractor {
 
     static func extract(from urlString: String) async -> ExtractedContent {
         guard let url = URL(string: urlString) else {
-            return ExtractedContent(ogTitle: nil, ogDescription: nil, ogImageUrl: nil, additionalImageUrls: [], pageText: nil, sourceUrl: urlString, videoUrls: [])
+            return ExtractedContent(ogTitle: nil, ogDescription: nil, ogImageUrl: nil, additionalImageUrls: [], pageText: nil, sourceUrl: urlString, videoUrls: [], patternPdfUrl: nil)
         }
 
         var request = URLRequest(url: url)
@@ -35,7 +37,7 @@ enum WebContentExtractor {
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode),
                   let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .ascii) else {
-                return ExtractedContent(ogTitle: nil, ogDescription: nil, ogImageUrl: nil, additionalImageUrls: [], pageText: nil, sourceUrl: urlString, videoUrls: [])
+                return ExtractedContent(ogTitle: nil, ogDescription: nil, ogImageUrl: nil, additionalImageUrls: [], pageText: nil, sourceUrl: urlString, videoUrls: [], patternPdfUrl: nil)
             }
 
             let ogTitle = extractMetaContent(from: html, property: "og:title")
@@ -55,10 +57,11 @@ enum WebContentExtractor {
                 additionalImageUrls: additionalImageUrls,
                 pageText: pageText,
                 sourceUrl: urlString,
-                videoUrls: videoUrls
+                videoUrls: videoUrls,
+                patternPdfUrl: nil
             )
         } catch {
-            return ExtractedContent(ogTitle: nil, ogDescription: nil, ogImageUrl: nil, additionalImageUrls: [], pageText: nil, sourceUrl: urlString, videoUrls: [])
+            return ExtractedContent(ogTitle: nil, ogDescription: nil, ogImageUrl: nil, additionalImageUrls: [], pageText: nil, sourceUrl: urlString, videoUrls: [], patternPdfUrl: nil)
         }
     }
 
@@ -109,7 +112,12 @@ enum WebContentExtractor {
             "<style[^>]*>[\\s\\S]*?</style>",
             "<nav[^>]*>[\\s\\S]*?</nav>",
             "<footer[^>]*>[\\s\\S]*?</footer>",
-            "<header[^>]*>[\\s\\S]*?</header>"
+            "<header[^>]*>[\\s\\S]*?</header>",
+            "<aside[^>]*>[\\s\\S]*?</aside>",
+            "<noscript[^>]*>[\\s\\S]*?</noscript>",
+            "<form[^>]*>[\\s\\S]*?</form>",
+            // Common craft blog sidebar/widget classes
+            "<div[^>]+class=[\"'][^\"']*(sidebar|widget|comment|related-post|newsletter|popup|modal|cookie|consent|social-share|share-button|ad-container|advertisement)[^\"']*[\"'][^>]*>[\\s\\S]*?</div>"
         ]
         for pattern in stripPatterns {
             if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
@@ -149,17 +157,42 @@ enum WebContentExtractor {
                 .trimmingCharacters(in: .whitespaces)
         }
 
-        // Filter out junk lines (empty bullets, nav items, common boilerplate)
+        // Filter out junk lines (empty bullets, nav items, common boilerplate, craft blog clutter)
         let junkPatterns: [String] = [
-            "^-\\s*$",                           // empty bullet "- "
-            "^skip to \\w+$",                    // "Skip to content"
-            "^(menu|search|close|toggle)$",       // single nav words
-            "^share (this|on)\\b",                // social sharing
-            "^(previous|next) (post|article)$",   // post navigation
-            "^leave a (comment|reply)$",          // comment CTAs
-            "^\\d+ comments?$",                   // comment counts
+            "^-\\s*$",                                          // empty bullet "- "
+            "^skip to \\w+$",                                   // "Skip to content"
+            "^(menu|search|close|toggle)$",                      // single nav words
+            "^share (this|on)\\b",                               // social sharing
+            "^(previous|next) (post|article)$",                  // post navigation
+            "^leave a (comment|reply)$",                         // comment CTAs
+            "^\\d+ comments?$",                                  // comment counts
+            "^this post may contain affiliate",                  // affiliate disclaimers
+            "^please read my disclosure",                        // disclosure policy
+            "^this post contains affiliate",                     // affiliate variant
+            "^disclosure:",                                      // disclosure header
+            "^jump to (the )?pattern",                           // CTA: skip to pattern
+            "^get the (ad[- ]free )?pdf",                        // CTA: PDF upsell
+            "^click here to (get|download|purchase)",            // CTA: download
+            "^(buy|purchase|shop|order) (now|the|this)",         // purchase CTAs
+            "^add to cart",                                      // shopping CTA
+            "^save (this|to|for later)",                         // save CTA
+            "^pin (this|it) (for|to)",                           // Pinterest CTA
+            "^what'?s to love",                                  // marketing section header
+            "^you may also (like|enjoy)",                        // related content
+            "^more patterns? (from|by|you)",                     // related patterns
+            "^(sign up|subscribe|join).*(newsletter|email|list)", // newsletter CTAs
+            "^(follow|connect with) (me|us) on",                // social follow CTAs
+            "^\\| filed under",                                  // category filing
+            "^posted (in|on|by)\\b",                             // post metadata
+            "^tagged (with|in)\\b",                              // tag metadata
+            "^\\d+ (shares?|pins?|likes?)$",                     // social counts
+            "^(copyright|©|all rights reserved)",                // copyright
+            "^(advertisement|sponsored|ad)$",                    // ads
         ]
         let junkRegexes = junkPatterns.compactMap { try? NSRegularExpression(pattern: $0, options: .caseInsensitive) }
+
+        // Load user-learned junk phrases from App Group UserDefaults
+        let learnedPhrases = Self.loadLearnedJunkPhrases()
 
         let filteredLines = normalizedLines.filter { line in
             if line.isEmpty { return true }  // keep blank lines for paragraph breaks
@@ -169,6 +202,11 @@ enum WebContentExtractor {
                 if regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) != nil {
                     return false
                 }
+            }
+            // Check against user-learned junk phrases
+            let lower = line.lowercased()
+            for phrase in learnedPhrases {
+                if lower.contains(phrase) { return false }
             }
             return true
         }
@@ -218,7 +256,8 @@ enum WebContentExtractor {
             ("&quot;", "\""), ("&#39;", "'"), ("&apos;", "'"),
             ("&#x27;", "'"), ("&nbsp;", " "), ("&#8211;", "–"),
             ("&#8212;", "—"), ("&#8216;", "'"), ("&#8217;", "'"),
-            ("&#8220;", "\u{201C}"), ("&#8221;", "\u{201D}")
+            ("&#8220;", "\u{201C}"), ("&#8221;", "\u{201D}"),
+            ("&hellip;", "…"), ("&mdash;", "—"), ("&ndash;", "–")
         ]
         for (entity, char) in entities {
             result = result.replacingOccurrences(of: entity, with: char)
@@ -315,5 +354,27 @@ enum WebContentExtractor {
             return resolved.absoluteString
         }
         return nil
+    }
+
+    // MARK: - Learned Junk Phrases (from App Group UserDefaults)
+
+    /// Reads user-learned junk phrases from App Group UserDefaults.
+    /// These are stored by JunkPhraseStore in the main app; the Share Extension
+    /// reads them directly to avoid cross-target import dependencies.
+    private static func loadLearnedJunkPhrases() -> [String] {
+        guard let defaults = UserDefaults(suiteName: "group.com.patternvault.app"),
+              let data = defaults.data(forKey: "learned_junk_phrases") else {
+            return []
+        }
+
+        // Decode the same JSON format used by JunkPhraseStore
+        struct StoredPhrase: Decodable {
+            let phrase: String
+        }
+
+        guard let phrases = try? JSONDecoder().decode([StoredPhrase].self, from: data) else {
+            return []
+        }
+        return phrases.map(\.phrase)
     }
 }

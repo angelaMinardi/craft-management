@@ -65,14 +65,20 @@ struct AddNoteView: View {
 
                 if let error = noteStore.errorMessage {
                     Section {
-                        Text(error)
-                            .foregroundStyle(Theme.softCoral)
-                            .font(.caption)
+                        VStack(spacing: Theme.Spacing.sm) {
+                            SpriteMascotView.pouty(size: 56)
+                            Text(error)
+                                .foregroundStyle(Theme.softCoral)
+                                .font(Theme.Typography.caption)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.xs)
                     }
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Theme.warmCream)
+            .background(Theme.screenGradient.ignoresSafeArea())
             .navigationTitle(isEditing ? "Edit Note" : "Add Note")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

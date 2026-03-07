@@ -76,7 +76,7 @@ struct SignUpView: View {
             }
             .padding(Theme.Spacing.xl)
         }
-        .background(Theme.cardBackground.ignoresSafeArea())
+        .background(Theme.screenGradient.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {

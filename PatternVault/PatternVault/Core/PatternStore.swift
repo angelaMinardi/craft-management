@@ -86,6 +86,22 @@ final class PatternStore: ObservableObject {
         }
     }
 
+    func updateSourceContent(pattern: Pattern, userId: UUID, newContent: String) async {
+        errorMessage = nil
+        do {
+            let updated = try await repo.updatePattern(
+                id: pattern.id, userId: userId,
+                title: nil, description: nil, status: nil,
+                sourceContent: newContent
+            )
+            if let idx = patterns.firstIndex(where: { $0.id == pattern.id }) {
+                patterns[idx] = updated
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func delete(pattern: Pattern, userId: UUID) async {
         errorMessage = nil
         do {

@@ -6,6 +6,8 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject var auth: AuthService
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var store = PatternStore()
     @Binding var sharedURL: String?
     @State private var showAddSheet = false
@@ -24,6 +26,16 @@ struct MainTabView: View {
                 .tag(2)
         }
         .tint(Theme.softCoral)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active, let userId = auth.currentUserId {
+                Task { await store.load(userId: userId) }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .patternListShouldRefresh)) { _ in
+            if let userId = auth.currentUserId {
+                Task { await store.load(userId: userId) }
+            }
+        }
         .onAppear {
             let tabBarAppearance = UITabBarAppearance()
             tabBarAppearance.configureWithDefaultBackground()

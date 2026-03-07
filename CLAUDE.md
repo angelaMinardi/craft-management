@@ -35,9 +35,10 @@ iOS-only craft pattern organizer (Swift/SwiftUI + Supabase). No web app.
 - Uses raw URLSession REST API — no Supabase SDK (memory limit ~120MB)
 - AI analysis via Claude Haiku (`claude-haiku-4-5-20251001`) with API key from Info.plist
 - Pipeline: HTML fetch → WebContentExtractor → AIPatternAnalyzer → SupabaseExtensionClient.savePattern
-- `max_tokens` for AI call must accommodate 12+ JSON fields including `cleaned_content` (currently 2000, ideally 4096+)
+- `max_tokens` for AI call: 4096 (to accommodate `cleaned_content` and 12+ JSON fields)
 - Page text extraction limit: 10000 chars with smart truncation at paragraph breaks
 - Fallback: when AI fails, raw `pageText` is saved as `cleanedContent`
+- **Ravelry:** For `ravelry.com/patterns/...` URLs, RavelryPatternExtractor runs first: tries Ravelry API `pdf_url` (if RAVELRY_ACCESS_KEY/PERSONAL_KEY set), then scrapes page for PDF/download links, follows intermediate "Pattern Purchase" page to ravelrycache.com PDF. If no PDF found, falls back to WebContentExtractor with **Ravelry chrome filtered out** (nav/sidebar/footer); if saved content would be chrome-only, `source_content` is stored as nil. Main app hides Ravelry chrome in Pattern Content and steps (PatternStepParser.looksLikeRavelryChrome, PatternContentView effectiveContent).
 
 ## Theme System (`Theme.swift`)
 - Brand colors: warmCream, softCoral, deepPlum, sageGreen, dustyBlue, honey
@@ -47,16 +48,26 @@ iOS-only craft pattern organizer (Swift/SwiftUI + Supabase). No web app.
 - Staggered entrance animation: `.staggeredAppear(index:)`
 - PatternCardView is shared between DashboardView and PatternListView — changes ripple to both
 
+## Design checklist (app-wide consistency)
+- Primary screens: use `Theme.screenGradient` or `Theme.warmCream` for background
+- Primary actions: use `PrimaryButtonStyle()` or sage green filled buttons
+- Empty/error states: use `SpriteMascotView` (idle, pouty, walking) plus Theme.Typography and brand colors
+- Cards: use `.cardStyle()`, `.borderedCard()`, or `.accentBorderedCard()` as appropriate
+- Share Extension: keep `ShareViewController` brand colors in sync with Theme.swift UIKit section (see comment in that file)
+
 ## Milestones
 - 1 (Auth): Complete
 - 2 (Patterns CRUD): Complete
 - 3 (Project Notes): Implemented, needs testing
 - 4 (Tags & Filters): Implemented, needs testing
 - 5 (Share Extension): Implemented with AI analysis, video/TikTok extraction, PDF support
-- 6 (Polish): In progress — Dashboard, PatternCardView, Theme redesigned; PatternDetailView next
+- 6 (Polish): In progress — Dashboard, PatternCardView, Theme redesigned; PatternDetailView polish next
+
+## Planned (future)
+- **Hands-free row counting:** User speaks to the app (e.g. “row 12”) while working on a pattern; app uses speech recognition to capture the row/round number and updates progress (current row or progress_update note) so tracking is hands-free. Likely: Speech framework (SFSpeechRecognizer), tap-to-talk or short listening; map spoken numbers to pattern steps (PatternStepParser / existing progress model); optional spoken confirmation (“Got it, row 12”). Add after current Ravelry/PDF and polish work is stable.
 
 ## Gotchas
-- No git repository — project is not version-controlled (git commands will fail)
+- Git repo: `https://github.com/angelaMinardi/craft-management` — API keys use `$(ANTHROPIC_API_KEY)` xcconfig variable (never hardcode secrets in pbxproj)
 - Share Extension and main app cannot share Swift files directly — types like `ExtractedContent` are defined in the extension target
 - `pbxproj` edits: new files need PBXFileReference + PBXBuildFile + PBXGroup membership + PBXSourcesBuildPhase entry
 - `craft-management/` directory is dead (abandoned web app) — ignore it

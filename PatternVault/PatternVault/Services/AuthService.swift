@@ -31,6 +31,9 @@ final class AuthService: ObservableObject {
     }
 
     private static let appGroupId = "group.com.patternvault.app"
+    private static let keychainService = "com.patternvault.app.supabase"
+    private static let keychainTokenAccount = "supabase_access_token"
+    private static let keychainUserIdAccount = "supabase_user_id"
     private let client = SupabaseManager.client
 
     private init() {
@@ -50,20 +53,62 @@ final class AuthService: ObservableObject {
     private func syncSessionToAppGroup() {
         let defaults = UserDefaults(suiteName: Self.appGroupId)
         // Share Supabase config so extension can make REST calls
-        if let url = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String {
-            defaults?.set(url, forKey: "supabase_url")
+        if let url = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
+           !url.isEmpty, !url.contains("$("),
+           let parsed = URL(string: url),
+           let scheme = parsed.scheme?.lowercased(),
+           (scheme == "https" || scheme == "http"),
+           parsed.host != nil {
+            defaults?.set(url.hasSuffix("/") ? String(url.dropLast()) : url, forKey: "supabase_url")
+        } else {
+            defaults?.removeObject(forKey: "supabase_url")
         }
-        if let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String {
+        if let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String,
+           !key.isEmpty, !key.contains("$(") {
             defaults?.set(key, forKey: "supabase_anon_key")
         }
         if let session {
+            // Store access token and user ID in shared Keychain (primary, secure)
+            Self.saveToSharedKeychain(account: Self.keychainTokenAccount, value: session.accessToken)
+            Self.saveToSharedKeychain(account: Self.keychainUserIdAccount, value: session.user.id.uuidString)
+            // DEPRECATED: UserDefaults token storage kept for backward compatibility during transition.
+            // Remove once all users have updated to the Keychain-based version.
             defaults?.set(session.accessToken, forKey: "supabase_access_token")
             defaults?.set(session.user.id.uuidString, forKey: "supabase_user_id")
         } else {
+            Self.deleteFromSharedKeychain(account: Self.keychainTokenAccount)
+            Self.deleteFromSharedKeychain(account: Self.keychainUserIdAccount)
             defaults?.removeObject(forKey: "supabase_access_token")
             defaults?.removeObject(forKey: "supabase_user_id")
         }
         defaults?.synchronize()
+    }
+
+    // MARK: - Shared Keychain helpers (access group = App Group for extension sharing)
+
+    private static func saveToSharedKeychain(account: String, value: String) {
+        guard let data = value.data(using: .utf8) else { return }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: account,
+            kSecAttrAccessGroup as String: appGroupId
+        ]
+        SecItemDelete(query as CFDictionary)
+        var addQuery = query
+        addQuery[kSecValueData as String] = data
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        SecItemAdd(addQuery as CFDictionary, nil)
+    }
+
+    private static func deleteFromSharedKeychain(account: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: account,
+            kSecAttrAccessGroup as String: appGroupId
+        ]
+        SecItemDelete(query as CFDictionary)
     }
 
     func signUp(email: String, password: String) async {
@@ -73,6 +118,7 @@ final class AuthService: ObservableObject {
         do {
             _ = try await client.auth.signUp(email: email, password: password)
             session = client.auth.currentSession
+            if session != nil { HapticService.success() }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -85,6 +131,7 @@ final class AuthService: ObservableObject {
         do {
             _ = try await client.auth.signIn(email: email, password: password)
             session = client.auth.currentSession
+            if session != nil { HapticService.success() }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -96,6 +143,7 @@ final class AuthService: ObservableObject {
         do {
             let newSession = try await client.auth.session(from: url)
             self.session = newSession
+            HapticService.success()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -111,6 +159,7 @@ final class AuthService: ObservableObject {
                 credentials: .init(provider: .apple, idToken: idToken)
             )
             session = client.auth.currentSession
+            if session != nil { HapticService.success() }
             if let fullName, let given = fullName.given ?? fullName.family, !given.isEmpty {
                 let nameParts = [fullName.given, fullName.family].compactMap { $0 }
                 let fullNameString = nameParts.joined(separator: " ")

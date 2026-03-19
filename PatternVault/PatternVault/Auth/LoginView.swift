@@ -16,6 +16,10 @@ struct LoginView: View {
 
     enum Field { case email, password }
 
+    private var emailTouched: Bool { !email.isEmpty }
+    private var emailValid: Bool { isValidEmail(email) }
+    private var formValid: Bool { emailValid && !password.isEmpty }
+
     var body: some View {
         ScrollView {
             VStack(spacing: Theme.Spacing.xl) {
@@ -42,6 +46,14 @@ struct LoginView: View {
                         .padding(12)
                         .background(Theme.warmCream)
                         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
+                        .accessibilityLabel("Email")
+                        .accessibilityHint("Enter your email address")
+
+                    if emailTouched && !emailValid {
+                        Text("Enter a valid email address")
+                            .font(Theme.Typography.caption)
+                            .foregroundColor(Theme.softCoral)
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -54,6 +66,8 @@ struct LoginView: View {
                         .padding(12)
                         .background(Theme.warmCream)
                         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
+                        .accessibilityLabel("Password")
+                        .accessibilityHint("Enter your password")
                 }
 
                 if let msg = auth.errorMessage {
@@ -73,7 +87,9 @@ struct LoginView: View {
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())
-                .disabled(auth.isLoading || email.isEmpty || password.isEmpty)
+                .disabled(auth.isLoading || !formValid)
+                .accessibilityLabel("Sign In")
+                .accessibilityHint("Sign in with your email and password")
 
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.fullName, .email]
@@ -96,6 +112,8 @@ struct LoginView: View {
                     .cardStyle()
                 }
                 .disabled(auth.isLoading)
+                .accessibilityLabel("Sign in with Google")
+                .accessibilityHint("Sign in using your Google account")
 
                 Button("Create an account") {
                     auth.clearError()
@@ -103,11 +121,13 @@ struct LoginView: View {
                 }
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.softCoral)
+                .accessibilityLabel("Create an account")
+                .accessibilityHint("Open sign up screen")
             }
             .padding(Theme.Spacing.xl)
         }
         .background(Theme.screenGradient.ignoresSafeArea())
-        .onTapGesture { focusedField = nil }
+        .simultaneousGesture(TapGesture().onEnded { focusedField = nil })
     }
 
     private func signIn() {
@@ -124,6 +144,9 @@ struct LoginView: View {
             guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
                   let tokenData = credential.identityToken,
                   let idToken = String(data: tokenData, encoding: .utf8) else {
+                #if DEBUG
+                print("[AppleSignIn] Failed to extract identity token from credential")
+                #endif
                 auth.errorMessage = "Could not get Apple sign-in token."
                 return
             }
@@ -132,10 +155,20 @@ struct LoginView: View {
                 await auth.signInWithApple(idToken: idToken, fullName: name)
             }
         case .failure(let error):
-            if (error as NSError).code != ASAuthorizationError.canceled.rawValue {
-                auth.errorMessage = error.localizedDescription
+            let nsError = error as NSError
+            #if DEBUG
+            print("[AppleSignIn] Error: domain=\(nsError.domain) code=\(nsError.code) desc=\(error.localizedDescription)")
+            #endif
+            if nsError.code != ASAuthorizationError.canceled.rawValue {
+                auth.errorMessage = "Apple sign-in failed. Make sure you're signed into iCloud and try again."
             }
         }
+    }
+
+    private func isValidEmail(_ email: String) -> Bool {
+        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmed.split(separator: "@")
+        return parts.count == 2 && parts[1].contains(".")
     }
 
     private func signInWithGoogle() {

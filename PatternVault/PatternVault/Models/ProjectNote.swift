@@ -34,7 +34,7 @@ enum ProjectNoteType: String, Codable, CaseIterable, Sendable {
     var displayName: String {
         switch self {
         case .general: return "General"
-        case .yarnInfo: return "Yarn Information"
+        case .yarnInfo: return "Materials / supplies"
         case .modifications: return "Modifications"
         case .progressUpdate: return "Progress Update"
         }

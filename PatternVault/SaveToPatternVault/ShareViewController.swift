@@ -8,6 +8,102 @@
 import UIKit
 import UniformTypeIdentifiers
 
+// MARK: - Entitlement cache (reads from App Group; main app writes usage when active)
+private enum ExtensionEntitlementCache {
+    private static let appGroupId = "group.com.patternvault.app"
+    private static let freeAIPerMonth = 5
+    private static let freePatternLimit = 30
+
+    static var canUseAI: Bool {
+        let defaults = UserDefaults(suiteName: appGroupId)
+        if defaults?.bool(forKey: "entitlement_is_premium") == true { return true }
+        let used = defaults?.integer(forKey: "entitlement_ai_usage_this_month") ?? 0
+        let month = defaults?.string(forKey: "entitlement_usage_month") ?? ""
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM"
+        let currentMonth = formatter.string(from: Date())
+        if month != currentMonth { return true }
+        return used < freeAIPerMonth
+    }
+
+    static var canAddPattern: Bool {
+        let defaults = UserDefaults(suiteName: appGroupId)
+        if defaults?.bool(forKey: "entitlement_is_premium") == true { return true }
+        let count = defaults?.integer(forKey: "entitlement_pattern_count") ?? 0
+        return count < freePatternLimit
+    }
+}
+
+// MARK: - AI kill switch (cost cap): read from App Group; fetch from Supabase if stale)
+private enum ExtensionAIKillSwitch {
+    private static let appGroupId = "group.com.patternvault.app"
+    private static let cacheKeyEnabled = "app_config_ai_enabled"
+    private static let cacheKeyUpdated = "app_config_ai_enabled_updated"
+    private static let cacheTTL: TimeInterval = 15 * 60
+
+    /// Call before using AI. Fetches from Supabase if cache missing or older than 15 min.
+    static func ensureCached() async {
+        let defaults = UserDefaults(suiteName: appGroupId)
+        let updated = defaults?.object(forKey: cacheKeyUpdated) as? Date
+        if let updated, Date().timeIntervalSince(updated) < cacheTTL, defaults?.object(forKey: cacheKeyEnabled) != nil {
+            return
+        }
+        guard let (url, anonKey) = config() else { return }
+        let base = url.hasSuffix("/") ? String(url.dropLast()) : url
+        guard let fetchURL = URL(string: "\(base)/rest/v1/app_config?id=eq.1&select=ai_enabled") else { return }
+        var request = URLRequest(url: fetchURL)
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 10
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+                  let row = json.first,
+                  let enabled = row["ai_enabled"] as? Bool else { return }
+            defaults?.set(enabled, forKey: cacheKeyEnabled)
+            defaults?.set(Date(), forKey: cacheKeyUpdated)
+            defaults?.synchronize()
+        } catch {
+            // Leave cache as-is; if no cache, isAIDisabledByKillSwitch will be false (allow AI)
+        }
+    }
+
+    /// True when AI is disabled by kill switch (cost cap). Read after ensureCached().
+    static var isAIDisabledByKillSwitch: Bool {
+        let defaults = UserDefaults(suiteName: appGroupId)
+        guard defaults?.object(forKey: cacheKeyEnabled) != nil else { return false }
+        return (defaults?.bool(forKey: cacheKeyEnabled) ?? true) == false
+    }
+
+    private static func config() -> (url: String, anonKey: String)? {
+        let defaults = UserDefaults(suiteName: appGroupId)
+        if let url = defaults?.string(forKey: "supabase_url"),
+           let key = defaults?.string(forKey: "supabase_anon_key"),
+           !url.isEmpty, !key.isEmpty {
+            let normalized = url.hasSuffix("/") ? String(url.dropLast()) : url
+            if let parsed = URL(string: normalized),
+               let scheme = parsed.scheme?.lowercased(),
+               (scheme == "https" || scheme == "http"),
+               parsed.host != nil {
+                return (normalized, key)
+            }
+        }
+        if let url = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
+           let key = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String,
+           !url.isEmpty, !key.isEmpty {
+            let normalized = url.hasSuffix("/") ? String(url.dropLast()) : url
+            if let parsed = URL(string: normalized),
+               let scheme = parsed.scheme?.lowercased(),
+               (scheme == "https" || scheme == "http"),
+               parsed.host != nil {
+                return (normalized, key)
+            }
+        }
+        return nil
+    }
+}
+
 // MARK: - Brand Colors
 // Keep in sync with PatternVault/Theme.swift UIKit section (uiWarmCream, uiSoftCoral, uiDeepPlum, uiSageGreen).
 // Extension target cannot import main app Swift files.
@@ -376,64 +472,190 @@ class ShareViewController: UIViewController {
             return
         }
 
-        for item in items {
-            for provider in item.attachments ?? [] {
-                if provider.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) {
-                    provider.loadItem(forTypeIdentifier: UTType.pdf.identifier, options: nil) { [weak self] data, error in
-                        DispatchQueue.main.async {
-                            if let url = data as? URL {
-                                self?.sharedPdfData = try? Data(contentsOf: url)
-                                self?.sharedURL = url.absoluteString
-                                self?.beginAnalysisForPdf()
-                            } else if let pdfData = data as? Data {
-                                self?.sharedPdfData = pdfData
-                                self?.sharedURL = "file://pattern-vault/pdf"
-                                self?.beginAnalysisForPdf()
-                            } else {
-                                self?.showError("Could not read PDF")
-                            }
+        let providers = items.flatMap { $0.attachments ?? [] }
+        guard !providers.isEmpty else {
+            showError("Unsupported content type")
+            return
+        }
+
+        // Prefer PDF when present.
+        if let pdfProvider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) }) {
+            let maxPdfSize = 10_000_000 // 10 MB
+            pdfProvider.loadItem(forTypeIdentifier: UTType.pdf.identifier, options: nil) { [weak self] data, _ in
+                DispatchQueue.main.async {
+                    if let url = data as? URL {
+                        if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+                           let fileSize = attrs[.size] as? Int,
+                           fileSize > maxPdfSize {
+                            self?.showError("PDF is too large (max 10 MB)")
+                            return
                         }
+                        self?.sharedPdfData = try? Data(contentsOf: url)
+                        self?.sharedURL = url.absoluteString
+                        self?.beginAnalysisForPdf()
+                    } else if let pdfData = data as? Data {
+                        if pdfData.count > maxPdfSize {
+                            self?.showError("PDF is too large (max 10 MB)")
+                            return
+                        }
+                        self?.sharedPdfData = pdfData
+                        self?.sharedURL = "file://pattern-vault/pdf"
+                        self?.beginAnalysisForPdf()
+                    } else {
+                        self?.showError("Could not read PDF")
                     }
-                    return
                 }
-                if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-                    provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { [weak self] data, error in
-                        DispatchQueue.main.async {
-                            if let url = data as? URL {
-                                self?.sharedURL = url.absoluteString
-                                self?.beginAnalysis()
-                            } else if let urlData = data as? Data, let url = URL(dataRepresentation: urlData, relativeTo: nil) {
-                                self?.sharedURL = url.absoluteString
-                                self?.beginAnalysis()
-                            } else {
-                                self?.showError("Could not read URL")
-                            }
-                        }
-                    }
-                    return
-                }
-                if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
-                    provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { [weak self] data, error in
-                        DispatchQueue.main.async {
-                            if let text = data as? String, let url = self?.extractURL(from: text) {
-                                self?.sharedURL = url
-                                self?.beginAnalysis()
-                            } else {
-                                self?.showError("No URL found in shared text")
-                            }
-                        }
-                    }
-                    return
+            }
+            return
+        }
+
+        attemptLoadURL(from: providers, providerIndex: 0)
+    }
+
+    /// Tries each provider/type combination before giving up.
+    private func attemptLoadURL(from providers: [NSItemProvider], providerIndex: Int) {
+        guard providerIndex < providers.count else {
+            showError("No URL found in shared content")
+            return
+        }
+        let provider = providers[providerIndex]
+        let candidateTypeIds = candidateTypeIdentifiers(for: provider)
+        guard !candidateTypeIds.isEmpty else {
+            attemptLoadURL(from: providers, providerIndex: providerIndex + 1)
+            return
+        }
+
+        attemptLoadURL(
+            from: provider,
+            typeIds: candidateTypeIds,
+            typeIndex: 0,
+            onFound: { [weak self] url in
+                self?.sharedURL = url
+                self?.beginAnalysis()
+            },
+            onExhausted: { [weak self] in
+                self?.attemptLoadURL(from: providers, providerIndex: providerIndex + 1)
+            }
+        )
+    }
+
+    private func candidateTypeIdentifiers(for provider: NSItemProvider) -> [String] {
+        let prioritized: [String] = [
+            UTType.url.identifier,
+            "public.url",
+            "public.url-name",
+            UTType.plainText.identifier,
+            UTType.text.identifier,
+            "public.text",
+            "public.utf8-plain-text",
+            "public.data"
+        ]
+
+        var result: [String] = []
+        var seen = Set<String>()
+        for typeId in prioritized where provider.hasItemConformingToTypeIdentifier(typeId) {
+            if seen.insert(typeId).inserted { result.append(typeId) }
+        }
+        // Firefox often uses custom identifiers.
+        for typeId in provider.registeredTypeIdentifiers {
+            if seen.insert(typeId).inserted {
+                result.append(typeId)
+            }
+        }
+        return result
+    }
+
+    private func attemptLoadURL(
+        from provider: NSItemProvider,
+        typeIds: [String],
+        typeIndex: Int,
+        onFound: @escaping (String) -> Void,
+        onExhausted: @escaping () -> Void
+    ) {
+        guard typeIndex < typeIds.count else {
+            onExhausted()
+            return
+        }
+        let typeId = typeIds[typeIndex]
+        provider.loadItem(forTypeIdentifier: typeId, options: nil) { [weak self] data, _ in
+            DispatchQueue.main.async {
+                if let extracted = self?.extractURL(fromSharedItem: data) {
+                    onFound(extracted)
+                } else {
+                    self?.attemptLoadURL(
+                        from: provider,
+                        typeIds: typeIds,
+                        typeIndex: typeIndex + 1,
+                        onFound: onFound,
+                        onExhausted: onExhausted
+                    )
                 }
             }
         }
-        showError("Unsupported content type")
+    }
+
+    private func extractURL(fromSharedItem item: Any?) -> String? {
+        ShareURLExtractor.extractURL(fromSharedItem: item)
     }
 
     private func beginAnalysisForPdf() {
+        guard let pdfData = sharedPdfData else {
+            urlLabel.text = "PDF pattern"
+            titleField.text = titleField.text?.isEmpty == true ? "PDF Pattern" : titleField.text
+            loadingOverlay.isHidden = true
+            return
+        }
         urlLabel.text = "PDF pattern"
-        titleField.text = titleField.text?.isEmpty == true ? "PDF Pattern" : titleField.text
-        loadingOverlay.isHidden = true
+        loadingOverlay.isHidden = false
+        loadingLabel.text = "Extracting text from PDF..."
+
+        Task {
+            let pageText = PDFTextExtractor.extractText(from: pdfData)
+            let minTextLength = 50
+            guard let text = pageText, text.count >= minTextLength else {
+                await MainActor.run {
+                    titleField.text = titleField.text?.isEmpty == true ? "PDF Pattern" : titleField.text
+                    loadingLabel.text = "PDF has no extractable text; you can still save with a title."
+                    loadingOverlay.isHidden = true
+                }
+                return
+            }
+
+            let content = ExtractedContent(
+                ogTitle: nil,
+                ogDescription: nil,
+                ogImageUrl: nil,
+                additionalImageUrls: [],
+                pageText: text,
+                sourceUrl: sharedURL ?? "file://pattern-vault/pdf",
+                videoUrls: [],
+                patternPdfUrl: nil
+            )
+            self.extractedContent = content
+
+            await MainActor.run { loadingLabel.text = "Analyzing pattern..." }
+            let useAI = ExtensionEntitlementCache.canUseAI && !ExtensionAIKillSwitch.isAIDisabledByKillSwitch
+            let result = useAI ? await AIPatternAnalyzer.analyze(content: content) : nil
+            self.aiResult = result
+
+            await MainActor.run {
+                if let result {
+                    titleField.text = result.title
+                    descriptionView.text = result.summary
+                    currentTags = result.tags
+                    refreshTagChips()
+                    if let d = result.difficulty {
+                        difficultyLabel.text = "Difficulty: \(d.capitalized)"
+                        difficultyLabel.isHidden = false
+                    }
+                    if let m = result.materials {
+                        materialsLabel.text = "Materials: \(m)"
+                        materialsLabel.isHidden = false
+                    }
+                }
+                loadingOverlay.isHidden = true
+            }
+        }
     }
 
     private func beginAnalysis() {
@@ -442,6 +664,7 @@ class ShareViewController: UIViewController {
         loadingOverlay.isHidden = false
 
         Task {
+            await ExtensionAIKillSwitch.ensureCached()
             if isYouTubeURL(urlString) {
                 loadingLabel.text = "Extracting from video..."
                 if let videoResult = await SupabaseExtensionClient.extractPatternFromVideo(videoURL: urlString) {
@@ -454,6 +677,11 @@ class ShareViewController: UIViewController {
                     }
                     return
                 }
+                await MainActor.run {
+                    loadingOverlay.isHidden = true
+                    showError("Could not get video transcript. The video may have no captions or the service is unavailable.", dismissOnOK: false)
+                }
+                return
             }
 
             if isTikTokURL(urlString) {
@@ -467,13 +695,20 @@ class ShareViewController: UIViewController {
                         await MainActor.run { titleField.text = ogTitle }
                     }
                     loadingLabel.text = "Analyzing pattern..."
-                    let result = await AIPatternAnalyzer.analyze(content: tiktokContent)
+                    let useAI = ExtensionEntitlementCache.canUseAI && !ExtensionAIKillSwitch.isAIDisabledByKillSwitch
+                    let result = useAI ? await AIPatternAnalyzer.analyze(content: tiktokContent) : nil
                     self.aiResult = result
                     await MainActor.run {
                         if let result {
                             titleField.text = result.title
                             descriptionView.text = result.summary
                             currentTags = result.tags
+                            if currentTags.count < 2 {
+                                let fallback = AIPatternAnalyzer.fallbackTags(sourceUrl: urlString, craftType: result.craftType)
+                                for tag in fallback where !currentTags.contains(tag) {
+                                    currentTags.append(tag)
+                                }
+                            }
                             refreshTagChips()
                             if let d = result.difficulty {
                                 difficultyLabel.text = "Difficulty: \(d.capitalized)"
@@ -483,52 +718,19 @@ class ShareViewController: UIViewController {
                                 materialsLabel.text = "Materials: \(m)"
                                 materialsLabel.isHidden = false
                             }
-                        }
-                        loadingOverlay.isHidden = true
-                    }
-                    return
-                }
-            }
-
-            // Ravelry: use pattern PDF content instead of the listing page
-            if RavelryPatternExtractor.isRavelryPatternURL(urlString) {
-                loadingLabel.text = "Finding pattern PDF..."
-                if let ravelryContent = await RavelryPatternExtractor.extract(from: urlString) {
-                    self.extractedContent = ravelryContent
-                    if let ogImage = ravelryContent.ogImageUrl {
-                        await loadThumbnail(from: ogImage)
-                    }
-                    if let ogTitle = ravelryContent.ogTitle {
-                        await MainActor.run { titleField.text = ogTitle }
-                    }
-                    if let ogDesc = ravelryContent.ogDescription {
-                        await MainActor.run { descriptionView.text = ogDesc }
-                    }
-                    loadingLabel.text = "Analyzing pattern..."
-                    let result = await AIPatternAnalyzer.analyze(content: ravelryContent)
-                    self.aiResult = result
-                    await MainActor.run {
-                        if let result {
-                            titleField.text = result.title
-                            descriptionView.text = result.summary
-                            currentTags = result.tags
+                        } else {
+                            if currentTags.isEmpty {
+                                currentTags = AIPatternAnalyzer.fallbackTags(sourceUrl: urlString)
+                            }
                             refreshTagChips()
-                            if let d = result.difficulty {
-                                difficultyLabel.text = "Difficulty: \(d.capitalized)"
-                                difficultyLabel.isHidden = false
-                            }
-                            if let m = result.materials {
-                                materialsLabel.text = "Materials: \(m)"
-                                materialsLabel.isHidden = false
-                            }
                         }
                         loadingOverlay.isHidden = true
                     }
                     return
                 }
-                // No PDF found — fall back to page content (filter Ravelry nav/sidebar so we don't save it as pattern content)
             }
 
+            // Ravelry and other URLs: fetch page content like any other site (save link + extracted content; no Ravelry API/PDF).
             // Step 1: Extract web content
             loadingLabel.text = "Fetching page..."
             var content = await WebContentExtractor.extract(from: urlString)
@@ -560,9 +762,10 @@ class ShareViewController: UIViewController {
                 descriptionView.text = ogDesc
             }
 
-            // Step 2: AI analysis
+            // Step 2: AI analysis (skip if free limit reached or kill switch on)
             loadingLabel.text = "Analyzing pattern..."
-            let result = await AIPatternAnalyzer.analyze(content: content)
+            let useAI = ExtensionEntitlementCache.canUseAI && !ExtensionAIKillSwitch.isAIDisabledByKillSwitch
+            let result = useAI ? await AIPatternAnalyzer.analyze(content: content) : nil
             self.aiResult = result
 
             // Update UI with AI results
@@ -570,6 +773,12 @@ class ShareViewController: UIViewController {
                 titleField.text = result.title
                 descriptionView.text = result.summary
                 currentTags = result.tags
+                if currentTags.count < 2 {
+                    let fallback = AIPatternAnalyzer.fallbackTags(sourceUrl: urlString, craftType: result.craftType)
+                    for tag in fallback where !currentTags.contains(tag) {
+                        currentTags.append(tag)
+                    }
+                }
                 refreshTagChips()
 
                 if let difficulty = result.difficulty {
@@ -581,6 +790,9 @@ class ShareViewController: UIViewController {
                     materialsLabel.isHidden = false
                 }
             } else {
+                if currentTags.isEmpty {
+                    currentTags = AIPatternAnalyzer.fallbackTags(sourceUrl: urlString)
+                }
                 refreshTagChips()
             }
 
@@ -610,7 +822,8 @@ class ShareViewController: UIViewController {
             needleHookSizes: v.needleHookSizes,
             yarnWeightYardage: v.yarnWeightYardage,
             techniques: v.techniques,
-            yarnLinks: v.yarnLinks.map { YarnLinkEntry(brandName: $0.brandName, officialUrl: $0.officialUrl, storeUrl: $0.storeUrl) }
+            yarnLinks: v.yarnLinks.map { YarnLinkEntry(brandName: $0.brandName, officialUrl: $0.officialUrl, storeUrl: $0.storeUrl) },
+            parsedStepsJSON: v.parsedSteps
         )
     }
 
@@ -643,15 +856,7 @@ class ShareViewController: UIViewController {
     }
 
     private func extractURL(from text: String) -> String? {
-        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-        let range = NSRange(text.startIndex..., in: text)
-        if let match = detector?.firstMatch(in: text, range: range), let url = match.url {
-            return url.absoluteString
-        }
-        if text.hasPrefix("http://") || text.hasPrefix("https://") {
-            return text.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return nil
+        ShareURLExtractor.extractURL(from: text)
     }
 
     private func detectPlatform(from url: String) -> String? {
@@ -675,11 +880,26 @@ class ShareViewController: UIViewController {
     @objc private func saveTapped() {
         guard !isSaving else { return }
         guard let urlString = sharedURL else { return }
+
+        if SupabaseExtensionClient.authInfo() == nil {
+            showError("Open Pattern Vault and sign in, then try saving again.", dismissOnOK: false)
+            return
+        }
+
+        titleField.layer.borderWidth = 0
         let title = titleField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !title.isEmpty else {
             titleField.layer.borderColor = UIColor.brandSoftCoral.cgColor
             titleField.layer.borderWidth = 1
             titleField.layer.cornerRadius = 6
+            let alert = UIAlertController(title: nil, message: "Please enter a pattern title.", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
+
+        if !ExtensionEntitlementCache.canAddPattern {
+            showError("Pattern limit reached. Upgrade to Premium in the app for unlimited patterns.", dismissOnOK: false)
             return
         }
 
@@ -700,10 +920,12 @@ class ShareViewController: UIViewController {
         if platform == "Ravelry", RavelryPatternExtractor.looksLikeRavelryChrome(sourceContentToSave) {
             sourceContentToSave = nil
         }
+        // TikTok: ensure video_url is set so "Tutorial video" shows in app
+        let videoUrlToSave = aiResult?.videoUrl ?? (platform == "tiktok" ? extractedContent?.videoUrls.first : nil)
 
         Task {
             do {
-                try await SupabaseExtensionClient.savePattern(
+                let savedPatternId = try await SupabaseExtensionClient.savePattern(
                     title: title,
                     description: description,
                     sourceUrl: sourceUrlToSave,
@@ -715,11 +937,12 @@ class ShareViewController: UIViewController {
                     materials: aiResult?.materials,
                     craftType: aiResult?.craftType,
                     sourceContent: sourceContentToSave,
-                    videoUrl: aiResult?.videoUrl,
+                    videoUrl: videoUrlToSave,
                     gauge: aiResult?.gauge,
                     needleHookSizes: aiResult?.needleHookSizes,
                     yarnWeightYardage: aiResult?.yarnWeightYardage,
                     techniques: aiResult?.techniques,
+                    parsedSteps: aiResult?.parsedStepsJSON,
                     pdfUrl: pdfUrlToSave,
                     pdfDataToUpload: sharedPdfData,
                     yarnLinks: aiResult?.yarnLinks.map { ($0.brandName, $0.officialUrl, $0.storeUrl) } ?? [],
@@ -730,12 +953,44 @@ class ShareViewController: UIViewController {
                         }
                     }
                 )
+                if aiResult != nil {
+                    _ = await SupabaseExtensionClient.incrementAIUsage()
+                }
+                let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+                defaults?.set(savedPatternId, forKey: "savedPatternId")
+                defaults?.set(title, forKey: "savedPatternTitle")
+                defaults?.synchronize()
                 showSuccess()
             } catch {
                 loadingOverlay.isHidden = true
                 isSaving = false
                 saveButton.isEnabled = true
-                showError(error.localizedDescription)
+                let ns = error as NSError
+                let url = (ns.userInfo["NSURLErrorFailingURLStringKey"] as? String) ?? (ns.userInfo["NSURLErrorFailingURLKey"] as? URL)?.absoluteString ?? "—"
+                let connection = SupabaseExtensionClient.connectionDiagnostics()
+                #if DEBUG
+                NSLog("[SaveToPatternVault] save failed: domain=%@ code=%ld desc=%@ failingURL=%@ diag=%@", ns.domain, ns.code, error.localizedDescription, url, connection)
+                #endif
+                // Write to app group so main app can show in Settings → Last share error
+                let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+                let diagnostic = "domain=\(ns.domain) code=\(ns.code) url=\(url) \(connection)"
+                defaults?.set(diagnostic, forKey: "lastShareErrorDiagnostic")
+                defaults?.set(Date(), forKey: "lastShareErrorDate")
+                defaults?.synchronize()
+                let message: String
+                if let e = error as? SupabaseExtensionError {
+                    switch e {
+                    case .notAuthenticated:
+                        message = "Open Pattern Vault, sign in, and try sharing again."
+                    case .missingConfig:
+                        message = "App config is missing. Open Pattern Vault once and try again."
+                    case .saveFailed:
+                        message = SupabaseExtensionError.messageForNetworkError(error)
+                    }
+                } else {
+                    message = SupabaseExtensionError.messageForNetworkError(error)
+                }
+                showError(message)
             }
         }
     }
@@ -765,6 +1020,10 @@ class ShareViewController: UIViewController {
     // MARK: - Feedback
 
     private func showSuccess() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(.success)
+
         loadingSpinner.stopAnimating()
         loadingLabel.layer.removeAnimation(forKey: "pulse")
         loadingLabel.text = "Saved!"
@@ -793,12 +1052,14 @@ class ShareViewController: UIViewController {
         }
     }
 
-    private func showError(_ message: String) {
+    private func showError(_ message: String, dismissOnOK: Bool = true) {
         loadingOverlay.isHidden = true
 
         let alert = UIAlertController(title: "Error", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-            self?.extensionContext?.completeRequest(returningItems: nil)
+            if dismissOnOK {
+                self?.extensionContext?.completeRequest(returningItems: nil)
+            }
         })
         present(alert, animated: true)
     }

@@ -19,8 +19,12 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
-	<key>ANTHROPIC_API_KEY</key>
-	<string>$(ANTHROPIC_API_KEY)</string>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>GEMINI_API_KEY</key>
+	<string>$(GEMINI_API_KEY)</string>
 	<key>RAVELRY_ACCESS_KEY</key>
 	<string>$(RAVELRY_ACCESS_KEY)</string>
 	<key>RAVELRY_PERSONAL_KEY</key>

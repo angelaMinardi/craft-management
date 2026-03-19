@@ -11,9 +11,18 @@ import SwiftUI
 struct PatternListView: View {
     @EnvironmentObject var auth: AuthService
     @ObservedObject var store: PatternStore
+    @ObservedObject var tutorialStore: AppTutorialStore
     @Binding var sharedURL: String?
+    @Binding var craftFilter: String?
+    @Binding var savedPatternId: UUID?
+
+    private var currentStepAnchor: TutorialAnchor? {
+        guard tutorialStore.isActive, tutorialStore.currentStep < AppTutorialStore.steps.count else { return nil }
+        return AppTutorialStore.steps[tutorialStore.currentStep].anchorId
+    }
 
     @Environment(\.scenePhase) private var scenePhase
+    @State private var patternToOpen: Pattern?
     @StateObject private var tagStore = TagStore()
     @State private var showAddSheet = false
     @State private var searchText = ""
@@ -24,9 +33,14 @@ struct PatternListView: View {
     private static let dismissedContinueKey = "dismissed_continue_pattern_ids"
     @State private var dismissedContinuePatternIds: Set<UUID> = []
     @State private var showFilterOptions = false
+    @State private var filterDifficulty: String?
     @ObservedObject private var progressStore = PatternProgressStore.shared
     @StateObject private var continueNoteStore = ProjectNoteStore()
     @State private var noteBasedProgress: [UUID: Double] = [:]
+    @State private var showPaywall = false
+    @State private var isSelectionMode = false
+    @State private var selectedPatternIds: Set<UUID> = []
+    @State private var showMassDeleteConfirm = false
 
     private var filteredPatterns: [Pattern] {
         var result = store.patterns
@@ -46,7 +60,26 @@ struct PatternListView: View {
                 return !filterTagIds.isDisjoint(with: patternTags)
             }
         }
+        if let cf = craftFilter, !cf.isEmpty {
+            result = result.filter { pattern in
+                pattern.craftType?.lowercased() == cf.lowercased()
+            }
+        }
+        if let diff = filterDifficulty, !diff.isEmpty {
+            result = result.filter { pattern in
+                Self.normalizedDifficulty(pattern.difficulty) == diff
+            }
+        }
         return result
+    }
+
+    /// Maps pattern.difficulty to a filter bucket: "beginner", "intermediate", "advanced".
+    private static func normalizedDifficulty(_ difficulty: String?) -> String? {
+        guard let d = difficulty?.lowercased().trimmingCharacters(in: .whitespaces), !d.isEmpty else { return nil }
+        if d.contains("beginner") || d.contains("easy") { return "beginner" }
+        if d.contains("intermediate") { return "intermediate" }
+        if d.contains("advanced") || d.contains("expert") { return "advanced" }
+        return nil
     }
 
     var body: some View {
@@ -70,6 +103,19 @@ struct PatternListView: View {
             .sheet(isPresented: $showAddSheet, onDismiss: { sharedURL = nil }) {
                 AddPatternView(store: store, prefillURL: sharedURL)
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
+            .confirmationDialog("Delete \(selectedPatternIds.count) pattern\(selectedPatternIds.count == 1 ? "" : "s")?", isPresented: $showMassDeleteConfirm, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    performMassDelete()
+                }
+                Button("Cancel", role: .cancel) {
+                    showMassDeleteConfirm = false
+                }
+            } message: {
+                Text("This will also delete all notes for these patterns. This cannot be undone.")
+            }
             .refreshable {
                 if let userId = auth.currentUserId {
                     await store.load(userId: userId)
@@ -87,12 +133,46 @@ struct PatternListView: View {
             .onChange(of: sharedURL) { _, newURL in
                 if newURL != nil { showAddSheet = true }
             }
+            .onChange(of: savedPatternId) { _, id in
+                if let id, let pattern = store.patterns.first(where: { $0.id == id }) {
+                    patternToOpen = pattern
+                    savedPatternId = nil
+                }
+            }
+            .onChange(of: store.patterns.count) { _, _ in
+                if let id = savedPatternId, let pattern = store.patterns.first(where: { $0.id == id }) {
+                    patternToOpen = pattern
+                    savedPatternId = nil
+                }
+            }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     Task { await loadPatternTagsMap() }
                 }
             }
-            .onAppear { loadDismissedContinueIds() }
+            .navigationDestination(item: $patternToOpen) { p in
+                PatternDetailView(store: store, pattern: p)
+            }
+            .onAppear {
+                loadDismissedContinueIds()
+                // Clear stale "cancelled" error so list can show (e.g. after adding a pattern)
+                if store.errorMessage?.lowercased() == "cancelled" {
+                    store.errorMessage = nil
+                    if let userId = auth.currentUserId {
+                        Task { await store.load(userId: userId) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func performMassDelete() {
+        guard let userId = auth.currentUserId, !selectedPatternIds.isEmpty else { return }
+        showMassDeleteConfirm = false
+        Task {
+            await store.deletePatterns(ids: selectedPatternIds, userId: userId)
+            selectedPatternIds = []
+            isSelectionMode = false
         }
     }
 
@@ -128,22 +208,68 @@ struct PatternListView: View {
                 }
             }
 
-            Text("My Patterns")
-                .font(.system(size: 26, weight: .bold, design: .rounded))
-                .foregroundStyle(Theme.deepPlum)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("My Patterns")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.deepPlum)
+                if !SubscriptionStore.shared.isPremium {
+                    Text("\(store.patterns.count) / \(SubscriptionStore.shared.patternLimit) patterns")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                }
+            }
 
             Spacer()
 
-            // Add button
-            Button { showAddSheet = true } label: {
-                ZStack {
-                    Circle()
-                        .fill(Theme.softCoral.opacity(0.12))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: "plus")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Theme.softCoral)
+            if isSelectionMode {
+                Button("Cancel") {
+                    isSelectionMode = false
+                    selectedPatternIds = []
                 }
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(Theme.deepPlum)
+
+                if !selectedPatternIds.isEmpty {
+                    Button {
+                        showMassDeleteConfirm = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "trash")
+                            Text("Delete \(selectedPatternIds.count)")
+                        }
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.red)
+                    }
+                }
+            } else {
+                // Add button
+                Button { showAddSheet = true } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Theme.softCoral.opacity(0.12))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "plus")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Theme.softCoral)
+                    }
+                }
+
+                // Select (mass delete) button
+                Button {
+                    isSelectionMode = true
+                    selectedPatternIds = []
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Theme.deepPlum.opacity(0.08))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                    }
+                }
+                .accessibilityLabel("Select patterns")
+                .accessibilityHint("Select multiple patterns to delete")
             }
         }
         .padding(.horizontal, Theme.Spacing.lg)
@@ -190,13 +316,20 @@ struct PatternListView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Filters")
-            .accessibilityHint("Opens filter options by status")
+            .accessibilityHint("Opens filter options by status and difficulty")
         }
         .padding(.horizontal, Theme.Spacing.lg)
         .sheet(isPresented: $showFilterOptions) {
             filterOptionsSheet
         }
     }
+
+    private static let difficultyOptions: [(value: String?, label: String)] = [
+        (nil, "All"),
+        ("beginner", "Beginner"),
+        ("intermediate", "Intermediate"),
+        ("advanced", "Advanced")
+    ]
 
     private var filterOptionsSheet: some View {
         NavigationStack {
@@ -212,6 +345,24 @@ struct PatternListView: View {
                                     .foregroundStyle(Theme.deepPlum)
                                 Spacer()
                                 if filterStatus == status {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Theme.softCoral)
+                                }
+                            }
+                        }
+                    }
+                }
+                Section("Difficulty") {
+                    ForEach(Self.difficultyOptions, id: \.label) { option in
+                        Button {
+                            filterDifficulty = option.value
+                            showFilterOptions = false
+                        } label: {
+                            HStack {
+                                Text(option.label)
+                                    .foregroundStyle(Theme.deepPlum)
+                                Spacer()
+                                if filterDifficulty == option.value {
                                     Image(systemName: "checkmark.circle.fill")
                                         .foregroundStyle(Theme.softCoral)
                                 }
@@ -238,7 +389,7 @@ struct PatternListView: View {
                 statusPill("All", icon: nil, isSelected: filterStatus == nil) {
                     filterStatus = nil
                 }
-                statusPill("Favorites", icon: "heart.fill", isSelected: filterStatus == .wantToMake) {
+                statusPill("Want to Make", icon: "bookmark", isSelected: filterStatus == .wantToMake) {
                     filterStatus = filterStatus == .wantToMake ? nil : .wantToMake
                 }
                 statusPill("In Progress", icon: "hammer.fill", isSelected: filterStatus == .inProgress) {
@@ -288,21 +439,30 @@ struct PatternListView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Theme.Spacing.sm) {
                     ForEach(categories, id: \.type) { cat in
-                        HStack(spacing: 5) {
-                            Image(systemName: craftIcon(for: cat.type))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(craftColor(for: cat.type))
-                            Text("\(cat.count)")
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(Theme.deepPlum)
-                            Text(cat.type.capitalized)
-                                .font(.system(size: 12, weight: .medium, design: .rounded))
-                                .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                        Button {
+                            if craftFilter?.lowercased() == cat.type.lowercased() {
+                                craftFilter = nil
+                            } else {
+                                craftFilter = cat.type
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: craftIcon(for: cat.type))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(craftColor(for: cat.type))
+                                Text("\(cat.count)")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundStyle(Theme.deepPlum)
+                                Text(cat.type.capitalized)
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background((craftFilter?.lowercased() == cat.type.lowercased() ? craftColor(for: cat.type) : craftColor(for: cat.type).opacity(0.08)))
+                            .clipShape(Capsule())
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(craftColor(for: cat.type).opacity(0.08))
-                        .clipShape(Capsule())
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.lg)
@@ -338,6 +498,12 @@ struct PatternListView: View {
     }
 
     // MARK: - Continue In-Progress Card (progress bar + dismiss)
+
+    private var inProgressPatterns: [Pattern] {
+        store.patterns
+            .filter { $0.status == .inProgress }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
 
     @ViewBuilder
     private func continueCard(pattern: Pattern) -> some View {
@@ -404,15 +570,16 @@ struct PatternListView: View {
         return noteBasedProgress[pattern.id] ?? 0
     }
 
-    /// When progress store has no data, parse latest progress_update note (e.g. "10 of 100 rows") for continue card.
+    /// When progress store has no data, parse latest progress_update note (e.g. "10 of 100 rows") for continue cards.
     private func loadContinueCardProgressFallback() async {
-        guard let inProgress = store.patterns.first(where: { $0.status == .inProgress }),
-              progressStore.progressFraction(for: inProgress.id) == 0 else { return }
-        await continueNoteStore.load(patternId: inProgress.id)
-        let progressNotes = continueNoteStore.notes.filter { $0.noteType == .progressUpdate }
-        guard let last = progressNotes.last else { return }
-        if let frac = Self.parseProgressFromNoteContent(last.content) {
-            noteBasedProgress[inProgress.id] = frac
+        let inProgressList = store.patterns.filter { $0.status == .inProgress }
+        for pattern in inProgressList where progressStore.progressFraction(for: pattern.id) == 0 {
+            await continueNoteStore.load(patternId: pattern.id)
+            let progressNotes = continueNoteStore.notes.filter { $0.noteType == .progressUpdate }
+            guard let last = progressNotes.last else { continue }
+            if let frac = Self.parseProgressFromNoteContent(last.content) {
+                await MainActor.run { noteBasedProgress[pattern.id] = frac }
+            }
         }
     }
 
@@ -432,12 +599,12 @@ struct PatternListView: View {
         return nil
     }
 
-    // MARK: - Trending Section
+    // MARK: - Recent Section
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Trending")
+                Text("Recent")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.deepPlum)
                 Spacer()
@@ -459,10 +626,11 @@ struct PatternListView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Theme.Spacing.md) {
-                    ForEach(Array(store.patterns.prefix(6).enumerated()), id: \.element.id) { index, pattern in
+                    ForEach(Array(store.patterns.sorted { $0.createdAt > $1.createdAt }.prefix(6).enumerated()), id: \.element.id) { index, pattern in
                         NavigationLink(destination: PatternDetailView(store: store, pattern: pattern)) {
                             PatternCardView(
                                 pattern: pattern,
+                                userId: auth.currentUserId,
                                 isFavorite: pattern.status == .wantToMake,
                                 isNew: isRecentlyAdded(pattern),
                                 elevated: true,
@@ -484,7 +652,12 @@ struct PatternListView: View {
 
     private var allPatternsGrid: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            if store.patterns.count > 6 || filterStatus != nil || !searchText.isEmpty {
+            if isSelectionMode {
+                Text("Tap patterns to select, then tap Delete")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    .padding(.horizontal, Theme.Spacing.lg)
+            } else if store.patterns.count > 6 || filterStatus != nil || !searchText.isEmpty {
                 Text(filterStatus != nil || !searchText.isEmpty ? "Results" : "All Patterns")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.deepPlum)
@@ -499,15 +672,49 @@ struct PatternListView: View {
                 spacing: Theme.Spacing.md
             ) {
                 ForEach(Array(filteredPatterns.enumerated()), id: \.element.id) { index, pattern in
-                    NavigationLink(destination: PatternDetailView(store: store, pattern: pattern)) {
-                        PatternCardView(
-                            pattern: pattern,
-                            isFavorite: pattern.status == .wantToMake,
-                            isNew: isRecentlyAdded(pattern)
-                        )
+                    if isSelectionMode {
+                        Button {
+                            if selectedPatternIds.contains(pattern.id) {
+                                selectedPatternIds.remove(pattern.id)
+                            } else {
+                                selectedPatternIds.insert(pattern.id)
+                            }
+                            HapticService.lightImpact()
+                        } label: {
+                            ZStack(alignment: .topTrailing) {
+                                PatternCardView(
+                                    pattern: pattern,
+                                    userId: auth.currentUserId,
+                                    isFavorite: pattern.status == .wantToMake,
+                                    isNew: isRecentlyAdded(pattern)
+                                )
+                                .opacity(selectedPatternIds.contains(pattern.id) ? 0.85 : 1)
+                                if selectedPatternIds.contains(pattern.id) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundStyle(Theme.sageGreen)
+                                        .background(Circle().fill(.white).padding(2))
+                                        .padding(Theme.Spacing.sm)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .staggeredAppear(index: index)
+                    } else {
+                        NavigationLink(destination: PatternDetailView(store: store, pattern: pattern)) {
+                            PatternCardView(
+                                pattern: pattern,
+                                userId: auth.currentUserId,
+                                isFavorite: pattern.status == .wantToMake,
+                                isNew: isRecentlyAdded(pattern)
+                            )
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .contentShape(Rectangle())
+                        .staggeredAppear(index: index)
                     }
-                    .buttonStyle(.plain)
-                    .staggeredAppear(index: index)
                 }
             }
             .padding(.horizontal, Theme.Spacing.lg)
@@ -519,7 +726,9 @@ struct PatternListView: View {
     @ViewBuilder
     private var populatedView: some View {
         headerSection
+            .tutorialAnchor(.patternsAdd, isActive: currentStepAnchor == .patternsAdd)
         searchBar
+            .tutorialAnchor(.patternsSearch, isActive: currentStepAnchor == .patternsSearch)
         statusFilters
         craftCategoryChips
 
@@ -527,15 +736,34 @@ struct PatternListView: View {
             tagFilters
         }
 
-        if let inProgressPattern = store.patterns.first(where: { $0.status == .inProgress }) {
-            continueCard(pattern: inProgressPattern)
+        ForEach(inProgressPatterns) { pattern in
+            continueCard(pattern: pattern)
         }
 
-        if store.patterns.count > 2 && filterStatus == nil && searchText.isEmpty {
+        if store.patterns.count > 2 && filterStatus == nil && searchText.isEmpty && !isSelectionMode {
             recentSection
         }
 
+        if !SubscriptionStore.shared.isPremium && store.patterns.count >= 25 {
+            premiumNudgeRow
+        }
+
         allPatternsGrid
+    }
+
+    private var premiumNudgeRow: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Text("Nearing your free limit. Premium unlocks unlimited.")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.deepPlum.opacity(0.55))
+            Button(Theme.Premium.seePremiumTitle) {
+                showPaywall = true
+            }
+            .font(Theme.Typography.caption)
+            .foregroundStyle(Theme.softCoral)
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.vertical, Theme.Spacing.xs)
     }
 
     // MARK: - Loading State
@@ -562,7 +790,7 @@ struct PatternListView: View {
             Spacer().frame(height: 50)
 
             VStack(spacing: Theme.Spacing.xl) {
-                SpriteMascotView.idle(size: 160)
+                TappableMascotView(size: 160)
 
                 VStack(spacing: Theme.Spacing.sm) {
                     Text("Welcome to Pattern Vault!")
@@ -576,14 +804,21 @@ struct PatternListView: View {
                         .lineSpacing(3)
                 }
 
-                Button { showAddSheet = true } label: {
+                Button {
+                    HapticService.lightImpact()
+                    showAddSheet = true
+                } label: {
                     Text("Get Started")
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.horizontal, 40)
+                .accessibilityLabel("Get Started")
+                .accessibilityHint("Add your first pattern")
             }
             .padding(.horizontal, Theme.Spacing.xl)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Welcome to Pattern Vault. Discover, organize, and manage your patterns with ease.")
     }
 
     // MARK: - Error State
@@ -608,8 +843,21 @@ struct PatternListView: View {
             }
             .font(Theme.Typography.caption)
             .foregroundStyle(Theme.deepPlum)
+            .accessibilityLabel("Try again")
+            .accessibilityHint("Reload your patterns")
+            if error.localizedCaseInsensitiveContains("Premium") || error.localizedCaseInsensitiveContains("limit") {
+                Button(Theme.Premium.seePremiumTitle) {
+                    showPaywall = true
+                }
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.softCoral)
+                .accessibilityLabel(Theme.Premium.seePremiumTitle)
+                .accessibilityHint("Opens Premium")
+            }
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Error loading patterns. Try again button.")
     }
 
     // MARK: - Helpers
@@ -639,6 +887,11 @@ struct PatternListView: View {
         case let c where c.contains("embroider"): return "paintbrush.pointed"
         case let c where c.contains("weav"): return "square.grid.3x3"
         case let c where c.contains("macram"): return "circle.grid.cross"
+        case let c where c.contains("leather"): return "rectangle.3.group"
+        case let c where c.contains("bead"): return "circle.hexagongrid.fill"
+        case let c where c.contains("jewelry"), let c where c.contains("jewell"): return "diamond"
+        case let c where c.contains("paper"): return "doc.fill"
+        case let c where c.contains("wood"): return "hammer.fill"
         default: return "sparkles"
         }
     }
@@ -650,6 +903,12 @@ struct PatternListView: View {
         case let c where c.contains("sew"), let c where c.contains("quilt"): return Theme.sageGreen
         case let c where c.contains("embroider"): return Theme.honey
         case let c where c.contains("weav"): return Theme.dustyBlue
+        case let c where c.contains("macram"): return Theme.softCoral
+        case let c where c.contains("leather"): return Theme.deepPlum.opacity(0.9)
+        case let c where c.contains("bead"): return Theme.dustyBlue
+        case let c where c.contains("jewelry"), let c where c.contains("jewell"): return Theme.honey
+        case let c where c.contains("paper"): return Theme.sageGreen
+        case let c where c.contains("wood"): return Theme.softCoral
         default: return Theme.softCoral
         }
     }
@@ -676,9 +935,19 @@ struct PatternListView: View {
     private func loadPatternTagsMap() async {
         let repo = TagRepository()
         var map: [UUID: Set<UUID>] = [:]
-        for pattern in store.patterns {
-            if let tags = try? await repo.fetchTags(forPatternId: pattern.id) {
-                map[pattern.id] = Set(tags.map(\.id))
+        await withTaskGroup(of: (UUID, Set<UUID>)?.self) { group in
+            for pattern in store.patterns {
+                group.addTask {
+                    if let tags = try? await repo.fetchTags(forPatternId: pattern.id) {
+                        return (pattern.id, Set(tags.map(\.id)))
+                    }
+                    return nil
+                }
+            }
+            for await result in group {
+                if let (patternId, tagIds) = result {
+                    map[patternId] = tagIds
+                }
             }
         }
         patternTagsMap = map

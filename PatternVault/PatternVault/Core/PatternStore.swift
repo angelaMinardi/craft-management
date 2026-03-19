@@ -7,6 +7,39 @@ import Foundation
 
 @MainActor
 final class PatternStore: ObservableObject {
+
+    /// Don't show task or request cancellation as an error to the user.
+    private static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        if error.localizedDescription.lowercased().contains("cancelled") { return true }
+        return false
+    }
+
+    private enum ErrorContext { case load, save, other }
+
+    /// User-friendly error message instead of raw server/API text.
+    private static func userFacingMessage(for error: Error, context: ErrorContext) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                return "We couldn't load your patterns. Check your connection and try again."
+            case .timedOut:
+                return "The request timed out. Check your connection and try again."
+            default:
+                break
+            }
+        }
+        switch context {
+        case .load:
+            return "We couldn't load your patterns. Check your connection and try again."
+        case .save:
+            return "We couldn't save the pattern. Please try again."
+        case .other:
+            return "Something went wrong. Please try again."
+        }
+    }
+
     @Published var patterns: [Pattern] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
@@ -18,18 +51,29 @@ final class PatternStore: ObservableObject {
     var completedCount: Int { patterns.filter { $0.status == .completed }.count }
 
     func load(userId: UUID) async {
+        if let cached = PatternListCacheService.loadCachedPatterns(userId: userId) {
+            patterns = cached
+        }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         do {
-            patterns = try await repo.fetchPatterns(userId: userId)
+            let fetched = try await repo.fetchPatterns(userId: userId)
+            patterns = fetched
+            PatternListCacheService.saveCachedPatterns(userId: userId, patterns: fetched)
         } catch {
-            errorMessage = error.localizedDescription
+            if Self.isCancellation(error) { return }
+            errorMessage = Self.userFacingMessage(for: error, context: .load)
         }
     }
 
+    /// Adds a pattern (persists pdf_url via repo). UI shows "Download Pattern" / "View PDF" and wand when pattern.pdfUrl != nil.
     func add(userId: UUID, title: String, description: String?, sourceUrl: String, status: PatternStatus, thumbnailUrl: String? = nil, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, sourceContent: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil) async -> Bool {
         errorMessage = nil
+        if !SubscriptionStore.shared.canAddPattern(currentPatternCount: patterns.count) {
+            errorMessage = "Pattern limit reached. Upgrade to Premium for unlimited patterns."
+            return false
+        }
         let platform = SourcePlatformHelper.platform(for: sourceUrl)
         do {
             let pattern = try await repo.addPattern(
@@ -54,7 +98,7 @@ final class PatternStore: ObservableObject {
             patterns.insert(pattern, at: 0)
             return true
         } catch {
-            errorMessage = error.localizedDescription
+            if !Self.isCancellation(error) { errorMessage = Self.userFacingMessage(for: error, context: .save) }
             return false
         }
     }
@@ -67,7 +111,7 @@ final class PatternStore: ObservableObject {
                 patterns[idx] = updated
             }
         } catch {
-            errorMessage = error.localizedDescription
+            if !Self.isCancellation(error) { errorMessage = Self.userFacingMessage(for: error, context: .other) }
         }
     }
 
@@ -82,7 +126,7 @@ final class PatternStore: ObservableObject {
                 patterns[idx] = updated
             }
         } catch {
-            errorMessage = error.localizedDescription
+            if !Self.isCancellation(error) { errorMessage = Self.userFacingMessage(for: error, context: .other) }
         }
     }
 
@@ -98,7 +142,7 @@ final class PatternStore: ObservableObject {
                 patterns[idx] = updated
             }
         } catch {
-            errorMessage = error.localizedDescription
+            if !Self.isCancellation(error) { errorMessage = Self.userFacingMessage(for: error, context: .other) }
         }
     }
 
@@ -108,7 +152,36 @@ final class PatternStore: ObservableObject {
             try await repo.deletePattern(id: pattern.id, userId: userId)
             patterns.removeAll { $0.id == pattern.id }
         } catch {
-            errorMessage = error.localizedDescription
+            if !Self.isCancellation(error) { errorMessage = Self.userFacingMessage(for: error, context: .other) }
+        }
+    }
+
+    /// Deletes multiple patterns. Updates in-memory list and cache on success.
+    func deletePatterns(ids: Set<UUID>, userId: UUID) async {
+        guard !ids.isEmpty else { return }
+        errorMessage = nil
+        do {
+            try await repo.deletePatterns(ids: Array(ids), userId: userId)
+            patterns.removeAll { ids.contains($0.id) }
+            if let _ = PatternListCacheService.loadCachedPatterns(userId: userId) {
+                PatternListCacheService.saveCachedPatterns(userId: userId, patterns: patterns)
+            }
+        } catch {
+            if !Self.isCancellation(error) { errorMessage = Self.userFacingMessage(for: error, context: .other) }
+        }
+    }
+
+    func saveParsedSteps(pattern: Pattern, userId: UUID, steps: [ParsedStep]) async {
+        errorMessage = nil
+        do {
+            let data = try JSONEncoder().encode(steps)
+            let json = String(data: data, encoding: .utf8)
+            let updated = try await repo.updateParsedSteps(patternId: pattern.id, userId: userId, parsedSteps: json)
+            if let idx = patterns.firstIndex(where: { $0.id == pattern.id }) {
+                patterns[idx] = updated
+            }
+        } catch {
+            if !Self.isCancellation(error) { errorMessage = Self.userFacingMessage(for: error, context: .other) }
         }
     }
 
@@ -122,7 +195,7 @@ final class PatternStore: ObservableObject {
                 patterns[idx] = updated
             }
         } catch {
-            errorMessage = error.localizedDescription
+            if !Self.isCancellation(error) { errorMessage = Self.userFacingMessage(for: error, context: .other) }
         }
     }
 }

@@ -11,6 +11,14 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var auth: AuthService
     @ObservedObject var store: PatternStore
+    @ObservedObject var tutorialStore: AppTutorialStore
+    var onSelectCraft: ((String) -> Void)? = nil
+    @State private var showPaywall = false
+
+    private var currentStepAnchor: TutorialAnchor? {
+        guard tutorialStore.isActive, tutorialStore.currentStep < AppTutorialStore.steps.count else { return nil }
+        return AppTutorialStore.steps[tutorialStore.currentStep].anchorId
+    }
 
     var body: some View {
         NavigationStack {
@@ -22,14 +30,23 @@ struct DashboardView: View {
                         emptySection
                     } else {
                         heroGreeting
+                            .tutorialAnchor(.homeVault, isActive: currentStepAnchor == .homeVault)
                         craftCategoryRow
+                            .tutorialAnchor(.homeCrafts, isActive: currentStepAnchor == .homeCrafts)
                         statsSection
+                            .tutorialAnchor(.homeStats, isActive: currentStepAnchor == .homeStats)
                         recentSection
+                        if !SubscriptionStore.shared.isPremium {
+                            premiumTeaserRow
+                        }
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.top, Theme.Spacing.lg)
-                .padding(.bottom, Theme.Spacing.xxl + 60)
+                .padding(.bottom, 100)
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear.frame(height: 84)
             }
             .background(Theme.screenGradient)
             .navigationTitle("Pattern Vault")
@@ -38,6 +55,9 @@ struct DashboardView: View {
                 if let userId = auth.currentUserId {
                     await store.load(userId: userId)
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
             }
             .task {
                 if store.patterns.isEmpty, let userId = auth.currentUserId {
@@ -58,6 +78,8 @@ struct DashboardView: View {
                 .foregroundStyle(Theme.deepPlum.opacity(0.6))
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Loading your vault")
     }
 
     private var emptySection: some View {
@@ -65,7 +87,7 @@ struct DashboardView: View {
             Spacer().frame(height: 40)
 
             VStack(spacing: Theme.Spacing.lg) {
-                SpriteMascotView.idle(size: 120)
+                TappableMascotView(size: 120)
 
                 Text("Your vault is empty")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
@@ -82,52 +104,60 @@ struct DashboardView: View {
             .frame(maxWidth: .infinity)
             .borderedCard()
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Your vault is empty. Share a pattern from Safari or any app to start building your collection.")
     }
 
     // MARK: - Hero Greeting (personalized, avatar, accent keyword)
 
     private var heroGreeting: some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.lg) {
-            // Left: greeting content
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text(personalizedGreeting)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
+        ZStack(alignment: .bottomTrailing) {
+            HStack(alignment: .top, spacing: Theme.Spacing.lg) {
+                // Left: greeting content
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text(personalizedGreeting)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(Theme.deepPlum.opacity(0.5))
 
-                // Accent keyword headline
-                (Text("Your ")
-                    .foregroundStyle(Theme.deepPlum)
-                + Text("Vault")
-                    .foregroundStyle(Theme.softCoral)
-                )
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-
-                Text("\(store.patterns.count) pattern\(store.patterns.count == 1 ? "" : "s") saved")
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.45))
-                    .padding(.top, 1)
-            }
-
-            Spacer(minLength: 0)
-
-            // Right: avatar circle
-            ZStack {
-                Circle()
-                    .fill(Theme.softCoral.opacity(0.12))
-                    .frame(width: 52, height: 52)
-
-                if let initial = userInitial {
-                    Text(initial)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                    // Accent keyword headline
+                    (Text("Your ")
+                        .foregroundStyle(Theme.deepPlum)
+                    + Text("Vault")
                         .foregroundStyle(Theme.softCoral)
-                } else {
-                    SpriteMascotView.idle(size: 44)
-                        .clipShape(Circle())
+                    )
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+
+                    Text("\(store.patterns.count) pattern\(store.patterns.count == 1 ? "" : "s") in your vault")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.45))
+                        .padding(.top, 1)
                 }
+
+                Spacer(minLength: 0)
+
+                // Right: avatar circle
+                ZStack {
+                    Circle()
+                        .fill(Theme.softCoral.opacity(0.12))
+                        .frame(width: 52, height: 52)
+
+                    if let initial = userInitial {
+                        Text(initial)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.softCoral)
+                    } else {
+                        SpriteMascotView.idle(size: 44)
+                            .clipShape(Circle())
+                    }
+                }
+                .padding(.top, 2)
             }
-            .padding(.top, 2)
+            .padding(Theme.Spacing.xl)
+
+            SpriteMascotView.knitting(size: 48)
+                .padding(.trailing, Theme.Spacing.md)
+                .padding(.bottom, Theme.Spacing.md)
         }
-        .padding(Theme.Spacing.xl)
         .background(
             LinearGradient(
                 colors: [Theme.warmCream, Color(red: 1.0, green: 0.96, blue: 0.93)],
@@ -137,6 +167,32 @@ struct DashboardView: View {
         )
         .borderedCard()
         .staggeredAppear(index: 0)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Your Vault, \(store.patterns.count) pattern\(store.patterns.count == 1 ? "" : "s") in your vault")
+    }
+
+    private var premiumTeaserRow: some View {
+        Button {
+            showPaywall = true
+        } label: {
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "crown")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.honey.opacity(0.9))
+                Text(Theme.Premium.teaser)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Theme.deepPlum.opacity(0.25))
+            }
+            .padding(.vertical, Theme.Spacing.sm)
+            .padding(.horizontal, Theme.Spacing.md)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Theme.Premium.teaser)
+        .accessibilityHint("Opens Premium")
     }
 
     private var personalizedGreeting: String {
@@ -165,34 +221,40 @@ struct DashboardView: View {
 
     // MARK: - Craft Category Quick-access (Newronation-style icon row)
 
+    @ViewBuilder
     private var craftCategoryRow: some View {
         let categories = uniqueCraftTypes
-        if categories.isEmpty { return AnyView(EmptyView()) }
-
-        return AnyView(
+        if !categories.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Theme.Spacing.lg) {
                     ForEach(Array(categories.enumerated()), id: \.element) { index, craft in
-                        VStack(spacing: Theme.Spacing.xs) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                                    .fill(craftCategoryColor(for: craft).opacity(0.1))
-                                    .frame(width: 56, height: 56)
-                                Image(systemName: craftCategoryIcon(for: craft))
-                                    .font(.system(size: 22, weight: .medium))
-                                    .foregroundStyle(craftCategoryColor(for: craft))
+                        Button {
+                            onSelectCraft?(craft)
+                        } label: {
+                            VStack(spacing: Theme.Spacing.xs) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                        .fill(craftCategoryColor(for: craft).opacity(0.1))
+                                        .frame(width: 56, height: 56)
+                                    Image(systemName: craftCategoryIcon(for: craft))
+                                        .font(.system(size: 22, weight: .medium))
+                                        .foregroundStyle(craftCategoryColor(for: craft))
+                                }
+                                Text(craft.capitalized)
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                                    .lineLimit(1)
                             }
-                            Text(craft.capitalized)
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                                .foregroundStyle(Theme.deepPlum.opacity(0.6))
-                                .lineLimit(1)
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(craft.capitalized)
+                        .accessibilityHint("Opens Patterns tab filtered by \(craft)")
                         .staggeredAppear(index: index + 1)
                     }
                 }
                 .padding(.horizontal, 2)
             }
-        )
+        }
     }
 
     private var uniqueCraftTypes: [String] {
@@ -214,6 +276,11 @@ struct DashboardView: View {
         case let c where c.contains("embroider"): return "paintbrush.pointed"
         case let c where c.contains("weav"): return "square.grid.3x3"
         case let c where c.contains("macram"): return "circle.grid.cross"
+        case let c where c.contains("leather"): return "rectangle.3.group"
+        case let c where c.contains("bead"): return "circle.hexagongrid.fill"
+        case let c where c.contains("jewelry"), let c where c.contains("jewell"): return "diamond"
+        case let c where c.contains("paper"): return "doc.fill"
+        case let c where c.contains("wood"): return "hammer.fill"
         default: return "sparkles"
         }
     }
@@ -225,6 +292,12 @@ struct DashboardView: View {
         case let c where c.contains("sew"), let c where c.contains("quilt"): return Theme.sageGreen
         case let c where c.contains("embroider"): return Theme.honey
         case let c where c.contains("weav"): return Theme.dustyBlue
+        case let c where c.contains("macram"): return Theme.softCoral
+        case let c where c.contains("leather"): return Theme.deepPlum.opacity(0.9)
+        case let c where c.contains("bead"): return Theme.dustyBlue
+        case let c where c.contains("jewelry"), let c where c.contains("jewell"): return Theme.honey
+        case let c where c.contains("paper"): return Theme.sageGreen
+        case let c where c.contains("wood"): return Theme.softCoral
         default: return Theme.softCoral
         }
     }
@@ -294,6 +367,9 @@ struct DashboardView: View {
         .padding(Theme.Spacing.lg)
         .borderedCard()
         .staggeredAppear(index: index)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(count) pattern\(count == 1 ? "" : "s")")
+        .accessibilityHint("Status: \(title)")
     }
 
     // MARK: - Recent (section header + horizontal cards)
@@ -311,18 +387,23 @@ struct DashboardView: View {
                 HStack(spacing: Theme.Spacing.lg) {
                     ForEach(Array(store.patterns.prefix(5).enumerated()), id: \.element.id) { index, pattern in
                         NavigationLink(destination: PatternDetailView(store: store, pattern: pattern)) {
-                            PatternCardView(pattern: pattern, elevated: true)
+                            PatternCardView(pattern: pattern, userId: auth.currentUserId, elevated: true)
                                 .frame(width: 168)
                         }
                         .buttonStyle(.plain)
+                        .frame(width: 168)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                         .staggeredAppear(index: index + 5)
                     }
                 }
-                .padding(.vertical, Theme.Spacing.xs)
-                .padding(.horizontal, 2)
+                .padding(.vertical, Theme.Spacing.sm)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.bottom, Theme.Spacing.sm)
             }
-            .padding(.horizontal, -Theme.Spacing.lg)
         }
+        .padding(.bottom, Theme.Spacing.lg)
         .staggeredAppear(index: 5)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Recent patterns")
     }
 }

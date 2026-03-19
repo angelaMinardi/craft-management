@@ -114,6 +114,17 @@ enum Theme {
         static let large: CGFloat = 16
         static let pill: CGFloat = 100
     }
+
+    // MARK: - Premium (consistent copy across app)
+
+    enum Premium {
+        /// One-line value prop used in Settings, Paywall, and limit messages.
+        static let tagline = "Unlimited vault, project mode, Row Tracker widget, stash matching, and ad-free."
+        /// Short teaser for non-intrusive placements (Dashboard, list).
+        static let teaser = "Unlimited patterns, project mode, no ads & more with Premium"
+        /// CTA when user hits a limit or we want to surface Premium.
+        static let seePremiumTitle = "See Premium"
+    }
 }
 
 // MARK: - View Modifiers

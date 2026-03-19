@@ -24,12 +24,17 @@ struct PatternContentView: View {
     @State private var showEmptyWarning = false
     @State private var showSaveConfirmation = false
     @State private var savedRemovalCount = 0
+    @StateObject private var imageStore = PatternImageStore()
 
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                     metadataSection
+
+                    if !imageStore.images.isEmpty {
+                        photosFromPatternSection
+                    }
 
                     if isEditMode {
                         editModeContent
@@ -96,6 +101,50 @@ struct PatternContentView: View {
                 saveConfirmationToast
             }
         }
+        .task {
+            await imageStore.load(patternId: pattern.id)
+        }
+    }
+
+    // MARK: - Photos from pattern (website images)
+
+    private var photosFromPatternSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("Photos from pattern")
+                .font(Theme.Typography.headline)
+                .foregroundStyle(Theme.deepPlum)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    ForEach(imageStore.images) { img in
+                        CachedAsyncImage(url: URL(string: img.imageUrl), userId: auth.currentUserId) { phase in
+                            switch phase {
+                            case .loading:
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                    .fill(Theme.cardBackground)
+                                    .frame(width: 160, height: 160)
+                                    .overlay { ProgressView() }
+                            case .success(let image):
+                                image.resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 160, height: 160)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                            case .failure:
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                    .fill(Theme.cardBackground)
+                                    .frame(width: 160, height: 160)
+                                    .overlay {
+                                        Image(systemName: "photo")
+                                            .font(.title2)
+                                            .foregroundStyle(Theme.deepPlum.opacity(0.2))
+                                    }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
     }
 
     // MARK: - Effective Content
@@ -105,7 +154,8 @@ struct PatternContentView: View {
     }
 
     private var effectiveContent: String? {
-        guard let c = pattern.sourceContent, !c.isEmpty else { return nil }
+        let c = PatternStepParser.truncateAtEndOfPattern(pattern.sourceContent) ?? pattern.sourceContent
+        guard let c = c, !c.isEmpty else { return nil }
         let isRavelry = !pattern.sourceUrl.isEmpty && pattern.sourceUrl.lowercased().contains("ravelry")
         if isRavelry, PatternStepParser.looksLikeRavelryChrome(c) { return nil }
         return c
@@ -392,6 +442,7 @@ struct PatternContentView: View {
         VStack {
             Spacer()
             HStack(spacing: Theme.Spacing.sm) {
+                SpriteMascotView.idle(size: 40)
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Theme.sageGreen)
                 Text("Cleaned up \(savedRemovalCount) block\(savedRemovalCount == 1 ? "" : "s")")
@@ -414,19 +465,20 @@ struct PatternContentView: View {
     // MARK: - Empty State
 
     private var emptyContentView: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 40))
-                .foregroundStyle(Theme.deepPlum.opacity(0.3))
+        VStack(spacing: Theme.Spacing.xl) {
+            SpriteMascotView.idle(size: 100)
             Text("No extracted content available")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Theme.deepPlum)
+            Text("Try opening the original page in a browser and use Share to save it with content.")
                 .font(Theme.Typography.body)
-                .foregroundStyle(Theme.deepPlum.opacity(0.6))
-            Text("Try opening the original page in browser.")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.deepPlum.opacity(0.4))
+                .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
+        .padding(.vertical, Theme.Spacing.xxl)
+        .padding(.horizontal, Theme.Spacing.xl)
+        .borderedCard()
     }
 
     // MARK: - Edit Mode Actions

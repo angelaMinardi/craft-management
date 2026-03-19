@@ -1,8 +1,10 @@
 # Deploy the extract-pattern-from-video Edge Function
 
+> **Status:** Legacy/optional path. Core in-app AI flow is Gemini-based. Keep this only if you still use the Supabase Edge Function YouTube transcript pipeline.
+
 This function lets the Pattern Vault share extension turn a **YouTube URL** into pattern metadata (title, summary, tags, materials, etc.) by fetching the video’s captions and running Claude on the transcript.
 
-> **Follow-up (on hold):** When Anthropic credits refresh, come back and verify the full flow: share a YouTube URL from the app and confirm the Edge Function returns pattern JSON and the share sheet saves the pattern. Until then, use the options in **“What you can do without the API”** below.
+> If this function is disabled, the app should continue to support non-function fallback behavior for shared URLs.
 
 ---
 
@@ -34,7 +36,7 @@ While the Edge Function is unavailable (e.g. Anthropic credits exhausted) or not
    From https://console.anthropic.com/ — used by the function to call Claude.
 
 4. **Your Supabase project**  
-   You need the **Project ID** (e.g. from SUPABASE_SETUP.md: `fbzbnztvanuiijzymckn`).
+   You need the **Project ID** (see setup guidance in `docs/SETUP.md`).
 
 ---
 

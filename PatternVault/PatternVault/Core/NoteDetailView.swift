@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct NoteDetailView: View {
+    @EnvironmentObject var auth: AuthService
     @ObservedObject var noteStore: ProjectNoteStore
     let note: ProjectNote
     let patternId: UUID
@@ -38,8 +39,11 @@ struct NoteDetailView: View {
 
                 // Photo
                 if let photoUrl = current.photoUrl, let url = URL(string: photoUrl) {
-                    AsyncImage(url: url) { phase in
+                    CachedAsyncImage(url: url, userId: auth.currentUserId) { phase in
                         switch phase {
+                        case .loading:
+                            ProgressView()
+                                .frame(maxWidth: .infinity, minHeight: 100)
                         case .success(let image):
                             image
                                 .resizable()
@@ -49,11 +53,6 @@ struct NoteDetailView: View {
                             Label("Photo unavailable", systemImage: "exclamationmark.triangle")
                                 .foregroundStyle(Theme.deepPlum.opacity(0.5))
                                 .font(Theme.Typography.caption)
-                        case .empty:
-                            ProgressView()
-                                .frame(maxWidth: .infinity, minHeight: 100)
-                        @unknown default:
-                            EmptyView()
                         }
                     }
                 }
@@ -110,8 +109,9 @@ struct NoteDetailView: View {
     }
 
     private func deleteNote() {
+        guard let userId = auth.currentUserId else { return }
         Task {
-            await noteStore.delete(noteId: current.id)
+            await noteStore.delete(noteId: current.id, userId: userId)
             dismiss()
         }
     }

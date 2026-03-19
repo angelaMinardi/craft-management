@@ -1,0 +1,245 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+import CTA from '../components/CTA.astro';
+
+const features = [
+  {
+    title: 'Save anything from anywhere',
+    description: 'Share a link from Ravelry, Etsy, TikTok, YouTube, or any blog. Pattern Vault saves it and recognizes the source — add a title or just save and go.',
+    icon: '🔗',
+  },
+  {
+    title: 'Track your journey',
+    description: 'Want to Make, In Progress, or Completed. Move patterns between stages and see at a glance how many you\'ve saved and how many you\'ve finished.',
+    icon: '✓',
+  },
+  {
+    title: 'Project notes that stick',
+    description: 'Yarn info, modifications, progress updates — all attached to the pattern. Timestamped notes and photos so you never lose track of what you did.',
+    icon: '📝',
+  },
+  {
+    title: 'Tags and filters',
+    description: 'Crochet, knitting, easy, blanket, gift idea — search and filter so "show me all my beginner crochet blanket patterns" is one tap.',
+    icon: '🏷️',
+  },
+];
+---
+
+<BaseLayout
+  title="Pattern Vault — Your craft library, in your pocket"
+  description="Save patterns from Ravelry, Etsy, TikTok, and anywhere else. Track projects, add notes, and keep everything in one place. For crafters who collect more patterns than they can make."
+>
+  <div class="home">
+    <section class="hero gradient-mesh" aria-labelledby="hero-heading">
+      <div class="hero-mascot-wrap">
+        <img src="/images/mascot.png" alt="Pattern Vault mascot" class="hero-mascot" width="160" height="160" />
+      </div>
+      <h1 id="hero-heading" class="hero-title">
+        Your craft library,<br /><span class="hero-title-accent">in your pocket</span>
+      </h1>
+      <p class="hero-subtitle">
+        Pattern Vault is the one place where every pattern, tutorial, and project idea — no matter where you found it — gets saved, organized, and tracked from "I want to make this" to "I finished it."
+      </p>
+      <p class="hero-tagline">
+        Save from Ravelry, Etsy, TikTok, YouTube, blogs. Track status. Add notes. One thread that ties your crafting world together.
+      </p>
+      <div class="hero-cta">
+        <CTA href="#" label="Download on the App Store" primary={true} />
+      </div>
+      <p class="hero-note">
+        Coming soon on the App Store. iOS only.
+      </p>
+    </section>
+
+    <section class="features" aria-labelledby="features-heading">
+      <h2 id="features-heading" class="section-title reveal">How it works</h2>
+      <div class="features-grid">
+        {features.map((f, i) => (
+          <div class="feature-wrap reveal" style={`--reveal-order: ${i}`}>
+            <FeatureCard title={f.title} description={f.description} icon={f.icon} />
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section class="cta-section gradient-mesh" aria-labelledby="cta-heading">
+      <h2 id="cta-heading" class="visually-hidden">Get the app</h2>
+      <p class="cta-text reveal">Your private craft notebook — made by crafters, for crafters.</p>
+      <div class="reveal">
+        <CTA href="#" label="Get Pattern Vault" primary={true} />
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  function initReveals() {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    const els = document.querySelectorAll('.reveal');
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('is-visible');
+          }
+        });
+      },
+      { rootMargin: '0px 0px -8% 0px', threshold: 0 }
+    );
+    els.forEach((el) => io.observe(el));
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReveals);
+  } else {
+    initReveals();
+  }
+</script>
+
+<style>
+  .home {
+    max-width: var(--content-wide);
+    margin: 0 auto;
+  }
+
+  .hero {
+    text-align: center;
+    padding: var(--space-4xl) var(--space-lg) var(--space-3xl);
+    max-width: var(--content-max);
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .hero-mascot-wrap {
+    margin: 0 auto var(--space-xl);
+    filter: drop-shadow(var(--shadow-glow-coral));
+  }
+
+  .hero-mascot {
+    width: 160px;
+    height: 160px;
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .hero-title {
+    font-size: var(--text-hero);
+    font-weight: 800;
+    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-tight);
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-lg);
+    animation: fade-in-up var(--duration-slow) var(--ease-out-expo) 0.2s both;
+  }
+
+  .hero-title-accent {
+    background: linear-gradient(135deg, var(--soft-coral), var(--sage-green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-title::after {
+    content: '';
+    display: block;
+    width: 4rem;
+    height: 4px;
+    margin: var(--space-md) auto 0;
+    background: linear-gradient(90deg, var(--soft-coral), var(--sage-green));
+    border-radius: var(--radius-full);
+    animation: fade-in-up var(--duration-slow) var(--ease-out-expo) 0.35s both;
+  }
+
+  .hero-subtitle {
+    font-size: var(--text-subtitle);
+    line-height: var(--line-height-relaxed);
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-md);
+    animation: fade-in-up var(--duration-slow) var(--ease-out-expo) 0.4s both;
+  }
+
+  .hero-tagline {
+    font-size: var(--text-body);
+    color: var(--text-muted);
+    margin: 0 0 var(--space-xl);
+    line-height: var(--line-height-relaxed);
+    animation: fade-in-up var(--duration-slow) var(--ease-out-expo) 0.5s both;
+  }
+
+  .hero-cta {
+    margin-bottom: var(--space-md);
+    animation: fade-in-up var(--duration-slow) var(--ease-out-expo) 0.6s both;
+  }
+
+  .hero-note {
+    font-size: var(--text-small);
+    color: var(--text-muted);
+    margin: 0;
+    animation: fade-in-up var(--duration-slow) var(--ease-out-expo) 0.7s both;
+  }
+
+  .section-title {
+    font-size: var(--text-title);
+    font-weight: 700;
+    letter-spacing: var(--letter-tight);
+    color: var(--deep-plum);
+    text-align: center;
+    margin: 0 0 var(--space-2xl);
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s var(--ease-out-expo), transform 0.7s var(--ease-out-expo);
+  }
+
+  .reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .feature-wrap.reveal {
+    transition-delay: calc(var(--reveal-order, 0) * 0.1s);
+  }
+
+  .features {
+    padding: var(--space-4xl) 0;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-xl);
+  }
+
+  .cta-section {
+    text-align: center;
+    padding: var(--space-4xl) var(--space-lg);
+    border-top: 1px solid var(--border);
+  }
+
+  .cta-text {
+    font-size: var(--text-subtitle);
+    font-weight: 600;
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-lg);
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>

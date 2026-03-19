@@ -5,6 +5,7 @@
 
 import SwiftUI
 import WebKit
+import UIKit
 
 struct PatternDetailView: View {
     @EnvironmentObject var auth: AuthService
@@ -30,10 +31,24 @@ struct PatternDetailView: View {
     @State private var logTimeNote = ""
     @State private var showYarnColorSheet = false
     @State private var showStepEditor = false
+    @State private var isAnalyzingSteps = false
+    @State private var aiStepErrorMessage: String?
     @State private var showVoiceRowSheet = false
     @State private var voiceRowSuccessMessage: String?
     @State private var junkFeedbackMessage: String?
+    @State private var showWandTip = false
+    @State private var makes: [PatternMake] = []
+    @State private var selectedMakeId: UUID?
+    @State private var showAddMakeSheet = false
+    @State private var showPaywall = false
+    @State private var shareFinishedImage: UIImage?
+    @State private var stepTabSelection: Int = 0
+    @State private var parsedStepsCache: [PatternStep] = []
+    @State private var isLoadingStepContent = true
     @Environment(\.dismiss) private var dismiss
+
+    private static let hasSeenWandTipKey = "PatternVaultHasSeenWandTip"
+    private let makeRepo = PatternMakeRepository()
     @ObservedObject private var progressStore = PatternProgressStore.shared
     @ObservedObject private var junkStore = JunkPhraseStore.shared
     @StateObject private var voiceRowService = VoiceRowService()
@@ -44,58 +59,79 @@ struct PatternDetailView: View {
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // MARK: - Hero
-                    heroSection
+            GeometryReader { geo in
+                let contentWidth = max(geo.size.width, 1)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // MARK: - Hero
+                        heroSection
+                            .frame(width: contentWidth)
 
-                    // MARK: - Pattern header card (mascot + title + Download)
-                    patternHeaderCard
+                        // MARK: - Pattern header card (mascot + title + Download)
+                        patternHeaderCard
+                            .frame(width: contentWidth)
 
-                    // MARK: - Main content (padded)
-                    VStack(spacing: Theme.Spacing.xl) {
-                        titleSection
-                        statusPicker
+                        // MARK: - Main content (padded)
+                        VStack(spacing: Theme.Spacing.xl) {
+                            titleSection
+                            statusPicker
+                            if current.status == .wantToMake {
+                                startProjectBanner
+                            }
+                            makePickerSection
 
-                        // MARK: - Step 1 / Progress (mockup-style)
-                        patternStepSection
+                            if showWandTip {
+                                wandTipBanner
+                            }
 
-                    if hasPatternInfo {
-                        patternInfoSection
-                    }
+                            // MARK: - Step 1 / Progress (mockup-style)
+                            patternStepSection
 
-                    if !yarnLinkStore.links.isEmpty {
-                        yarnLinksSection
-                    }
-                }
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.top, Theme.Spacing.xl)
+                        if hasPatternInfo {
+                            patternInfoSection
+                        }
 
-                // MARK: - Photo gallery (full-bleed horizontal scroll)
-                if !imageStore.images.isEmpty {
-                    photoGallery
+                        if !yarnLinkStore.links.isEmpty {
+                            yarnLinksSection
+                        }
+                        if !similarPatterns.isEmpty {
+                            similarInVaultSection
+                        }
+                        }
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .frame(width: contentWidth)
                         .padding(.top, Theme.Spacing.xl)
-                }
 
-                // MARK: - Bottom sections (padded)
-                VStack(spacing: Theme.Spacing.xl) {
-                    sourceSection
-                    tagsSection
-                    notesSection
+                        // MARK: - Photo gallery (full-bleed horizontal scroll)
+                        if !imageStore.images.isEmpty {
+                            photoGallery
+                                .padding(.top, Theme.Spacing.xl)
+                        }
 
-                    if let error = noteStore.errorMessage {
-                        Text(error)
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.softCoral)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        // MARK: - Bottom sections (padded)
+                        VStack(spacing: Theme.Spacing.xl) {
+                            sourceSection
+                            tagsSection
+                            notesSection
+
+                            if let error = noteStore.errorMessage {
+                                Text(error)
+                                    .font(Theme.Typography.caption)
+                                    .foregroundStyle(Theme.softCoral)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            deleteButton
+                        }
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .frame(width: contentWidth)
+                        .padding(.top, Theme.Spacing.xl)
+                        .padding(.bottom, 120)
                     }
-
-                    deleteButton
                 }
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.top, Theme.Spacing.xl)
-                .padding(.bottom, 100)
             }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear.frame(height: 84)
             }
             .background(Theme.screenGradient.ignoresSafeArea())
 
@@ -104,6 +140,45 @@ struct PatternDetailView: View {
         }
         .navigationTitle(current.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(current.title)
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.deepPlum)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    if current.status == .completed {
+                        Button {
+                            presentFinishedProjectShareCard()
+                        } label: {
+                            Label("Share finished project", systemImage: "square.and.arrow.up")
+                        }
+                    }
+                    if let url = URL(string: current.sourceUrl) {
+                        ShareLink(item: url, subject: Text(current.title), preview: SharePreview(current.title, image: Image(systemName: "doc.text"))) {
+                            Label("Share this pattern", systemImage: "link")
+                        }
+                    }
+                    Button {
+                        printCurrentStep()
+                    } label: {
+                        Label("Print current step", systemImage: "printer")
+                    }
+                    if current.sourceContent != nil {
+                        Button {
+                            printFullContent()
+                        } label: {
+                            Label("Print full pattern", systemImage: "doc.text")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
         .confirmationDialog("Delete Pattern", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) { deletePattern() }
             Button("Cancel", role: .cancel) { }
@@ -115,6 +190,18 @@ struct PatternDetailView: View {
         } message: {
             if let msg = junkFeedbackMessage { Text(msg) }
         }
+        .alert("Analyze steps", isPresented: Binding(get: { aiStepErrorMessage != nil }, set: { if !$0 { aiStepErrorMessage = nil } })) {
+            Button("OK") { aiStepErrorMessage = nil }
+            Button(Theme.Premium.seePremiumTitle) {
+                aiStepErrorMessage = nil
+                showPaywall = true
+            }
+        } message: {
+            if let msg = aiStepErrorMessage { Text(msg) }
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
         .sheet(isPresented: $showAddNote) {
             AddNoteView(noteStore: noteStore, patternId: current.id)
         }
@@ -123,22 +210,24 @@ struct PatternDetailView: View {
         }
         .sheet(isPresented: $showWebView) {
             NavigationStack {
-                InAppWebView(url: URL(string: current.sourceUrl)!)
-                    .navigationTitle("Pattern Page")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Done") { showWebView = false }
-                        }
-                        ToolbarItem(placement: .primaryAction) {
-                            if let url = URL(string: current.sourceUrl) {
+                if let url = URL(string: current.sourceUrl) {
+                    InAppWebView(url: url)
+                        .navigationTitle("Pattern Page")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Done") { showWebView = false }
+                            }
+                            ToolbarItem(placement: .primaryAction) {
                                 Link(destination: url) {
                                     Image(systemName: "safari")
                                 }
                             }
                         }
-                    }
-            }
+                } else {
+                    Text("Invalid URL")
+                        .foregroundColor(.secondary)
+                }
         }
         .sheet(isPresented: $showPdfViewer) {
             if let pdfUrlString = current.pdfUrl, let pdfURL = URL(string: pdfUrlString) {
@@ -155,19 +244,68 @@ struct PatternDetailView: View {
             }
         }
         .task {
+            refreshPatternSteps()
+            stepTabSelection = currentStepIndex
+            if canShowAnalyzeStepsWand && !UserDefaults.standard.bool(forKey: Self.hasSeenWandTipKey) {
+                showWandTip = true
+            }
+
             async let notes: () = noteStore.load(patternId: current.id)
+            async let tags: () = tagStore.loadPatternTags(patternId: current.id)
+            _ = await (notes, tags)
+
             async let allTags: () = tagStore.loadAllTags()
-            async let patternTags: () = tagStore.loadPatternTags(patternId: current.id)
             async let images: () = imageStore.load(patternId: current.id)
-            async let yarnLinks: () = yarnLinkStore.load(patternId: current.id)
-            _ = await (notes, allTags, patternTags, images, yarnLinks)
+            if let userId = auth.currentUserId {
+                async let yarnLinks: () = yarnLinkStore.load(patternId: current.id, userId: userId)
+                async let makesLoad: () = loadMakes()
+                _ = await (allTags, images, yarnLinks, makesLoad)
+            } else {
+                async let makesLoad: () = loadMakes()
+                _ = await (allTags, images, makesLoad)
+            }
         }
         .refreshable {
+            refreshPatternSteps()
             await noteStore.load(patternId: current.id)
             await tagStore.loadPatternTags(patternId: current.id)
             await imageStore.load(patternId: current.id)
-            await yarnLinkStore.load(patternId: current.id)
+            if let userId = auth.currentUserId {
+                await yarnLinkStore.load(patternId: current.id, userId: userId)
+            }
+            await loadMakes()
         }
+        .onChange(of: showStepEditor) { _, isShowing in
+            if !isShowing {
+                refreshPatternSteps()
+                stepTabSelection = currentStepIndex
+            }
+        }
+        .onChange(of: current.parsedSteps) { _, _ in
+            refreshPatternSteps()
+            stepTabSelection = currentStepIndex
+        }
+        .onChange(of: stepTabSelection) { _, newIndex in
+            let steps = patternSteps
+            guard !steps.isEmpty else { return }
+            progressStore.setCurrentStep(patternId: current.id, makeId: selectedMakeId, index: newIndex, stepCount: steps.count)
+        }
+        .sheet(isPresented: $showAddMakeSheet) {
+            AddPatternMakeView(patternId: current.id, existingCount: makes.count) { newMake in
+                makes.append(newMake)
+                selectedMakeId = newMake.id
+            }
+        }
+    }
+
+    private func loadMakes() async {
+        guard let userId = auth.currentUserId else { return }
+        do {
+            makes = try await makeRepo.fetchMakes(patternId: current.id, userId: userId)
+            if selectedMakeId != nil && !makes.contains(where: { $0.id == selectedMakeId }) {
+                selectedMakeId = nil
+            }
+        } catch { }
     }
 
     // MARK: - Hero Image
@@ -175,8 +313,13 @@ struct PatternDetailView: View {
     private var heroSection: some View {
         ZStack(alignment: .bottom) {
             if let thumbnailUrl = current.thumbnailUrl, let imageURL = URL(string: thumbnailUrl) {
-                AsyncImage(url: imageURL) { phase in
+                CachedAsyncImage(url: imageURL, userId: auth.currentUserId) { phase in
                     switch phase {
+                    case .loading:
+                        Rectangle()
+                            .fill(Theme.warmCream)
+                            .frame(height: 260)
+                            .overlay { ProgressView() }
                     case .success(let image):
                         image.resizable()
                             .aspectRatio(contentMode: .fill)
@@ -184,11 +327,6 @@ struct PatternDetailView: View {
                             .clipped()
                     case .failure:
                         heroPlaceholder
-                    default:
-                        Rectangle()
-                            .fill(Theme.warmCream)
-                            .frame(height: 260)
-                            .overlay { ProgressView() }
                     }
                 }
             } else {
@@ -256,6 +394,9 @@ struct PatternDetailView: View {
                 Text(current.title)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.deepPlum)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 52)
 
                 HStack(spacing: 6) {
@@ -315,17 +456,52 @@ struct PatternDetailView: View {
 
     // MARK: - Steps / progress (from PatternStepParser + PatternProgressStore)
 
-    private var patternSteps: [PatternStep] {
+    /// True when the user can tap the wand to analyze steps (has saved content or a PDF to fetch).
+    private var canShowAnalyzeStepsWand: Bool {
+        let trimmed = current.sourceContent?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmed.isEmpty { return true }
+        if let url = current.pdfUrl, !url.isEmpty, URL(string: url) != nil { return true }
+        return false
+    }
+
+    private var patternSteps: [PatternStep] { parsedStepsCache }
+
+    private func refreshPatternSteps() {
+        let contentForSteps = PatternStepParser.truncateAtEndOfPattern(current.sourceContent) ?? current.sourceContent
         let layout = progressStore.customStepLayout(for: current.id)
-        let content = current.sourceContent
-        let hash = contentHashForStepLayout(content)
-        if let layout = layout, layout.contentHash == hash, let content = content, !content.isEmpty {
+        let aiSteps = current.decodedParsedSteps
+        isLoadingStepContent = true
+        Task {
+            // Yield so the push animation can complete before heavier parsing work.
+            await Task.yield()
+            parsedStepsCache = computePatternSteps(
+                sourceContent: contentForSteps,
+                patternDescription: current.patternDescription,
+                layout: layout,
+                aiSteps: aiSteps
+            )
+            stepTabSelection = min(max(0, stepTabSelection), max(0, parsedStepsCache.count - 1))
+            isLoadingStepContent = false
+        }
+    }
+
+    private func computePatternSteps(
+        sourceContent: String?,
+        patternDescription: String?,
+        layout: CustomStepLayout?,
+        aiSteps: [ParsedStep]?
+    ) -> [PatternStep] {
+        let hash = contentHashForStepLayout(sourceContent)
+        if let layout = layout, layout.contentHash == hash, let content = sourceContent, !content.isEmpty {
             let allBlocks = ContentBlockParser.parse(content)
             let blocks = allBlocks.filter { $0.kind != .paragraphBreak }
-            let steps = buildStepsFromLayout(layout, blocks: blocks)
-            if !steps.isEmpty { return steps }
+            let layoutSteps = buildStepsFromLayout(layout, blocks: blocks)
+            if !layoutSteps.isEmpty { return layoutSteps }
         }
-        return PatternStepParser.parseSteps(sourceContent: current.sourceContent, patternDescription: current.patternDescription)
+        if let aiSteps, !aiSteps.isEmpty {
+            return aiSteps.map { PatternStep(title: $0.title, body: $0.body) }
+        }
+        return PatternStepParser.parseSteps(sourceContent: sourceContent, patternDescription: patternDescription)
     }
 
     private func buildStepsFromLayout(_ layout: CustomStepLayout, blocks: [ContentBlock]) -> [PatternStep] {
@@ -344,12 +520,86 @@ struct PatternDetailView: View {
             let title = i < titles.count ? titles[i] : "Step \(i + 1)"
             result.append(PatternStep(title: title, body: body.trimmingCharacters(in: .whitespacesAndNewlines)))
         }
-        return result.isEmpty ? PatternStepParser.parseSteps(sourceContent: current.sourceContent, patternDescription: current.patternDescription) : result
+        return result
+    }
+
+    private func analyzeStepsWithAI() {
+        guard let userId = auth.currentUserId else {
+            aiStepErrorMessage = "You must be signed in to analyze steps."
+            return
+        }
+        if !SubscriptionStore.shared.canUseAI() {
+            aiStepErrorMessage = "You've used your 5 free AI analyses this month. Upgrade to Premium for unlimited."
+            return
+        }
+        isAnalyzingSteps = true
+        aiStepErrorMessage = nil
+        #if DEBUG
+        print("[AISteps] Starting AI analysis for pattern: \(current.title)")
+        #endif
+        Task {
+            do {
+                // Resolve content: use sourceContent if substantial; else fetch and extract from PDF when pdfUrl is set.
+                let existingContent = PatternStepParser.truncateAtEndOfPattern(current.sourceContent) ?? current.sourceContent
+                let trimmedExisting = existingContent?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                var contentToUse: String
+                var contentCameFromPdf = false
+
+                if !trimmedExisting.isEmpty {
+                    contentToUse = trimmedExisting
+                } else if let pdfUrlString = current.pdfUrl, !pdfUrlString.isEmpty, let pdfURL = URL(string: pdfUrlString) {
+                    let (data, urlResponse) = try await URLSession.shared.data(from: pdfURL)
+                    guard let http = urlResponse as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                        aiStepErrorMessage = "Couldn't download the pattern PDF. Check your connection and try again."
+                        isAnalyzingSteps = false
+                        return
+                    }
+                    guard let extracted = PDFTextExtractor.extractText(from: data), !extracted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                        aiStepErrorMessage = "Couldn't extract text from the PDF. The file may be scanned images only."
+                        isAnalyzingSteps = false
+                        return
+                    }
+                    contentToUse = extracted.trimmingCharacters(in: .whitespacesAndNewlines)
+                    contentCameFromPdf = true
+                } else {
+                    aiStepErrorMessage = "No pattern content to analyze. Open the pattern in a browser and use Share to save it with content, paste content in Edit steps, or add a pattern that has a PDF."
+                    isAnalyzingSteps = false
+                    return
+                }
+
+                let steps = try await AIStepParserService.parseSteps(from: contentToUse)
+                #if DEBUG
+                print("[AISteps] Got \(steps.count) steps from AI")
+                for (i, step) in steps.enumerated() {
+                    print("[AISteps]   \(i + 1). \(step.title): \(step.body.prefix(60))...")
+                }
+                #endif
+                if !steps.isEmpty {
+                    await store.saveParsedSteps(pattern: current, userId: userId, steps: steps)
+                    _ = await SubscriptionStore.shared.recordAIUse(userId: userId)
+                    progressStore.clearCustomStepLayout(patternId: current.id)
+                    if contentCameFromPdf {
+                        await store.updateSourceContent(pattern: current, userId: userId, newContent: contentToUse)
+                    }
+                    #if DEBUG
+                    print("[AISteps] Saved to DB successfully")
+                    #endif
+                } else {
+                    aiStepErrorMessage = "AI didn’t return any steps. Try editing steps manually with the pencil icon."
+                }
+            } catch {
+                #if DEBUG
+                print("[AISteps] ERROR: \(error.localizedDescription)")
+                #endif
+                aiStepErrorMessage = error.localizedDescription
+            }
+            isAnalyzingSteps = false
+        }
     }
 
     private var currentStepIndex: Int {
         let steps = patternSteps
-        let stored = progressStore.progress(for: current.id)?.currentStepIndex ?? 0
+        let stored = progressStore.progress(for: current.id, makeId: selectedMakeId)?.currentStepIndex ?? 0
         return min(max(0, stored), max(0, steps.count - 1))
     }
 
@@ -364,12 +614,101 @@ struct PatternDetailView: View {
         return Double(index + 1) / Double(stepCount)
     }
 
+    private var wandTipBanner: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "lightbulb.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(Theme.honey)
+            Text("Tap the wand to split this pattern into steps.")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.deepPlum)
+            Spacer(minLength: 8)
+            Button("Got it") {
+                markWandTipSeen()
+                showWandTip = false
+            }
+            .font(Theme.Typography.caption)
+            .foregroundStyle(Theme.sageGreen)
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.honey.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
+    }
+
+    private func markWandTipSeen() {
+        UserDefaults.standard.set(true, forKey: Self.hasSeenWandTipKey)
+    }
+
     private var patternStepSection: some View {
         let steps = patternSteps
         let index = currentStepIndex
         return Group {
-            if steps.isEmpty {
-                EmptyView()
+            if isLoadingStepContent {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    SectionHeaderView(title: "Steps")
+                    HStack(spacing: Theme.Spacing.sm) {
+                        ProgressView()
+                            .tint(Theme.softCoral)
+                        Text("Preparing steps...")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    }
+                    .padding(Theme.Spacing.lg)
+                    .cardStyle()
+                }
+            } else if isAnalyzingSteps && current.parsedSteps == nil {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    SectionHeaderView(title: "Steps")
+                    VStack(spacing: Theme.Spacing.md) {
+                        ProgressView()
+                            .tint(Theme.softCoral)
+                        Text("Analyzing pattern steps...")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(Theme.Spacing.xl)
+                    .cardStyle()
+                }
+            } else if steps.isEmpty {
+                if canShowAnalyzeStepsWand && !isAnalyzingSteps {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        HStack {
+                            SectionHeaderView(title: "Steps")
+                            Spacer()
+                            Button {
+                                markWandTipSeen()
+                                showWandTip = false
+                                analyzeStepsWithAI()
+                            } label: {
+                                Image(systemName: "wand.and.stars")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(Theme.dustyBlue)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Analyze steps with AI")
+                        }
+                        Text("No steps yet. Tap the wand to analyze this pattern into steps.")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    }
+                } else if isAnalyzingSteps {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        SectionHeaderView(title: "Steps")
+                        ProgressView()
+                            .tint(Theme.softCoral)
+                        Text("Analyzing pattern steps...")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        SectionHeaderView(title: "Steps")
+                        Text("No pattern content or PDF. Save content via Share, paste in Edit steps, or import a pattern with a PDF to analyze steps.")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    }
+                }
             } else {
                 VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                     VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -377,56 +716,71 @@ struct PatternDetailView: View {
                             SectionHeaderView(title: steps.count > 1 ? "Step \(index + 1) of \(steps.count)" : "Step 1")
                                 .accessibilityAddTraits(.isHeader)
                             Spacer()
+                            if canShowAnalyzeStepsWand && !isAnalyzingSteps {
+                                Button {
+                                    markWandTipSeen()
+                                    showWandTip = false
+                                    analyzeStepsWithAI()
+                                } label: {
+                                    Image(systemName: "wand.and.stars")
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(Theme.dustyBlue)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(current.parsedSteps == nil ? "Analyze steps with AI" : "Re-analyze steps with AI")
+                            }
+                            if isAnalyzingSteps {
+                                ProgressView()
+                                    .tint(Theme.softCoral)
+                            }
                             Button {
                                 showStepEditor = true
                             } label: {
-                            Image(systemName: "pencil.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundStyle(Theme.softCoral)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Edit steps")
-                        if steps.count > 1 {
-                            HStack(spacing: Theme.Spacing.xs) {
-                                Button {
-                                    progressStore.setCurrentStep(patternId: current.id, index: index - 1, stepCount: steps.count)
-                                } label: {
-                                    Image(systemName: "chevron.left.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundStyle(index > 0 ? Theme.softCoral : Theme.deepPlum.opacity(0.2))
+                                Image(systemName: "pencil.circle.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(Theme.softCoral)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Edit steps")
+                            if steps.count > 1 {
+                                HStack(spacing: Theme.Spacing.xs) {
+                                    Button {
+                                        withAnimation { stepTabSelection = max(0, index - 1) }
+                                    } label: {
+                                        Image(systemName: "chevron.left.circle.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundStyle(index > 0 ? Theme.softCoral : Theme.deepPlum.opacity(0.2))
+                                    }
+                                    .disabled(index <= 0)
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Previous step")
+                                    .accessibilityHint("Step \(index) of \(steps.count)")
+                                    Button {
+                                        withAnimation { stepTabSelection = min(steps.count - 1, index + 1) }
+                                    } label: {
+                                        Image(systemName: "chevron.right.circle.fill")
+                                            .font(.system(size: 22))
+                                            .foregroundStyle(index < steps.count - 1 ? Theme.softCoral : Theme.deepPlum.opacity(0.2))
+                                    }
+                                    .disabled(index >= steps.count - 1)
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Next step")
+                                    .accessibilityHint("Step \(index + 2) of \(steps.count)")
                                 }
-                                .disabled(index <= 0)
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Previous step")
-                                .accessibilityHint("Step \(index) of \(steps.count)")
-                                Button {
-                                    progressStore.setCurrentStep(patternId: current.id, index: index + 1, stepCount: steps.count)
-                                } label: {
-                                    Image(systemName: "chevron.right.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundStyle(index < steps.count - 1 ? Theme.softCoral : Theme.deepPlum.opacity(0.2))
-                                }
-                                .disabled(index >= steps.count - 1)
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Next step")
-                                .accessibilityHint("Step \(index + 2) of \(steps.count)")
                             }
                         }
+                        if steps[index].title != "Step \(index + 1)" {
+                            Text(steps[index].title)
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                        }
                     }
-                    if steps[index].title != "Step \(index + 1)" {
-                        Text(steps[index].title)
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.deepPlum.opacity(0.7))
-                    }
-                    }
+
                     VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                         ProgressView(value: stepProgressFraction, total: 1)
                             .tint(Theme.softCoral)
                             .accessibilityValue("\(Int(stepProgressFraction * 100)) percent complete")
-                        Text(steps[index].body)
-                            .font(Theme.Typography.body)
-                            .foregroundStyle(Theme.deepPlum)
-                            .lineSpacing(4)
+                        FormattedStepBodyView(stepBody: steps[index].body)
                         HStack(spacing: Theme.Spacing.sm) {
                             Text("\(Int(stepProgressFraction * 100))%")
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -441,7 +795,7 @@ struct PatternDetailView: View {
                         }
                     }
                     .padding(Theme.Spacing.lg)
-                    .borderedCard()
+                    .modifier(StepCardStyle(isCurrentStep: index == currentStepIndex))
                     .contextMenu {
                         Button(role: .destructive) {
                             markStepAsNotPartOfPattern(stepIndex: index, steps: steps)
@@ -449,17 +803,51 @@ struct PatternDetailView: View {
                             Label("Not part of pattern", systemImage: "eye.slash")
                         }
                     }
+                    .highPriorityGesture(
+                        DragGesture(minimumDistance: 20)
+                            .onEnded { value in
+                                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                                if value.translation.width <= -60, index < steps.count - 1 {
+                                    let next = index + 1
+                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                        stepTabSelection = next
+                                    }
+                                    progressStore.setCurrentStep(patternId: current.id, makeId: selectedMakeId, index: next, stepCount: steps.count)
+                                } else if value.translation.width >= 60, index > 0 {
+                                    let prev = index - 1
+                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                        stepTabSelection = prev
+                                    }
+                                    progressStore.setCurrentStep(patternId: current.id, makeId: selectedMakeId, index: prev, stepCount: steps.count)
+                                }
+                            }
+                    )
+
+                    if index == currentStepIndex, index < steps.count - 1 {
+                        Button {
+                            withAnimation { stepTabSelection = index + 1 }
+                        } label: {
+                            HStack(spacing: Theme.Spacing.xs) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 14))
+                                Text("Mark step complete")
+                                    .font(Theme.Typography.caption)
+                            }
+                            .foregroundStyle(Theme.sageGreen)
+                        }
+                        .buttonStyle(.plain)
+                    }
 
                     Button { showUpdateProgressSheet = true } label: {
                         HStack(spacing: Theme.Spacing.sm) {
                             Image(systemName: "chart.bar.fill")
                                 .font(.system(size: 14))
                                 .foregroundStyle(Theme.sageGreen)
-                            Text("Update progress (rows)")
+                            Text("Update progress")
                                 .font(Theme.Typography.caption)
                                 .foregroundStyle(Theme.deepPlum.opacity(0.7))
                             Spacer()
-                            if let data = progressStore.progress(for: current.id), let rc = data.rowsCompleted, let tr = data.totalRows, tr > 0 {
+                            if let data = progressStore.progress(for: current.id, makeId: selectedMakeId), let rc = data.rowsCompleted, let tr = data.totalRows, tr > 0 {
                                 Text("\(rc) of \(tr)")
                                     .font(Theme.Typography.caption2)
                                     .foregroundStyle(Theme.deepPlum.opacity(0.5))
@@ -474,7 +862,8 @@ struct PatternDetailView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Update progress")
-                    .accessibilityHint("Set rows completed and total rows for this pattern")
+                    .accessibilityHint("Set progress; use rows for knitting/crochet or leave blank and use notes")
+
                 }
             }
         }
@@ -484,10 +873,15 @@ struct PatternDetailView: View {
         .sheet(isPresented: $showStepEditor) {
             StepEditorView(pattern: current, progressStore: progressStore, isPresented: $showStepEditor)
         }
+        .sheet(isPresented: Binding(get: { shareFinishedImage != nil }, set: { if !$0 { shareFinishedImage = nil } })) {
+            if let img = shareFinishedImage {
+                ShareSheet(image: img)
+            }
+        }
     }
 
     private var updateProgressSheet: some View {
-        let data = progressStore.progress(for: current.id)
+        let data = progressStore.progress(for: current.id, makeId: selectedMakeId)
         return NavigationStack {
             Form {
                 Section {
@@ -498,7 +892,7 @@ struct PatternDetailView: View {
                 } header: {
                     Text("Row progress")
                 } footer: {
-                    Text("Progress bar will use rows when set. Optionally saves a progress note.")
+                    Text("Use rows for knitting/crochet, or leave blank and use notes. Progress bar uses rows when set.")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -524,7 +918,7 @@ struct PatternDetailView: View {
     private func saveUpdateProgress() {
         guard let completed = Int(updateRowsCompleted.trimmingCharacters(in: .whitespaces)), completed >= 0 else { return }
         let total = Int(updateTotalRows.trimmingCharacters(in: .whitespaces))
-        progressStore.setRows(patternId: current.id, completed: completed, total: total)
+        progressStore.setRows(patternId: current.id, makeId: selectedMakeId, completed: completed, total: total)
         if let userId = auth.currentUserId, let total = total, total > 0 {
             let content = "\(completed) of \(total) rows completed"
             Task {
@@ -532,6 +926,68 @@ struct PatternDetailView: View {
             }
         }
         showUpdateProgressSheet = false
+    }
+
+    // MARK: - Print
+
+    private func escapeHtml(_ s: String) -> String {
+        s
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "\n", with: "<br>")
+    }
+
+    private func printCurrentStep() {
+        let steps = patternSteps
+        let index = currentStepIndex
+        let title = escapeHtml(current.title)
+        let source = escapeHtml(current.sourceUrl)
+        let body: String
+        if steps.isEmpty {
+            body = "<p><em>No steps yet. Analyze this pattern to split it into steps.</em></p>"
+        } else {
+            let step = steps[index]
+            let stepTitle = escapeHtml(step.title)
+            let stepBody = escapeHtml(step.body)
+            body = """
+            <h2>\(stepTitle)</h2>
+            <p>Step \(index + 1) of \(steps.count)</p>
+            <div>\(stepBody)</div>
+            """
+        }
+        let html = """
+        <!DOCTYPE html><html><head><meta charset="utf-8"><title>\(title)</title></head><body>
+        <h1>\(title)</h1>
+        <p><small>Source: \(source)</small></p>
+        <hr>
+        \(body)
+        </body></html>
+        """
+        presentPrintController(html: html)
+    }
+
+    private func printFullContent() {
+        let title = escapeHtml(current.title)
+        let source = escapeHtml(current.sourceUrl)
+        let content = current.sourceContent.map { escapeHtml($0) } ?? "<p><em>No content available.</em></p>"
+        let html = """
+        <!DOCTYPE html><html><head><meta charset="utf-8"><title>\(title)</title></head><body>
+        <h1>\(title)</h1>
+        <p><small>Source: \(source)</small></p>
+        <hr>
+        <div>\(content)</div>
+        </body></html>
+        """
+        presentPrintController(html: html)
+    }
+
+    private func presentPrintController(html: String) {
+        let formatter = UIMarkupTextPrintFormatter(markupText: html)
+        let printController = UIPrintInteractionController.shared
+        printController.printFormatter = formatter
+        printController.present(animated: true)
     }
 
     private func markStepAsNotPartOfPattern(stepIndex: Int, steps: [PatternStep]) {
@@ -548,7 +1004,7 @@ struct PatternDetailView: View {
     // MARK: - Floating tool palette + mascot peek (tappable: Log time, Row, Yarn color)
 
     private var floatingToolPalette: some View {
-        let yarnLabel = progressStore.progress(for: current.id)?.yarnColorName ?? "Color"
+        let yarnLabel = progressStore.progress(for: current.id, makeId: selectedMakeId)?.yarnColorName ?? "Color"
         return HStack(alignment: .bottom, spacing: 0) {
             Spacer(minLength: 0)
             VStack(alignment: .trailing, spacing: Theme.Spacing.sm) {
@@ -558,11 +1014,11 @@ struct PatternDetailView: View {
                     }
                     .buttonStyle(.plain)
                     Button { showVoiceRowSheet = true } label: {
-                        toolPaletteChip(icon: "mic.fill", label: "Row")
+                        toolPaletteChip(icon: "mic.fill", label: "Progress")
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("Log row by voice")
-                    .accessibilityHint("Say your current row or round number")
+                    .accessibilityLabel("Log progress by voice")
+                    .accessibilityHint("Say your current row, round, step number, or percent")
                     Button { showYarnColorSheet = true } label: {
                         toolPaletteChip(icon: "paintpalette.fill", label: yarnLabel)
                     }
@@ -575,11 +1031,12 @@ struct PatternDetailView: View {
                 .padding(.trailing, Theme.Spacing.md)
                 .padding(.bottom, Theme.Spacing.sm)
 
-                SpriteMascotView.idle(size: 56)
+                TappableMascotView(size: 56)
                     .padding(.trailing, 8)
             }
             .padding(.bottom, 100)
         }
+        .padding(.trailing, Theme.Spacing.lg)
         .sheet(isPresented: $showLogTimeSheet) { logTimeSheet }
         .sheet(isPresented: $showYarnColorSheet) { yarnColorSheet }
         .sheet(isPresented: $showVoiceRowSheet) { voiceRowSheet }
@@ -631,13 +1088,13 @@ struct PatternDetailView: View {
             List {
                 ForEach(Self.yarnColorOptions, id: \.self) { name in
                     Button {
-                        progressStore.setYarnColor(patternId: current.id, colorName: name == "Clear" ? nil : name)
+                        progressStore.setYarnColor(patternId: current.id, makeId: selectedMakeId, colorName: name == "Clear" ? nil : name)
                         showYarnColorSheet = false
                     } label: {
                         HStack {
                             Text(name)
                                 .foregroundStyle(Theme.deepPlum)
-                            if progressStore.progress(for: current.id)?.yarnColorName == name {
+                            if progressStore.progress(for: current.id, makeId: selectedMakeId)?.yarnColorName == name {
                                 Spacer()
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(Theme.sageGreen)
@@ -648,7 +1105,7 @@ struct PatternDetailView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Theme.screenGradient.ignoresSafeArea())
-            .navigationTitle("Yarn color")
+            .navigationTitle("Current color")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -763,8 +1220,8 @@ struct PatternDetailView: View {
         guard let n = n else {
             return
         }
-        let existingTotal = progressStore.progress(for: current.id)?.totalRows
-        progressStore.setRows(patternId: current.id, completed: n, total: existingTotal)
+        let existingTotal = progressStore.progress(for: current.id, makeId: selectedMakeId)?.totalRows
+        progressStore.setRows(patternId: current.id, makeId: selectedMakeId, completed: n, total: existingTotal)
         if let userId = auth.currentUserId {
             let content = "Row \(n)"
             Task {
@@ -788,9 +1245,10 @@ struct PatternDetailView: View {
                     .font(.system(size: 9, weight: .semibold, design: .rounded))
                     .foregroundStyle(Theme.deepPlum.opacity(0.7))
                     .lineLimit(1)
+                    .truncationMode(.tail)
             }
         }
-        .frame(minWidth: 44, minHeight: 40)
+        .frame(minWidth: 44, maxWidth: 56, minHeight: 40)
     }
 
     // MARK: - Title & Description
@@ -801,18 +1259,15 @@ struct PatternDetailView: View {
                 editTitleCard
             } else {
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Text(current.title)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(Theme.deepPlum)
-
                     if let desc = current.patternDescription, !desc.isEmpty {
                         Text(desc)
                             .font(Theme.Typography.body)
                             .foregroundStyle(Theme.deepPlum.opacity(0.6))
                             .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    // Quick-info pills (craft type + difficulty)
                     if hasQuickInfo {
                         HStack(spacing: Theme.Spacing.sm) {
                             if let craftType = current.craftType, !craftType.isEmpty {
@@ -822,8 +1277,10 @@ struct PatternDetailView: View {
                                 quickInfoPill(icon: "chart.bar", text: difficulty.capitalized)
                             }
                         }
-                        .padding(.top, Theme.Spacing.xs)
                     }
+                    Text("Tap to edit title and description")
+                        .font(Theme.Typography.caption2)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.4))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -869,6 +1326,40 @@ struct PatternDetailView: View {
         .borderedCard(borderColor: Theme.softCoral.opacity(0.3))
     }
 
+    // MARK: - Start project (when status is Want to Make)
+
+    private var startProjectBanner: some View {
+        Button {
+            changeStatus(to: .inProgress)
+        } label: {
+            HStack(spacing: Theme.Spacing.md) {
+                Image(systemName: "hammer.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Theme.honey)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Start project")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Theme.deepPlum)
+                    Text("Track rows and set this as your active pattern for the widget.")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.65))
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.deepPlum.opacity(0.4))
+            }
+            .padding(Theme.Spacing.md)
+            .background(Theme.honey.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                    .stroke(Theme.honey.opacity(0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Status Picker (horizontal pills)
 
     private var statusPicker: some View {
@@ -907,6 +1398,62 @@ struct PatternDetailView: View {
         }
     }
 
+    // MARK: - Make Picker (multiple projects per pattern)
+
+    private var makePickerSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text("Make")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Button {
+                        selectedMakeId = nil
+                    } label: {
+                        Text("Default")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(selectedMakeId == nil ? .white : Theme.dustyBlue)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(selectedMakeId == nil ? Theme.dustyBlue : Theme.dustyBlue.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    ForEach(makes) { make in
+                        Button {
+                            selectedMakeId = make.id
+                        } label: {
+                            Text(make.name)
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundStyle(selectedMakeId == make.id ? .white : Theme.deepPlum)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(selectedMakeId == make.id ? Theme.softCoral : Theme.softCoral.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Button {
+                        showAddMakeSheet = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 12))
+                            Text("Add make")
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundStyle(Theme.sageGreen)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Theme.sageGreen.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
     // MARK: - Pattern Info (bordered card with rows + dividers)
 
     private struct InfoItem: Identifiable {
@@ -923,6 +1470,42 @@ struct PatternDetailView: View {
     private var hasVideoUrl: Bool {
         guard let v = current.videoUrl else { return false }
         return !v.isEmpty
+    }
+
+    private var similarPatterns: [SimilarPatternResult] {
+        PatternSimilarityHelper.similar(to: current, in: store.patterns, limit: 5)
+    }
+
+    private var similarInVaultSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeaderView(title: "Similar in your vault")
+            VStack(spacing: Theme.Spacing.sm) {
+                ForEach(similarPatterns) { result in
+                    NavigationLink(value: result.pattern) {
+                        HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(result.pattern.title)
+                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Theme.deepPlum)
+                                    .lineLimit(2)
+                                if !result.reason.isEmpty {
+                                    Text(result.reason)
+                                        .font(Theme.Typography.caption2)
+                                        .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                                }
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Theme.deepPlum.opacity(0.3))
+                        }
+                        .padding(Theme.Spacing.md)
+                        .borderedCard()
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     private var patternInfoItems: [InfoItem] {
@@ -990,11 +1573,14 @@ struct PatternDetailView: View {
         }
     }
 
-    // MARK: - Yarn & Supplies
+    // MARK: - Materials & Supplies
 
     private var yarnLinksSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeaderView(title: "Yarn & Supplies")
+            SectionHeaderView(title: "Materials & supplies")
+            Text("Yarn, leather, beads, or other supplies")
+                .font(Theme.Typography.caption2)
+                .foregroundStyle(Theme.deepPlum.opacity(0.5))
 
             VStack(spacing: Theme.Spacing.sm) {
                 ForEach(yarnLinkStore.links) { link in
@@ -1043,8 +1629,13 @@ struct PatternDetailView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Theme.Spacing.sm) {
                     ForEach(imageStore.images) { img in
-                        AsyncImage(url: URL(string: img.imageUrl)) { phase in
+                        CachedAsyncImage(url: URL(string: img.imageUrl), userId: auth.currentUserId) { phase in
                             switch phase {
+                            case .loading:
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                    .fill(Theme.warmCream)
+                                    .frame(width: 160, height: 160)
+                                    .overlay { ProgressView() }
                             case .success(let image):
                                 image.resizable()
                                     .aspectRatio(contentMode: .fill)
@@ -1060,11 +1651,6 @@ struct PatternDetailView: View {
                                             .font(.title2)
                                             .foregroundStyle(Theme.deepPlum.opacity(0.2))
                                     }
-                            default:
-                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                                    .fill(Theme.warmCream)
-                                    .frame(width: 160, height: 160)
-                                    .overlay { ProgressView() }
                             }
                         }
                     }
@@ -1331,5 +1917,35 @@ struct PatternDetailView: View {
         guard let url = URL(string: urlString),
               let host = url.host else { return nil }
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    private func presentFinishedProjectShareCard() {
+        let yarn = progressStore.progress(for: current.id, makeId: selectedMakeId)?.yarnColorName
+        let card = FinishedProjectShareCardView(
+            patternTitle: current.title,
+            yarnUsed: yarn,
+            needleSize: current.needleHookSizes,
+            notes: nil
+        )
+        let renderer = ImageRenderer(content: card)
+        renderer.proposedSize = .init(width: 400, height: 500)
+        renderer.scale = UIScreen.main.scale
+        if let img = renderer.uiImage {
+            shareFinishedImage = img
+        }
+    }
+}
+
+// MARK: - Step card highlight (current step gets accent border)
+
+private struct StepCardStyle: ViewModifier {
+    let isCurrentStep: Bool
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isCurrentStep {
+            content.accentBorderedCard()
+        } else {
+            content.borderedCard()
+        }
     }
 }

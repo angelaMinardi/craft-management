@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Contact — Pattern Vault"
+  description="Contact Pattern Vault for support and feedback."
+>
+  <div class="legal-page contact-page">
+    <h1 id="contact-heading">Contact &amp; Support</h1>
+    <p>
+      Have a question, feedback, or need help? We’d love to hear from you.
+    </p>
+    <p>
+      <strong>Email:</strong>
+      <a href="mailto:support@patternvault.app">support@patternvault.app</a>
+    </p>
+    <p class="contact-note">
+      We’ll do our best to respond within a few business days. For privacy or terms-related requests, you can also refer to our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Service</a>.
+    </p>
+  </div>
+</BaseLayout>
+
+<style>
+  .contact-page h1 {
+    font-size: var(--text-title);
+    font-weight: 700;
+    color: #4A2040;
+    margin: 0 0 var(--space-lg);
+  }
+
+  .contact-page p {
+    margin: 0 0 var(--space-md);
+    line-height: var(--line-height-relaxed);
+    color: #4A2040;
+  }
+
+  .contact-note {
+    margin-top: var(--space-xl);
+    font-size: var(--text-small);
+    color: #5C3A52;
+  }
+
+  .contact-page a {
+    color: #E8836B;
+  }
+</style>

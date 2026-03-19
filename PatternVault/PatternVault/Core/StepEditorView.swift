@@ -40,11 +40,21 @@ struct StepEditorView: View {
         NavigationStack {
             Group {
                 if blocks.isEmpty {
-                    ContentUnavailableView(
-                        "No content to split",
-                        systemImage: "doc.text",
-                        description: Text("This pattern has no instruction content. Add or refresh content to define steps.")
-                    )
+                    VStack(spacing: Theme.Spacing.xl) {
+                        SpriteMascotView.idle(size: 100)
+                        Text("No content to split")
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Theme.deepPlum)
+                        Text("This pattern has no instruction content. Add or refresh content to define steps.")
+                            .font(Theme.Typography.body)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.xxl)
+                    .padding(.horizontal, Theme.Spacing.xl)
+                    .borderedCard()
+                    .padding(.horizontal, Theme.Spacing.lg)
                 } else {
                     stepEditorList
                 }
@@ -208,32 +218,45 @@ struct StepEditorView: View {
     }
 
     private func prefillFromContentOrLayout() {
-        let content = pattern.sourceContent ?? ""
+        let contentForSteps = PatternStepParser.truncateAtEndOfPattern(pattern.sourceContent) ?? pattern.sourceContent ?? ""
+        let content = contentForSteps
         let allBlocks = ContentBlockParser.parse(content)
         blocks = allBlocks.filter { $0.kind != .paragraphBreak }
 
-        let hash = contentHashForStepLayout(pattern.sourceContent)
+        let hash = contentHashForStepLayout(contentForSteps)
+        // Priority 1: Existing custom layout
         if let layout = progressStore.customStepLayout(for: pattern.id), layout.contentHash == hash {
             stepBreakIndices = Set(layout.stepStartIndices.dropFirst())
             stepTitles = (1...layout.stepTitles.count).enumerated().reduce(into: [Int: String]()) { $0[$1.offset + 1] = layout.stepTitles[$1.offset] }
             excludedBlockIndices = Set(layout.excludedBlockIndices)
+            return
+        }
+
+        excludedBlockIndices = []
+
+        // Priority 2: AI-parsed steps → approximate block indices
+        if let aiSteps = pattern.decodedParsedSteps, aiSteps.count > 1, !blocks.isEmpty {
+            stepBreakIndices = Set((1..<aiSteps.count).map { (blocks.count * $0) / aiSteps.count })
+            stepTitles = (1...aiSteps.count).enumerated().reduce(into: [Int: String]()) { $0[$1.offset + 1] = aiSteps[$1.offset].title }
+            return
+        }
+
+        // Priority 3: Heuristic parser
+        let steps = PatternStepParser.parseSteps(sourceContent: contentForSteps, patternDescription: pattern.patternDescription)
+        if steps.count <= 1 || blocks.isEmpty {
+            stepBreakIndices = []
+            stepTitles = [1: "Step 1"]
         } else {
-            excludedBlockIndices = []
-            let steps = PatternStepParser.parseSteps(sourceContent: pattern.sourceContent, patternDescription: pattern.patternDescription)
-            if steps.count <= 1 || blocks.isEmpty {
-                stepBreakIndices = []
-                stepTitles = [1: "Step 1"]
-            } else {
-                stepBreakIndices = Set((1..<steps.count).map { (blocks.count * $0) / steps.count })
-                stepTitles = (1...steps.count).enumerated().reduce(into: [Int: String]()) { $0[$1.offset + 1] = steps[$1.offset].title }
-            }
+            stepBreakIndices = Set((1..<steps.count).map { (blocks.count * $0) / steps.count })
+            stepTitles = (1...steps.count).enumerated().reduce(into: [Int: String]()) { $0[$1.offset + 1] = steps[$1.offset].title }
         }
     }
 
     private func saveAndDismiss() {
         let starts = sortedStarts
         let titles = (1...starts.count).map { stepTitles[$0] ?? "Step \($0)" }
-        let hash = contentHashForStepLayout(pattern.sourceContent)
+        let contentForSteps = PatternStepParser.truncateAtEndOfPattern(pattern.sourceContent) ?? pattern.sourceContent
+        let hash = contentHashForStepLayout(contentForSteps)
         let layout = CustomStepLayout(
             stepStartIndices: starts,
             stepTitles: titles,

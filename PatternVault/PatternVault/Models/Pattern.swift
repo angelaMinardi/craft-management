@@ -5,7 +5,13 @@
 
 import Foundation
 
-struct Pattern: Identifiable, Codable, Sendable {
+struct ParsedStep: Codable, Identifiable, Sendable, Equatable {
+    var id: String { title + body.prefix(20) }
+    let title: String
+    let body: String
+}
+
+struct Pattern: Identifiable, Codable, Sendable, Hashable {
     let id: UUID
     var title: String
     var patternDescription: String?
@@ -23,6 +29,7 @@ struct Pattern: Identifiable, Codable, Sendable {
     var needleHookSizes: String?
     var yarnWeightYardage: String?
     var techniques: String?
+    var parsedSteps: String?
     var createdAt: Date
     var updatedAt: Date
 
@@ -44,8 +51,14 @@ struct Pattern: Identifiable, Codable, Sendable {
         case needleHookSizes = "needle_hook_sizes"
         case yarnWeightYardage = "yarn_weight_yardage"
         case techniques
+        case parsedSteps = "parsed_steps"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+
+    var decodedParsedSteps: [ParsedStep]? {
+        guard let json = parsedSteps, let data = json.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode([ParsedStep].self, from: data)
     }
 }
 

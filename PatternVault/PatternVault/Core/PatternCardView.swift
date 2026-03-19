@@ -9,6 +9,8 @@ import SwiftUI
 
 struct PatternCardView: View {
     let pattern: Pattern
+    /// When set, images load from local cache first and are cached for offline use.
+    var userId: UUID? = nil
     var isFavorite: Bool = false
     var isNew: Bool = false
     /// Use for dashboard/recent; softer shadow and larger radius.
@@ -16,44 +18,35 @@ struct PatternCardView: View {
     /// Optional subtitle (e.g. designer/source) below title for horizontal lists.
     var subtitle: String? = nil
 
+    private var imageHeight: CGFloat { elevated ? 180 : 160 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Image with overlay title
-            ZStack(alignment: .bottomLeading) {
+            // Image only (no overlay) so card clipping doesn't cut off text
+            ZStack(alignment: .topLeading) {
                 if let thumbnailUrl = pattern.thumbnailUrl,
                    let imageURL = URL(string: thumbnailUrl) {
-                    AsyncImage(url: imageURL) { phase in
+                    CachedAsyncImage(url: imageURL, userId: userId) { phase in
                         switch phase {
+                        case .loading:
+                            placeholderImage
+                                .overlay { ProgressView().tint(Theme.softCoral) }
                         case .success(let image):
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: imageHeight)
+                                .clipped()
                         case .failure:
                             placeholderImage
-                        default:
-                            placeholderImage
-                                .overlay {
-                                    ProgressView()
-                                        .tint(Theme.softCoral)
-                                }
                         }
                     }
-                    .frame(minHeight: elevated ? 150 : 130, maxHeight: elevated ? 180 : 160)
-                    .clipped()
                 } else {
                     placeholderImage
                 }
-
-                // Gradient overlay for text legibility
-                LinearGradient(
-                    colors: [.clear, .clear, Color.black.opacity(0.5)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-
-                // Title overlaid on image
-                VStack(alignment: .leading, spacing: 3) {
-                    // Badges row
+                // Badges on image (small, top corner)
+                if isFavorite || isNew {
                     HStack(spacing: 4) {
                         if isFavorite {
                             Image(systemName: "heart.fill")
@@ -73,28 +66,40 @@ struct PatternCardView: View {
                                 .clipShape(Capsule())
                         }
                     }
-
-                    Text(pattern.title)
-                        .font(.system(size: elevated ? 15 : 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-                    if let subtitle, !subtitle.isEmpty {
-                        Text(subtitle)
-                            .font(.system(size: elevated ? 11 : 10, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .lineLimit(1)
-                            .shadow(color: .black.opacity(0.25), radius: 1, x: 0, y: 1)
-                    }
+                    .padding(Theme.Spacing.sm)
                 }
-                .padding(Theme.Spacing.md)
             }
+            .frame(height: imageHeight)
+
+            // Title below image — truncate with ellipsis so text never clips at card edges
+            VStack(alignment: .leading, spacing: 2) {
+                Text(pattern.title)
+                    .font(.system(size: elevated ? 14 : 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.deepPlum)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.system(size: elevated ? 11 : 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.sm)
 
             // Status strip — thin colored bar at bottom
             Theme.statusColor(for: pattern.status)
                 .frame(height: 3)
         }
+        .frame(width: elevated ? 168 : nil)
+        .contentShape(Rectangle())
         .cardStyle(elevated: elevated)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(pattern.title), \(pattern.status.displayName)")
+        .accessibilityHint("Opens pattern details")
     }
 
     private var placeholderImage: some View {
@@ -116,6 +121,6 @@ struct PatternCardView: View {
                     .foregroundStyle(Theme.softCoral.opacity(0.25))
             }
         }
-        .frame(minHeight: elevated ? 150 : 130, maxHeight: elevated ? 180 : 160)
+        .frame(height: imageHeight)
     }
 }

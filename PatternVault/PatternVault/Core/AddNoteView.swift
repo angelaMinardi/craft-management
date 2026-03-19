@@ -22,6 +22,7 @@ struct AddNoteView: View {
     @State private var photoData: Data?
     @State private var photoPreview: Image?
     @State private var isSaving = false
+    @State private var showPaywall = false
 
     private var isEditing: Bool { existingNote != nil }
     private var canSave: Bool { !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSaving }
@@ -71,6 +72,13 @@ struct AddNoteView: View {
                                 .foregroundStyle(Theme.softCoral)
                                 .font(Theme.Typography.caption)
                                 .multilineTextAlignment(.center)
+                            if error.localizedCaseInsensitiveContains("Premium") || (error.localizedCaseInsensitiveContains("photo") && error.localizedCaseInsensitiveContains("limit")) {
+                                Button(Theme.Premium.seePremiumTitle) {
+                                    showPaywall = true
+                                }
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.softCoral)
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Theme.Spacing.xs)
@@ -78,6 +86,9 @@ struct AddNoteView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
             .background(Theme.screenGradient.ignoresSafeArea())
             .navigationTitle(isEditing ? "Edit Note" : "Add Note")
             .navigationBarTitleDisplayMode(.inline)
@@ -125,11 +136,13 @@ struct AddNoteView: View {
                 // Update existing note
                 await noteStore.update(
                     noteId: existing.id,
+                    userId: userId,
                     content: trimmed,
                     noteType: noteType,
                     photoUrl: existing.photoUrl // keep existing photo for now
                 )
                 isSaving = false
+                HapticService.success()
                 dismiss()
             } else {
                 // Add new note
@@ -141,7 +154,11 @@ struct AddNoteView: View {
                     photoData: photoData
                 )
                 isSaving = false
-                if success { dismiss() }
+                if success {
+                    HapticService.success()
+                    CelebrationStore.shared.unlock("first_note")
+                    dismiss()
+                }
             }
         }
     }

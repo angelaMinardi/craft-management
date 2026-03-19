@@ -8,11 +8,8 @@
 //
 
 import Foundation
-import PDFKit
 
 enum RavelryPatternExtractor {
-
-    private static let pageTextLimit = 10_000
 
     /// Returns true if the URL is a Ravelry pattern page (e.g. ravelry.com/patterns/library/...).
     static func isRavelryPatternURL(_ urlString: String) -> Bool {
@@ -102,7 +99,7 @@ enum RavelryPatternExtractor {
 
             let (pdfDataOpt, pdfURLUsed, intermediateHtml) = await fetchUrlAndResolvePdf(candidateURLString: candidate, baseUrl: pageURL)
             if let data = pdfDataOpt, let urlUsed = pdfURLUsed,
-               let pageText = extractTextFromPdf(data: data) {
+               let pageText = PDFTextExtractor.extractText(from: data) {
                 let ogTitle = extractMetaContent(from: html, property: "og:title")
                     ?? extractMetaContent(from: html, name: "title")
                     ?? firstMatch(in: html, pattern: "<title[^>]*>([^<]+)</title>").map { decodeHTMLEntities($0).trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -130,9 +127,31 @@ enum RavelryPatternExtractor {
         return nil
     }
 
+    /// Maximum PDF size we are willing to download (5 MB). Checked via HEAD before GET.
+    private static let maxPdfBytes = 5_000_000
+
+    /// Sends a HEAD request and returns the Content-Length if the server reports it, or nil.
+    private static func contentLength(for url: URL) async -> Int64? {
+        var head = URLRequest(url: url)
+        head.httpMethod = "HEAD"
+        head.timeoutInterval = 10
+        head.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        guard let (_, resp) = try? await URLSession.shared.data(for: head),
+              let http = resp as? HTTPURLResponse,
+              (200...299).contains(http.statusCode) else { return nil }
+        let length = http.expectedContentLength  // -1 when unknown
+        return length >= 0 ? length : nil
+    }
+
     /// Fetches URL; if response is PDF returns (data, url, nil). If response is HTML (e.g. Ravelry's "Pattern Purchase" page), returns (nil, nil, html) so caller can parse for "download PDF" link.
     private static func fetchUrlAndResolvePdf(candidateURLString: String, baseUrl: URL) async -> (pdfData: Data?, pdfURLString: String?, intermediateHtml: String?) {
         guard let url = URL(string: candidateURLString) else { return (nil, nil, nil) }
+
+        // Pre-flight: skip download if Content-Length exceeds the PDF size cap
+        if let length = await contentLength(for: url), length > maxPdfBytes {
+            return (nil, nil, nil)
+        }
+
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
         request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
@@ -145,7 +164,7 @@ enum RavelryPatternExtractor {
                 || (data.count >= 5 && String(data: data.prefix(5), encoding: .ascii) == "%PDF-")
 
             if isPdf {
-                let maxPdfBytes = 5_000_000
+                // Belt-and-suspenders: truncate in case Content-Length was missing or inaccurate
                 let dataToUse = data.count > maxPdfBytes ? data.prefix(maxPdfBytes) : data
                 return (Data(dataToUse), candidateURLString, nil)
             }
@@ -161,6 +180,12 @@ enum RavelryPatternExtractor {
     /// Download PDF at urlString; if response is PDF, extract text and return ExtractedContent. Otherwise nil.
     private static func downloadPdfAndExtractContent(pdfURLString: String, urlString: String, html: String) async -> ExtractedContent? {
         guard let pdfURL = URL(string: pdfURLString) else { return nil }
+
+        // Pre-flight: skip download if Content-Length exceeds the PDF size cap
+        if let length = await contentLength(for: pdfURL), length > maxPdfBytes {
+            return nil
+        }
+
         var pdfRequest = URLRequest(url: pdfURL)
         pdfRequest.timeoutInterval = 20
         pdfRequest.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
@@ -180,9 +205,9 @@ enum RavelryPatternExtractor {
             return nil
         }
 
-        let maxPdfBytes = 5_000_000
+        // Belt-and-suspenders: truncate in case Content-Length was missing or inaccurate
         let dataToUse = pdfData.count > maxPdfBytes ? pdfData.prefix(maxPdfBytes) : pdfData
-        guard let pageText = extractTextFromPdf(data: Data(dataToUse)) else {
+        guard let pageText = PDFTextExtractor.extractText(from: Data(dataToUse)) else {
             return nil
         }
 
@@ -322,22 +347,6 @@ enum RavelryPatternExtractor {
             guard match.numberOfRanges > 1, let captureRange = Range(match.range(at: 1), in: string) else { return nil }
             return String(string[captureRange])
         }
-    }
-
-    private static func extractTextFromPdf(data: Data) -> String? {
-        guard let doc = PDFDocument(data: data) else { return nil }
-        guard let text = doc.string, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return nil
-        }
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count > pageTextLimit {
-            let end = trimmed.index(trimmed.startIndex, offsetBy: pageTextLimit)
-            if let lastBreak = trimmed[..<end].range(of: "\n\n", options: .backwards) {
-                return String(trimmed[..<lastBreak.lowerBound])
-            }
-            return String(trimmed[..<end])
-        }
-        return trimmed
     }
 
     // MARK: - HTML helpers (minimal duplicate of WebContentExtractor for OG + link parsing)

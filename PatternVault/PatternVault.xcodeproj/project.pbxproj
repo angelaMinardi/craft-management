@@ -12,7 +12,6 @@
 		B0010002 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010002 /* RootView.swift */; };
 		B0010003 /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010003 /* SupabaseManager.swift */; };
 		B0010004 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010004 /* AuthService.swift */; };
-		B0010010 /* VoiceRowService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010010 /* VoiceRowService.swift */; };
 		B0010005 /* AuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010005 /* AuthGateView.swift */; };
 		B0010006 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010006 /* LoginView.swift */; };
 		B0010007 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010007 /* SignUpView.swift */; };
@@ -24,6 +23,20 @@
 		B001000D /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F001000F /* QuickLook.framework */; };
 		B001000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F001000E /* Assets.xcassets */; };
 		B001000F /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = P0010002 /* Lottie */; };
+		B0010010 /* VoiceRowService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010010 /* VoiceRowService.swift */; };
+		B0010011 /* AIStepParserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010011 /* AIStepParserService.swift */; };
+		B0010012 /* ImageCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010012 /* ImageCacheService.swift */; };
+		B0010013 /* WidgetDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010013 /* WidgetDataService.swift */; };
+		B0010014 /* PatternListCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010014 /* PatternListCacheService.swift */; };
+		B0010015 /* CelebrationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010015 /* CelebrationStore.swift */; };
+		B0010016 /* HapticService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010016 /* HapticService.swift */; };
+		B0010017 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = P0010003 /* GoogleMobileAds */; };
+		B0010018 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = P0010004 /* FirebaseAnalytics */; };
+		B0010019 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = P0010005 /* FirebaseCrashlytics */; };
+		B001001A /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = P0010006 /* FirebaseCore */; };
+		B0010020 /* AIKillSwitchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010020 /* AIKillSwitchService.swift */; };
+		B0010021 /* YardageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010021 /* YardageHelper.swift */; };
+		B0010022 /* PatternDuplicateHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010022 /* PatternDuplicateHelper.swift */; };
 		B0020001 /* Pattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020001 /* Pattern.swift */; };
 		B0020002 /* ProjectNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020002 /* ProjectNote.swift */; };
 		B0020003 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020003 /* Tag.swift */; };
@@ -60,6 +73,14 @@
 		B003000E /* ContentBlockParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000E /* ContentBlockParser.swift */; };
 		B003000F /* JunkPhraseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000F /* JunkPhraseStore.swift */; };
 		B0030010 /* StepEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030010 /* StepEditorView.swift */; };
+		B0030011 /* FormattedStepBodyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030011 /* FormattedStepBodyView.swift */; };
+		B0030012 /* CelebrationOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030012 /* CelebrationOverlayView.swift */; };
+		B0030013 /* AppTutorialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030013 /* AppTutorialStore.swift */; };
+		B0030014 /* AppTutorialOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030014 /* AppTutorialOverlayView.swift */; };
+		B0030015 /* TutorialAnchorPreferenceKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030015 /* TutorialAnchorPreferenceKey.swift */; };
+		B0030016 /* WidgetOnboardingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030016 /* WidgetOnboardingStore.swift */; };
+		B0030017 /* WidgetOnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030017 /* WidgetOnboardingSheet.swift */; };
+		B0030018 /* DuplicatesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030018 /* DuplicatesListView.swift */; };
 		B0040001 /* EmptyPatterns.json in Resources */ = {isa = PBXBuildFile; fileRef = F0040001 /* EmptyPatterns.json */; };
 		B0040002 /* LottieAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040002 /* LottieAnimationView.swift */; };
 		B0040003 /* AnimatedCrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040003 /* AnimatedCrowView.swift */; };
@@ -70,6 +91,43 @@
 		B0050005 /* WalkingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050005 /* WalkingMascotFrames */; };
 		B0050006 /* PoutyMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050006 /* PoutyMascotFrames */; };
 		B0050007 /* KnittingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050007 /* KnittingMascotFrames */; };
+		B0050010 /* TappableMascotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0050010 /* TappableMascotView.swift */; };
+		B0060001 /* YarnStashItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0060001 /* YarnStashItem.swift */; };
+		B0060002 /* YarnStashRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0060002 /* YarnStashRepository.swift */; };
+		B0060003 /* YarnStashStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0060003 /* YarnStashStore.swift */; };
+		B0060004 /* YarnStashListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0060004 /* YarnStashListView.swift */; };
+		B0060005 /* AddYarnStashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0060005 /* AddYarnStashView.swift */; };
+		B0070001 /* NeedleHookItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0070001 /* NeedleHookItem.swift */; };
+		B0070002 /* NeedleHookRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0070002 /* NeedleHookRepository.swift */; };
+		B0070003 /* NeedleHookStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0070003 /* NeedleHookStore.swift */; };
+		B0070004 /* NeedleHookListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0070004 /* NeedleHookListView.swift */; };
+		B0070005 /* AddNeedleHookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0070005 /* AddNeedleHookView.swift */; };
+		B0080001 /* PatternMake.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0080001 /* PatternMake.swift */; };
+		B0080002 /* PatternMakeRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0080002 /* PatternMakeRepository.swift */; };
+		B0080003 /* AddPatternMakeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0080003 /* AddPatternMakeView.swift */; };
+		B0080004 /* StashAndToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0080004 /* StashAndToolsView.swift */; };
+		B0090001 /* EntitlementRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0090001 /* EntitlementRepository.swift */; };
+		B0090002 /* SubscriptionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0090002 /* SubscriptionStore.swift */; };
+		B0090003 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0090003 /* PaywallView.swift */; };
+		B0090004 /* AdBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0090004 /* AdBannerView.swift */; };
+		B00A0001 /* PatternDiscoveryResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0001 /* PatternDiscoveryResult.swift */; };
+		B00A0002 /* RavelryPatternSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0002 /* RavelryPatternSearchService.swift */; };
+		B00A0003 /* FindPatternsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0003 /* FindPatternsView.swift */; };
+		B00A0004 /* StashMatchPatternsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0004 /* StashMatchPatternsView.swift */; };
+		B00A0005 /* FinishedProjectShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0005 /* FinishedProjectShareCardView.swift */; };
+		B00B0001 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0001 /* KeychainHelper.swift */; };
+		B00B0002 /* OAuth1Signer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0002 /* OAuth1Signer.swift */; };
+		B00B0003 /* RavelryOAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0003 /* RavelryOAuthService.swift */; };
+		B00B0004 /* RavelryUserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0004 /* RavelryUserService.swift */; };
+		B00B0005 /* RavelryImportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0005 /* RavelryImportStore.swift */; };
+		B00B0006 /* PDFTextExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0006 /* PDFTextExtractor.swift */; };
+		B0TEST01 /* PatternStepParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST01 /* PatternStepParserTests.swift */; };
+		B0TEST02 /* ContentBlockParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST02 /* ContentBlockParserTests.swift */; };
+		B0TEST03 /* SourcePlatformHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST03 /* SourcePlatformHelperTests.swift */; };
+		B0TEST04 /* PatternModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST04 /* PatternModelTests.swift */; };
+		B0TEST05 /* RavelryPatternDetailsParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST05 /* RavelryPatternDetailsParsingTests.swift */; };
+		B0TEST06 /* PDFTextExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST06 /* PDFTextExtractorTests.swift */; };
+		B0TEST07 /* ShareURLExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST07 /* ShareURLExtractorTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -79,6 +137,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 08C772002F5B374A00241E4E;
 			remoteInfo = SaveToPatternVault;
+		};
+		TSTDP1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = P0000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T0010001;
+			remoteInfo = PatternVault;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -99,12 +164,12 @@
 /* Begin PBXFileReference section */
 		08C772012F5B374A00241E4E /* SaveToPatternVault.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SaveToPatternVault.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		08C7E5B72F58EE8100DCDC30 /* PatternVault.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PatternVault.entitlements; sourceTree = "<group>"; };
+		C00100CC /* Config/Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Config.xcconfig; sourceTree = "<group>"; };
 		E0010000 /* PatternVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PatternVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0010001 /* PatternVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternVaultApp.swift; sourceTree = "<group>"; };
 		F0010002 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		F0010003 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
 		F0010004 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
-		F0010010 /* VoiceRowService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRowService.swift; sourceTree = "<group>"; };
 		F0010005 /* AuthGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthGateView.swift; sourceTree = "<group>"; };
 		F0010006 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		F0010007 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
@@ -115,6 +180,16 @@
 		F001000D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F001000E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F001000F /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
+		F0010010 /* VoiceRowService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRowService.swift; sourceTree = "<group>"; };
+		F0010011 /* AIStepParserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStepParserService.swift; sourceTree = "<group>"; };
+		F0010012 /* ImageCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheService.swift; sourceTree = "<group>"; };
+		F0010013 /* WidgetDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataService.swift; sourceTree = "<group>"; };
+		F0010014 /* PatternListCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternListCacheService.swift; sourceTree = "<group>"; };
+		F0010015 /* CelebrationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationStore.swift; sourceTree = "<group>"; };
+		F0010016 /* HapticService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticService.swift; sourceTree = "<group>"; };
+		F0010020 /* AIKillSwitchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIKillSwitchService.swift; sourceTree = "<group>"; };
+		F0010021 /* YardageHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YardageHelper.swift; sourceTree = "<group>"; };
+		F0010022 /* PatternDuplicateHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternDuplicateHelper.swift; sourceTree = "<group>"; };
 		F0020001 /* Pattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pattern.swift; sourceTree = "<group>"; };
 		F0020002 /* ProjectNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectNote.swift; sourceTree = "<group>"; };
 		F0020003 /* Tag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
@@ -151,6 +226,14 @@
 		F003000E /* ContentBlockParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlockParser.swift; sourceTree = "<group>"; };
 		F003000F /* JunkPhraseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JunkPhraseStore.swift; sourceTree = "<group>"; };
 		F0030010 /* StepEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepEditorView.swift; sourceTree = "<group>"; };
+		F0030011 /* FormattedStepBodyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormattedStepBodyView.swift; sourceTree = "<group>"; };
+		F0030012 /* CelebrationOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationOverlayView.swift; sourceTree = "<group>"; };
+		F0030013 /* AppTutorialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTutorialStore.swift; sourceTree = "<group>"; };
+		F0030014 /* AppTutorialOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTutorialOverlayView.swift; sourceTree = "<group>"; };
+		F0030015 /* TutorialAnchorPreferenceKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TutorialAnchorPreferenceKey.swift; sourceTree = "<group>"; };
+		F0030016 /* WidgetOnboardingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetOnboardingStore.swift; sourceTree = "<group>"; };
+		F0030017 /* WidgetOnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetOnboardingSheet.swift; sourceTree = "<group>"; };
+		F0030018 /* DuplicatesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicatesListView.swift; sourceTree = "<group>"; };
 		F0040001 /* EmptyPatterns.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = EmptyPatterns.json; sourceTree = "<group>"; };
 		F0040002 /* LottieAnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieAnimationView.swift; sourceTree = "<group>"; };
 		F0040003 /* AnimatedCrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedCrowView.swift; sourceTree = "<group>"; };
@@ -161,6 +244,44 @@
 		F0050005 /* WalkingMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = WalkingMascotFrames; sourceTree = "<group>"; };
 		F0050006 /* PoutyMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = PoutyMascotFrames; sourceTree = "<group>"; };
 		F0050007 /* KnittingMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = KnittingMascotFrames; sourceTree = "<group>"; };
+		F0050010 /* TappableMascotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TappableMascotView.swift; sourceTree = "<group>"; };
+		F0060001 /* YarnStashItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnStashItem.swift; sourceTree = "<group>"; };
+		F0060002 /* YarnStashRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnStashRepository.swift; sourceTree = "<group>"; };
+		F0060003 /* YarnStashStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnStashStore.swift; sourceTree = "<group>"; };
+		F0060004 /* YarnStashListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnStashListView.swift; sourceTree = "<group>"; };
+		F0060005 /* AddYarnStashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddYarnStashView.swift; sourceTree = "<group>"; };
+		F0070001 /* NeedleHookItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleHookItem.swift; sourceTree = "<group>"; };
+		F0070002 /* NeedleHookRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleHookRepository.swift; sourceTree = "<group>"; };
+		F0070003 /* NeedleHookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleHookStore.swift; sourceTree = "<group>"; };
+		F0070004 /* NeedleHookListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeedleHookListView.swift; sourceTree = "<group>"; };
+		F0070005 /* AddNeedleHookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddNeedleHookView.swift; sourceTree = "<group>"; };
+		F0080001 /* PatternMake.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternMake.swift; sourceTree = "<group>"; };
+		F0080002 /* PatternMakeRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternMakeRepository.swift; sourceTree = "<group>"; };
+		F0080003 /* AddPatternMakeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPatternMakeView.swift; sourceTree = "<group>"; };
+		F0080004 /* StashAndToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashAndToolsView.swift; sourceTree = "<group>"; };
+		F0090001 /* EntitlementRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementRepository.swift; sourceTree = "<group>"; };
+		F0090002 /* SubscriptionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionStore.swift; sourceTree = "<group>"; };
+		F0090003 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		F0090004 /* AdBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdBannerView.swift; sourceTree = "<group>"; };
+		F00A0001 /* PatternDiscoveryResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternDiscoveryResult.swift; sourceTree = "<group>"; };
+		F00A0002 /* RavelryPatternSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryPatternSearchService.swift; sourceTree = "<group>"; };
+		F00A0003 /* FindPatternsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindPatternsView.swift; sourceTree = "<group>"; };
+		F00A0004 /* StashMatchPatternsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashMatchPatternsView.swift; sourceTree = "<group>"; };
+		F00A0005 /* FinishedProjectShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinishedProjectShareCardView.swift; sourceTree = "<group>"; };
+		F00B0001 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		F00B0002 /* OAuth1Signer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuth1Signer.swift; sourceTree = "<group>"; };
+		F00B0003 /* RavelryOAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryOAuthService.swift; sourceTree = "<group>"; };
+		F00B0004 /* RavelryUserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryUserService.swift; sourceTree = "<group>"; };
+		F00B0005 /* RavelryImportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryImportStore.swift; sourceTree = "<group>"; };
+		F00B0006 /* PDFTextExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTextExtractor.swift; sourceTree = "<group>"; };
+		F0TEST01 /* PatternStepParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStepParserTests.swift; sourceTree = "<group>"; };
+		F0TEST02 /* ContentBlockParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlockParserTests.swift; sourceTree = "<group>"; };
+		F0TEST03 /* SourcePlatformHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcePlatformHelperTests.swift; sourceTree = "<group>"; };
+		F0TEST04 /* PatternModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternModelTests.swift; sourceTree = "<group>"; };
+		F0TEST05 /* RavelryPatternDetailsParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryPatternDetailsParsingTests.swift; sourceTree = "<group>"; };
+		F0TEST06 /* PDFTextExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTextExtractorTests.swift; sourceTree = "<group>"; };
+		F0TEST07 /* ShareURLExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareURLExtractorTests.swift; sourceTree = "<group>"; };
+		TST0002 /* PatternVaultTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PatternVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -191,7 +312,18 @@
 			files = (
 				B001000C /* Supabase in Frameworks */,
 				B001000F /* Lottie in Frameworks */,
+				B0010017 /* GoogleMobileAds in Frameworks */,
+				B0010018 /* FirebaseAnalytics in Frameworks */,
+				B0010019 /* FirebaseCrashlytics in Frameworks */,
+				B001001A /* FirebaseCore in Frameworks */,
 				B001000D /* QuickLook.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		TSTFRM /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -209,8 +341,10 @@
 		G0010000 = {
 			isa = PBXGroup;
 			children = (
+				C00100CC /* Config/Config.xcconfig */,
 				G0010001 /* PatternVault */,
 				08C772022F5B374A00241E4E /* SaveToPatternVault */,
+				G0TEST01 /* PatternVaultTests */,
 				G0010002 /* Products */,
 				08832CC12F5C9FA400984121 /* Recovered References */,
 			);
@@ -246,6 +380,7 @@
 			children = (
 				E0010000 /* PatternVault.app */,
 				08C772012F5B374A00241E4E /* SaveToPatternVault.appex */,
+				TST0002 /* PatternVaultTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -290,9 +425,31 @@
 				F003000E /* ContentBlockParser.swift */,
 				F003000F /* JunkPhraseStore.swift */,
 				F0030010 /* StepEditorView.swift */,
+				F0030011 /* FormattedStepBodyView.swift */,
+				F0030012 /* CelebrationOverlayView.swift */,
+				F0030013 /* AppTutorialStore.swift */,
+				F0030014 /* AppTutorialOverlayView.swift */,
+				F0030015 /* TutorialAnchorPreferenceKey.swift */,
+				F0030016 /* WidgetOnboardingStore.swift */,
+				F0030017 /* WidgetOnboardingSheet.swift */,
+				F0030018 /* DuplicatesListView.swift */,
 				F0040002 /* LottieAnimationView.swift */,
 				F0040003 /* AnimatedCrowView.swift */,
 				F0050002 /* SpriteMascotView.swift */,
+				F0050010 /* TappableMascotView.swift */,
+				F0060003 /* YarnStashStore.swift */,
+				F0060004 /* YarnStashListView.swift */,
+				F0060005 /* AddYarnStashView.swift */,
+				F0070003 /* NeedleHookStore.swift */,
+				F0070004 /* NeedleHookListView.swift */,
+				F0070005 /* AddNeedleHookView.swift */,
+				F0080003 /* AddPatternMakeView.swift */,
+				F0080004 /* StashAndToolsView.swift */,
+				F00A0003 /* FindPatternsView.swift */,
+				F00A0004 /* StashMatchPatternsView.swift */,
+				F00A0005 /* FinishedProjectShareCardView.swift */,
+				F0090003 /* PaywallView.swift */,
+				F0090004 /* AdBannerView.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -303,8 +460,25 @@
 				F0010003 /* SupabaseManager.swift */,
 				F0010004 /* AuthService.swift */,
 				F0010010 /* VoiceRowService.swift */,
+				F0010011 /* AIStepParserService.swift */,
+				F0010020 /* AIKillSwitchService.swift */,
+				F0010012 /* ImageCacheService.swift */,
+				F0010013 /* WidgetDataService.swift */,
+				F0010021 /* YardageHelper.swift */,
+				F0010022 /* PatternDuplicateHelper.swift */,
+				F0010014 /* PatternListCacheService.swift */,
+				F0010015 /* CelebrationStore.swift */,
+				F0010016 /* HapticService.swift */,
 				F0020005 /* SourcePlatformHelper.swift */,
 				F0020013 /* MetadataService.swift */,
+				F0090002 /* SubscriptionStore.swift */,
+				F00A0002 /* RavelryPatternSearchService.swift */,
+				F00B0001 /* KeychainHelper.swift */,
+				F00B0002 /* OAuth1Signer.swift */,
+				F00B0003 /* RavelryOAuthService.swift */,
+				F00B0004 /* RavelryUserService.swift */,
+				F00B0005 /* RavelryImportStore.swift */,
+				F00B0006 /* PDFTextExtractor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -317,6 +491,10 @@
 				F0020003 /* Tag.swift */,
 				F0030004 /* PatternImage.swift */,
 				F0030009 /* PatternYarnLink.swift */,
+				F0060001 /* YarnStashItem.swift */,
+				F0070001 /* NeedleHookItem.swift */,
+				F0080001 /* PatternMake.swift */,
+				F00A0001 /* PatternDiscoveryResult.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -329,6 +507,10 @@
 				F0020012 /* TagRepository.swift */,
 				F0030005 /* PatternImageRepository.swift */,
 				F0020014 /* PatternYarnLinkRepository.swift */,
+				F0060002 /* YarnStashRepository.swift */,
+				F0070002 /* NeedleHookRepository.swift */,
+				F0080002 /* PatternMakeRepository.swift */,
+				F0090001 /* EntitlementRepository.swift */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -339,6 +521,20 @@
 				F0040001 /* EmptyPatterns.json */,
 			);
 			path = Animations;
+			sourceTree = "<group>";
+		};
+		G0TEST01 /* PatternVaultTests */ = {
+			isa = PBXGroup;
+			children = (
+				F0TEST01 /* PatternStepParserTests.swift */,
+				F0TEST02 /* ContentBlockParserTests.swift */,
+				F0TEST03 /* SourcePlatformHelperTests.swift */,
+				F0TEST04 /* PatternModelTests.swift */,
+				F0TEST05 /* RavelryPatternDetailsParsingTests.swift */,
+				F0TEST06 /* PDFTextExtractorTests.swift */,
+				F0TEST07 /* ShareURLExtractorTests.swift */,
+			);
+			path = PatternVaultTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -384,10 +580,32 @@
 			packageProductDependencies = (
 				P0010001 /* Supabase */,
 				P0010002 /* Lottie */,
+				P0010003 /* GoogleMobileAds */,
+				P0010004 /* FirebaseAnalytics */,
+				P0010005 /* FirebaseCrashlytics */,
+				P0010006 /* FirebaseCore */,
 			);
 			productName = PatternVault;
 			productReference = E0010000 /* PatternVault.app */;
 			productType = "com.apple.product-type.application";
+		};
+		TST0001 /* PatternVaultTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = TSTCL1 /* Build configuration list for PBXNativeTarget "PatternVaultTests" */;
+			buildPhases = (
+				TSTSRC /* Sources */,
+				TSTFRM /* Frameworks */,
+				TSTRES /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				TSTDP2 /* PBXTargetDependency */,
+			);
+			name = PatternVaultTests;
+			productName = PatternVaultTests;
+			productReference = TST0002 /* PatternVaultTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -420,6 +638,8 @@
 			packageReferences = (
 				R0010001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				R0010002 /* XCRemoteSwiftPackageReference "lottie-spm" */,
+				R0010003 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				R0010004 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = G0010002 /* Products */;
 			projectDirPath = "";
@@ -427,6 +647,7 @@
 			targets = (
 				T0010001 /* PatternVault */,
 				08C772002F5B374A00241E4E /* SaveToPatternVault */,
+				TST0001 /* PatternVaultTests */,
 			);
 		};
 /* End PBXProject section */
@@ -454,6 +675,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		TSTRES /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -474,6 +702,15 @@
 				B0010003 /* SupabaseManager.swift in Sources */,
 				B0010004 /* AuthService.swift in Sources */,
 				B0010010 /* VoiceRowService.swift in Sources */,
+				B0010011 /* AIStepParserService.swift in Sources */,
+				B0010020 /* AIKillSwitchService.swift in Sources */,
+				B0010012 /* ImageCacheService.swift in Sources */,
+				B0010013 /* WidgetDataService.swift in Sources */,
+				B0010021 /* YardageHelper.swift in Sources */,
+				B0010022 /* PatternDuplicateHelper.swift in Sources */,
+				B0010014 /* PatternListCacheService.swift in Sources */,
+				B0010015 /* CelebrationStore.swift in Sources */,
+				B0010016 /* HapticService.swift in Sources */,
 				B0010005 /* AuthGateView.swift in Sources */,
 				B0010006 /* LoginView.swift in Sources */,
 				B0010007 /* SignUpView.swift in Sources */,
@@ -516,9 +753,61 @@
 				B003000E /* ContentBlockParser.swift in Sources */,
 				B003000F /* JunkPhraseStore.swift in Sources */,
 				B0030010 /* StepEditorView.swift in Sources */,
+				B0030011 /* FormattedStepBodyView.swift in Sources */,
+				B0030012 /* CelebrationOverlayView.swift in Sources */,
+				B0030013 /* AppTutorialStore.swift in Sources */,
+				B0030014 /* AppTutorialOverlayView.swift in Sources */,
+				B0030015 /* TutorialAnchorPreferenceKey.swift in Sources */,
+				B0030016 /* WidgetOnboardingStore.swift in Sources */,
+				B0030017 /* WidgetOnboardingSheet.swift in Sources */,
+				B0030018 /* DuplicatesListView.swift in Sources */,
 				B0040002 /* LottieAnimationView.swift in Sources */,
 				B0040003 /* AnimatedCrowView.swift in Sources */,
 				B0050002 /* SpriteMascotView.swift in Sources */,
+				B0050010 /* TappableMascotView.swift in Sources */,
+				B0060001 /* YarnStashItem.swift in Sources */,
+				B0060002 /* YarnStashRepository.swift in Sources */,
+				B0060003 /* YarnStashStore.swift in Sources */,
+				B0060004 /* YarnStashListView.swift in Sources */,
+				B0060005 /* AddYarnStashView.swift in Sources */,
+				B0070001 /* NeedleHookItem.swift in Sources */,
+				B0070002 /* NeedleHookRepository.swift in Sources */,
+				B0070003 /* NeedleHookStore.swift in Sources */,
+				B0070004 /* NeedleHookListView.swift in Sources */,
+				B0070005 /* AddNeedleHookView.swift in Sources */,
+				B0080001 /* PatternMake.swift in Sources */,
+				B0080002 /* PatternMakeRepository.swift in Sources */,
+				B0080003 /* AddPatternMakeView.swift in Sources */,
+				B0080004 /* StashAndToolsView.swift in Sources */,
+				B0090001 /* EntitlementRepository.swift in Sources */,
+				B0090002 /* SubscriptionStore.swift in Sources */,
+				B0090003 /* PaywallView.swift in Sources */,
+				B0090004 /* AdBannerView.swift in Sources */,
+				B00A0001 /* PatternDiscoveryResult.swift in Sources */,
+				B00A0002 /* RavelryPatternSearchService.swift in Sources */,
+				B00A0003 /* FindPatternsView.swift in Sources */,
+				B00A0004 /* StashMatchPatternsView.swift in Sources */,
+				B00A0005 /* FinishedProjectShareCardView.swift in Sources */,
+				B00B0001 /* KeychainHelper.swift in Sources */,
+				B00B0002 /* OAuth1Signer.swift in Sources */,
+				B00B0003 /* RavelryOAuthService.swift in Sources */,
+				B00B0004 /* RavelryUserService.swift in Sources */,
+				B00B0005 /* RavelryImportStore.swift in Sources */,
+				B00B0006 /* PDFTextExtractor.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		TSTSRC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B0TEST01 /* PatternStepParserTests.swift in Sources */,
+				B0TEST02 /* ContentBlockParserTests.swift in Sources */,
+				B0TEST03 /* SourcePlatformHelperTests.swift in Sources */,
+				B0TEST04 /* PatternModelTests.swift in Sources */,
+				B0TEST05 /* RavelryPatternDetailsParsingTests.swift in Sources */,
+				B0TEST06 /* PDFTextExtractorTests.swift in Sources */,
+				B0TEST07 /* ShareURLExtractorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -530,15 +819,18 @@
 			target = 08C772002F5B374A00241E4E /* SaveToPatternVault */;
 			targetProxy = 08C772092F5B374A00241E4E /* PBXContainerItemProxy */;
 		};
+		TSTDP2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = T0010001 /* PatternVault */;
+			targetProxy = TSTDP1 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		08C7720E2F5B374A00241E4E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C00100CC /* Config/Config.xcconfig */;
 			buildSettings = {
-				ANTHROPIC_API_KEY = "$(ANTHROPIC_API_KEY)";
-				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
-				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
@@ -565,8 +857,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
+				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPABASE_ANON_KEY = "$(inherited)";
+				SUPABASE_URL = "$(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "SaveToPatternVault/SaveToPatternVault-Bridging-Header.h";
@@ -579,10 +875,8 @@
 		};
 		08C7720F2F5B374A00241E4E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C00100CC /* Config/Config.xcconfig */;
 			buildSettings = {
-				ANTHROPIC_API_KEY = "$(ANTHROPIC_API_KEY)";
-				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
-				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
@@ -609,14 +903,64 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
+				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPABASE_ANON_KEY = "$(inherited)";
+				SUPABASE_URL = "$(inherited)";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "SaveToPatternVault/SaveToPatternVault-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		TSTCFG1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.PatternVaultTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PatternVault.app/PatternVault";
+			};
+			name = Debug;
+		};
+		TSTCFG2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.PatternVaultTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/PatternVault.app/PatternVault";
 			};
 			name = Release;
 		};
@@ -737,14 +1081,15 @@
 		};
 		X0010003 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C00100CC /* Config/Config.xcconfig */;
 			buildSettings = {
-				ANTHROPIC_API_KEY = "$(ANTHROPIC_API_KEY)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PatternVault/PatternVault.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PatternVault/Info.plist;
@@ -760,10 +1105,10 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				RAVELRY_ACCESS_KEY = placeholder;
-				RAVELRY_PERSONAL_KEY = placeholder;
-				SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiemJuenR2YW51aWlqenltY2tuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MzY0NDcsImV4cCI6MjA4ODIxMjQ0N30.Ifur1ENkVLLypKbjh6gNUBA_E78ajJrKKfnI4yywU_o;
-				SUPABASE_URL = "https://fbzbnztvanuiijzymckn.supabase.co";
+				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
+				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
+				SUPABASE_ANON_KEY = "$(inherited)";
+				SUPABASE_URL = "$(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -772,14 +1117,15 @@
 		};
 		X0010004 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C00100CC /* Config/Config.xcconfig */;
 			buildSettings = {
-				ANTHROPIC_API_KEY = "$(ANTHROPIC_API_KEY)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PatternVault/PatternVault.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PatternVault/Info.plist;
@@ -795,10 +1141,10 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				RAVELRY_ACCESS_KEY = placeholder;
-				RAVELRY_PERSONAL_KEY = placeholder;
-				SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiemJuenR2YW51aWlqenltY2tuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2MzY0NDcsImV4cCI6MjA4ODIxMjQ0N30.Ifur1ENkVLLypKbjh6gNUBA_E78ajJrKKfnI4yywU_o;
-				SUPABASE_URL = "https://fbzbnztvanuiijzymckn.supabase.co";
+				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
+				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
+				SUPABASE_ANON_KEY = "$(inherited)";
+				SUPABASE_URL = "$(inherited)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -835,6 +1181,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		TSTCL1 /* Build configuration list for PBXNativeTarget "PatternVaultTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				TSTCFG1 /* Debug */,
+				TSTCFG2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -854,6 +1209,22 @@
 				minimumVersion = 4.3.0;
 			};
 		};
+		R0010003 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
+		R0010004 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -866,6 +1237,26 @@
 			isa = XCSwiftPackageProductDependency;
 			package = R0010002 /* XCRemoteSwiftPackageReference "lottie-spm" */;
 			productName = Lottie;
+		};
+		P0010003 /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = R0010003 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
+		P0010004 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = R0010004 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		P0010005 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = R0010004 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+		P0010006 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = R0010004 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

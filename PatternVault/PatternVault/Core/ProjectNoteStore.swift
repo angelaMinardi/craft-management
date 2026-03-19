@@ -32,6 +32,13 @@ final class ProjectNoteStore: ObservableObject {
     func add(patternId: UUID, userId: UUID, noteType: ProjectNoteType, content: String, photoData: Data?) async -> Bool {
         errorMessage = nil
         do {
+            if let photoData {
+                let count = try await repo.countNotesWithPhoto(userId: userId)
+                if !SubscriptionStore.shared.canAddNotePhoto(currentNotePhotoCount: count) {
+                    errorMessage = "Note photo limit reached. Upgrade to Premium for unlimited photos."
+                    return false
+                }
+            }
             var photoUrl: String? = nil
             let noteId = UUID()
             if let photoData {
@@ -52,11 +59,12 @@ final class ProjectNoteStore: ObservableObject {
         }
     }
 
-    func update(noteId: UUID, content: String?, noteType: ProjectNoteType?, photoUrl: String?) async {
+    func update(noteId: UUID, userId: UUID, content: String?, noteType: ProjectNoteType?, photoUrl: String?) async {
         errorMessage = nil
         do {
             let updated = try await repo.updateNote(
                 id: noteId,
+                userId: userId,
                 content: content,
                 noteType: noteType,
                 photoUrl: photoUrl
@@ -69,10 +77,10 @@ final class ProjectNoteStore: ObservableObject {
         }
     }
 
-    func delete(noteId: UUID) async {
+    func delete(noteId: UUID, userId: UUID) async {
         errorMessage = nil
         do {
-            try await repo.deleteNote(id: noteId)
+            try await repo.deleteNote(id: noteId, userId: userId)
             notes.removeAll { $0.id == noteId }
         } catch {
             errorMessage = error.localizedDescription

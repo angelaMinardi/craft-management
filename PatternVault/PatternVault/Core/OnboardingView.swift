@@ -62,14 +62,14 @@ struct OnboardingView: View {
                 TabView(selection: $currentPage) {
                     onboardingPage(
                         title: "Welcome to Pattern Vault!",
-                        subtitle: "Discover, organize, and manage your patterns with ease.",
+                        subtitle: "Discover, organize, and track your craft patterns in one place.",
                         heroImageName: nil
                     )
                     .tag(0)
 
                     onboardingPage(
-                        title: "Save from\nanywhere",
-                        subtitle: "Share a link from Safari, YouTube, or any app. We'll grab the details for you.",
+                        title: "Add to your vault",
+                        subtitle: "Share a link from Safari, YouTube, or any app. We'll save the link and pull in details when we can.",
                         heroImageName: "ShareToPatternVault"
                     )
                     .tag(1)
@@ -117,8 +117,11 @@ struct OnboardingView: View {
                             .clipShape(Capsule())
                         }
                         .buttonStyle(OnboardingButtonStyle())
+                        .accessibilityLabel("Next")
+                        .accessibilityHint("Continue to next screen")
                     } else {
                         Button {
+                            HapticService.mediumImpact()
                             isCelebrating = true
                         } label: {
                             Text("Get started")
@@ -131,6 +134,8 @@ struct OnboardingView: View {
                         }
                         .buttonStyle(OnboardingButtonStyle())
                         .padding(.horizontal, Theme.Spacing.xxl)
+                        .accessibilityLabel("Get started")
+                        .accessibilityHint("Finish onboarding and open the app")
                         .scaleEffect(buttonAppeared ? 1 : 0.92)
                         .opacity(buttonAppeared ? 1 : 0)
                     }

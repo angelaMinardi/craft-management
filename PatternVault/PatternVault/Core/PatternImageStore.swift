@@ -41,9 +41,9 @@ final class PatternImageStore: ObservableObject {
         }
     }
 
-    func delete(imageId: UUID) async {
+    func delete(imageId: UUID, userId: UUID) async {
         do {
-            try await repo.deleteImage(id: imageId)
+            try await repo.deleteImage(id: imageId, userId: userId)
             images.removeAll { $0.id == imageId }
         } catch {
             errorMessage = error.localizedDescription

@@ -70,7 +70,7 @@ final class ProjectNoteRepository: ObservableObject {
         }
     }
 
-    func updateNote(id: UUID, content: String?, noteType: ProjectNoteType?, photoUrl: String?) async throws -> ProjectNote {
+    func updateNote(id: UUID, userId: UUID, content: String?, noteType: ProjectNoteType?, photoUrl: String?) async throws -> ProjectNote {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let payload = UpdatePayload(
@@ -83,6 +83,7 @@ final class ProjectNoteRepository: ObservableObject {
             .from("project_notes")
             .update(payload)
             .eq("id", value: id.uuidString)
+            .eq("user_id", value: userId.uuidString)
             .select()
             .single()
             .execute()
@@ -90,12 +91,25 @@ final class ProjectNoteRepository: ObservableObject {
         return response
     }
 
-    func deleteNote(id: UUID) async throws {
+    func deleteNote(id: UUID, userId: UUID) async throws {
         try await client
             .from("project_notes")
             .delete()
             .eq("id", value: id.uuidString)
+            .eq("user_id", value: userId.uuidString)
             .execute()
+    }
+
+    /// Returns the number of project notes that have a photo (for freemium limit).
+    func countNotesWithPhoto(userId: UUID) async throws -> Int {
+        struct Params: Encodable {
+            let p_user_id: String
+        }
+        let count: Int = try await client
+            .rpc("count_notes_with_photo", params: Params(p_user_id: userId.uuidString))
+            .execute()
+            .value
+        return count
     }
 
     func uploadPhoto(imageData: Data, noteId: UUID) async throws -> String {

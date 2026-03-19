@@ -23,6 +23,7 @@ struct AddPatternView: View {
     @State private var attachedPdfData: Data?
     @State private var showPdfPicker = false
     @State private var fetchTask: Task<Void, Never>?
+    @State private var duplicateExisting: Pattern?
     @FocusState private var focusedField: Field?
 
     enum Field { case url, title, description }
@@ -48,6 +49,8 @@ struct AddPatternView: View {
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .focused($focusedField, equals: .url)
+                            .accessibilityLabel("Pattern URL")
+                            .accessibilityHint("Paste the link to the pattern")
                             .onChange(of: url) { _, newValue in
                                 scheduleFetch(for: newValue)
                             }
@@ -82,6 +85,8 @@ struct AddPatternView: View {
                 Section("Details") {
                     TextField("Title (e.g. Cozy Cardigan)", text: $title)
                         .focused($focusedField, equals: .title)
+                        .accessibilityLabel("Title")
+                        .accessibilityHint("Pattern name")
                     TextField("Description (optional)", text: $description, axis: .vertical)
                         .lineLimit(3...6)
                         .focused($focusedField, equals: .description)
@@ -142,15 +147,27 @@ struct AddPatternView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityLabel("Cancel")
+                        .accessibilityHint("Close without saving")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
                         .disabled(url.isEmpty || title.isEmpty || isSaving)
+                        .accessibilityLabel("Save")
+                        .accessibilityHint("Save the pattern to your vault")
                 }
             }
             .onAppear {
                 if let prefillURL, !prefillURL.isEmpty {
                     url = prefillURL
+                }
+            }
+            .alert("You may already have this pattern", isPresented: Binding(get: { duplicateExisting != nil }, set: { if !$0 { duplicateExisting = nil } })) {
+                Button("Cancel", role: .cancel) { duplicateExisting = nil }
+                Button("Save anyway") { save(forceAdd: true) }
+            } message: {
+                if let existing = duplicateExisting {
+                    Text("A pattern with this link is already in your vault: \"\(existing.title)\". Save anyway to add a duplicate?")
                 }
             }
             .fileImporter(
@@ -207,8 +224,13 @@ struct AddPatternView: View {
         }
     }
 
-    private func save() {
+    private func save(forceAdd: Bool = false) {
         guard let userId = auth.currentUserId else { return }
+        if !forceAdd, let existing = PatternDuplicateHelper.existingMatch(for: url, in: store.patterns) {
+            duplicateExisting = existing
+            return
+        }
+        duplicateExisting = nil
         isSaving = true
         Task {
             let desc = description.isEmpty ? nil : description
@@ -224,7 +246,12 @@ struct AddPatternView: View {
                 await store.attachPdf(pattern: newPattern, userId: userId, pdfData: pdfData)
             }
             isSaving = false
-            if success { dismiss() }
+            if success {
+                HapticService.success()
+                if store.patterns.count == 1 { CelebrationStore.shared.unlock("first_pattern") }
+                if store.patterns.count == 10 { CelebrationStore.shared.unlock("vault_10") }
+                dismiss()
+            }
         }
     }
 }

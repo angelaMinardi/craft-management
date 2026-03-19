@@ -64,9 +64,10 @@ final class PatternRepository: ObservableObject {
         let needle_hook_sizes: String?
         let yarn_weight_yardage: String?
         let techniques: String?
+        let parsed_steps: String?
     }
 
-    func addPattern(userId: UUID, title: String, description: String?, sourceUrl: String, sourcePlatform: String?, status: PatternStatus, thumbnailUrl: String? = nil, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, sourceContent: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil) async throws -> Pattern {
+    func addPattern(userId: UUID, title: String, description: String?, sourceUrl: String, sourcePlatform: String?, status: PatternStatus, thumbnailUrl: String? = nil, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, sourceContent: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil, parsedSteps: String? = nil) async throws -> Pattern {
         let id = UUID()
         let payload = InsertPayload(
             id: id.uuidString,
@@ -86,7 +87,8 @@ final class PatternRepository: ObservableObject {
             gauge: gauge,
             needle_hook_sizes: needleHookSizes,
             yarn_weight_yardage: yarnWeightYardage,
-            techniques: techniques
+            techniques: techniques,
+            parsed_steps: parsedSteps
         )
         let response: Pattern = try await client
             .from("patterns")
@@ -112,13 +114,14 @@ final class PatternRepository: ObservableObject {
         let yarn_weight_yardage: String?
         let techniques: String?
         let source_content: String?
+        let parsed_steps: String?
         let updated_at: String
 
         enum CodingKeys: String, CodingKey {
             case title, description, status
             case difficulty, materials, craft_type
             case pdf_url, video_url, gauge, needle_hook_sizes, yarn_weight_yardage, techniques
-            case source_content, updated_at
+            case source_content, parsed_steps, updated_at
         }
 
         func encode(to encoder: Encoder) throws {
@@ -136,11 +139,12 @@ final class PatternRepository: ObservableObject {
             try c.encodeIfPresent(yarn_weight_yardage, forKey: .yarn_weight_yardage)
             try c.encodeIfPresent(techniques, forKey: .techniques)
             try c.encodeIfPresent(source_content, forKey: .source_content)
+            try c.encodeIfPresent(parsed_steps, forKey: .parsed_steps)
             try c.encode(updated_at, forKey: .updated_at)
         }
     }
 
-    func updatePattern(id: UUID, userId: UUID, title: String?, description: String?, status: PatternStatus?, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil, sourceContent: String? = nil) async throws -> Pattern {
+    func updatePattern(id: UUID, userId: UUID, title: String?, description: String?, status: PatternStatus?, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil, sourceContent: String? = nil, parsedSteps: String? = nil) async throws -> Pattern {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let payload = UpdatePayload(
@@ -157,6 +161,7 @@ final class PatternRepository: ObservableObject {
             yarn_weight_yardage: yarnWeightYardage,
             techniques: techniques,
             source_content: sourceContent,
+            parsed_steps: parsedSteps,
             updated_at: formatter.string(from: Date())
         )
         let response: Pattern = try await client
@@ -179,6 +184,10 @@ final class PatternRepository: ObservableObject {
         try await updatePattern(id: patternId, userId: userId, title: nil, description: nil, status: nil, pdfUrl: pdfUrl)
     }
 
+    func updateParsedSteps(patternId: UUID, userId: UUID, parsedSteps: String?) async throws -> Pattern {
+        try await updatePattern(id: patternId, userId: userId, title: nil, description: nil, status: nil, parsedSteps: parsedSteps)
+    }
+
     func deletePattern(id: UUID, userId: UUID) async throws {
         try await client
             .from("patterns")
@@ -186,6 +195,13 @@ final class PatternRepository: ObservableObject {
             .eq("id", value: id.uuidString)
             .eq("user_id", value: userId.uuidString)
             .execute()
+    }
+
+    /// Deletes multiple patterns for the user. RLS ensures only own rows are removed.
+    func deletePatterns(ids: [UUID], userId: UUID) async throws {
+        for id in ids {
+            try await deletePattern(id: id, userId: userId)
+        }
     }
 
     /// Uploads PDF to pattern-pdfs bucket. Path: userId/patternId/uuid.pdf. Returns public URL.

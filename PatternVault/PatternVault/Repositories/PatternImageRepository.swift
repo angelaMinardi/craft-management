@@ -47,11 +47,12 @@ final class PatternImageRepository: ObservableObject {
         return response
     }
 
-    func deleteImage(id: UUID) async throws {
+    func deleteImage(id: UUID, userId: UUID) async throws {
         try await client
             .from("pattern_images")
             .delete()
             .eq("id", value: id.uuidString)
+            .eq("user_id", value: userId.uuidString)
             .execute()
     }
 

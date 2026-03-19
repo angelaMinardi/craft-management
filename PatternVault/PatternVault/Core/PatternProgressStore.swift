@@ -89,19 +89,40 @@ final class PatternProgressStore: ObservableObject {
     static let shared = PatternProgressStore()
 
     private let defaultsKey = "pattern_progress"
-    private var cache: [UUID: PatternProgressData] = [:]
+    /// Key: "patternId" (legacy) or "patternId_default" or "patternId_makeId". Progress is per-pattern or per-make.
+    private var cache: [String: PatternProgressData] = [:]
+    private static let defaultMakeSuffix = "default"
 
     private init() {
         loadFromDefaults()
     }
 
-    func progress(for patternId: UUID) -> PatternProgressData? {
-        cache[patternId]
+    private func key(patternId: UUID, makeId: UUID?) -> String {
+        if let makeId = makeId {
+            return "\(patternId.uuidString)_\(makeId.uuidString)"
+        }
+        return "\(patternId.uuidString)_\(Self.defaultMakeSuffix)"
     }
 
-    /// Progress as 0...1 for the given pattern. Uses step index/count if no row data; otherwise rows completed/total. Returns 0 when no progress stored.
-    func progressFraction(for patternId: UUID, stepCount: Int? = nil, rowsCompleted: Int? = nil, totalRows: Int? = nil) -> Double {
-        let data = cache[patternId]
+    /// Resolve progress: prefer key with makeId; fall back to legacy single-UUID key for old installs.
+    private func resolve(patternId: UUID, makeId: UUID?) -> PatternProgressData? {
+        let k = key(patternId: patternId, makeId: makeId)
+        if let v = cache[k] { return v }
+        // Legacy: key was patternId.uuidString only (no suffix)
+        return cache[patternId.uuidString]
+    }
+
+    private func write(patternId: UUID, makeId: UUID?, _ data: PatternProgressData) {
+        cache[key(patternId: patternId, makeId: makeId)] = data
+    }
+
+    func progress(for patternId: UUID, makeId: UUID? = nil) -> PatternProgressData? {
+        resolve(patternId: patternId, makeId: makeId)
+    }
+
+    /// Progress as 0...1 for the given pattern (and optional make). Uses step index/count if no row data; otherwise rows completed/total. Returns 0 when no progress stored.
+    func progressFraction(for patternId: UUID, makeId: UUID? = nil, stepCount: Int? = nil, rowsCompleted: Int? = nil, totalRows: Int? = nil) -> Double {
+        let data = resolve(patternId: patternId, makeId: makeId)
         if let rc = data?.rowsCompleted ?? rowsCompleted, let tr = data?.totalRows ?? totalRows, tr > 0 {
             return min(1, max(0, Double(rc) / Double(tr)))
         }
@@ -113,64 +134,65 @@ final class PatternProgressStore: ObservableObject {
     }
 
     func customStepLayout(for patternId: UUID) -> CustomStepLayout? {
-        cache[patternId]?.customStepLayout
+        // Step layout is shared across makes; use default key.
+        resolve(patternId: patternId, makeId: nil)?.customStepLayout
     }
 
     func setCustomStepLayout(patternId: UUID, layout: CustomStepLayout) {
-        var data = cache[patternId] ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
+        var data = resolve(patternId: patternId, makeId: nil) ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
         data.customStepLayout = layout
         data.currentStepIndex = 0
         data.stepCount = layout.stepStartIndices.count
-        cache[patternId] = data
+        write(patternId: patternId, makeId: nil, data)
         saveToDefaults()
         objectWillChange.send()
     }
 
     func clearCustomStepLayout(patternId: UUID) {
-        guard var data = cache[patternId] else { return }
+        guard var data = resolve(patternId: patternId, makeId: nil) else { return }
         data.customStepLayout = nil
         data.currentStepIndex = 0
-        cache[patternId] = data
+        write(patternId: patternId, makeId: nil, data)
         saveToDefaults()
         objectWillChange.send()
     }
 
-    func setCurrentStep(patternId: UUID, index: Int, stepCount: Int) {
+    func setCurrentStep(patternId: UUID, makeId: UUID? = nil, index: Int, stepCount: Int) {
         let stepCount = max(1, stepCount)
         let clamped = min(max(0, index), stepCount - 1)
-        var data = cache[patternId] ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
+        var data = resolve(patternId: patternId, makeId: makeId) ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
         data.currentStepIndex = clamped
         data.stepCount = stepCount
-        cache[patternId] = data
+        write(patternId: patternId, makeId: makeId, data)
         saveToDefaults()
         objectWillChange.send()
     }
 
-    func setRows(patternId: UUID, completed: Int, total: Int?) {
-        var data = cache[patternId] ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
+    func setRows(patternId: UUID, makeId: UUID? = nil, completed: Int, total: Int?) {
+        var data = resolve(patternId: patternId, makeId: makeId) ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
         data.rowsCompleted = completed
         data.totalRows = total
-        cache[patternId] = data
+        write(patternId: patternId, makeId: makeId, data)
         saveToDefaults()
         objectWillChange.send()
     }
 
-    func setYarnColor(patternId: UUID, colorName: String?) {
-        var data = cache[patternId] ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
+    func setYarnColor(patternId: UUID, makeId: UUID? = nil, colorName: String?) {
+        var data = resolve(patternId: patternId, makeId: makeId) ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
         data.yarnColorName = colorName
-        cache[patternId] = data
+        write(patternId: patternId, makeId: makeId, data)
         saveToDefaults()
         objectWillChange.send()
     }
 
-    func setProgress(patternId: UUID, currentStepIndex: Int, stepCount: Int? = nil, rowsCompleted: Int? = nil, totalRows: Int? = nil, yarnColorName: String? = nil) {
-        var data = cache[patternId] ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
+    func setProgress(patternId: UUID, makeId: UUID? = nil, currentStepIndex: Int, stepCount: Int? = nil, rowsCompleted: Int? = nil, totalRows: Int? = nil, yarnColorName: String? = nil) {
+        var data = resolve(patternId: patternId, makeId: makeId) ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
         data.currentStepIndex = max(0, currentStepIndex)
         if let sc = stepCount { data.stepCount = sc }
         if let rc = rowsCompleted { data.rowsCompleted = rc }
         if let tr = totalRows { data.totalRows = tr }
         if let yc = yarnColorName { data.yarnColorName = yc }
-        cache[patternId] = data
+        write(patternId: patternId, makeId: makeId, data)
         saveToDefaults()
         objectWillChange.send()
     }
@@ -180,16 +202,26 @@ final class PatternProgressStore: ObservableObject {
     }
 
     private func loadFromDefaults() {
-        guard let data = defaults.data(forKey: defaultsKey),
-              let decoded = try? JSONDecoder().decode([String: PatternProgressData].self, from: data) else {
-            return
+        guard let data = defaults.data(forKey: defaultsKey) else { return }
+        // Support legacy [UUID string: Value] and new [composite key: Value]
+        if let decoded = try? JSONDecoder().decode([String: PatternProgressData].self, from: data) {
+            var migrated: [String: PatternProgressData] = [:]
+            for (k, v) in decoded {
+                if k.contains("_") {
+                    migrated[k] = v
+                } else {
+                    migrated["\(k)_\(Self.defaultMakeSuffix)"] = v
+                }
+            }
+            cache = migrated
+            if migrated.count != decoded.count || decoded.keys.contains(where: { !$0.contains("_") }) {
+                saveToDefaults()
+            }
         }
-        cache = decoded.compactMapKeys { UUID(uuidString: $0) }
     }
 
     private func saveToDefaults() {
-        let encoded = cache.mapKeys { $0.uuidString }
-        guard let data = try? JSONEncoder().encode(encoded) else { return }
+        guard let data = try? JSONEncoder().encode(cache) else { return }
         defaults.set(data, forKey: defaultsKey)
     }
 }

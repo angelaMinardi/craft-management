@@ -10,11 +10,12 @@ import Supabase
 final class PatternYarnLinkRepository: ObservableObject {
     private let client = SupabaseManager.client
 
-    func fetchLinks(patternId: UUID) async throws -> [PatternYarnLink] {
+    func fetchLinks(patternId: UUID, userId: UUID) async throws -> [PatternYarnLink] {
         let response: [PatternYarnLink] = try await client
             .from("pattern_yarn_links")
             .select()
             .eq("pattern_id", value: patternId.uuidString)
+            .eq("user_id", value: userId.uuidString)
             .order("display_order", ascending: true)
             .execute()
             .value

@@ -39,5 +39,8 @@ struct NoteRowView: View {
             }
         }
         .padding(.vertical, 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(note.noteType.displayName): \(note.content)")
+        .accessibilityHint("Opens note details")
     }
 }

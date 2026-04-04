@@ -37,6 +37,9 @@
 		B0010020 /* AIKillSwitchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010020 /* AIKillSwitchService.swift */; };
 		B0010021 /* YardageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010021 /* YardageHelper.swift */; };
 		B0010022 /* PatternDuplicateHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010022 /* PatternDuplicateHelper.swift */; };
+		B0010023 /* MascotInteractionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010023 /* MascotInteractionStore.swift */; };
+		B0010024 /* PatternRowParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010024 /* PatternRowParser.swift */; };
+		B0010025 /* ChartHighlightStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010025 /* ChartHighlightStore.swift */; };
 		B0020001 /* Pattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020001 /* Pattern.swift */; };
 		B0020002 /* ProjectNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020002 /* ProjectNote.swift */; };
 		B0020003 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020003 /* Tag.swift */; };
@@ -57,6 +60,8 @@
 		B0020012 /* TagRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020012 /* TagRepository.swift */; };
 		B0020013 /* MetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020013 /* MetadataService.swift */; };
 		B0020014 /* PatternYarnLinkRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020014 /* PatternYarnLinkRepository.swift */; };
+		B0020015 /* RowCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020015 /* RowCounter.swift */; };
+		B0020016 /* ChartHighlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020016 /* ChartHighlight.swift */; };
 		B0030001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030001 /* Theme.swift */; };
 		B0030002 /* PatternCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030002 /* PatternCardView.swift */; };
 		B0030003 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030003 /* OnboardingView.swift */; };
@@ -81,6 +86,11 @@
 		B0030016 /* WidgetOnboardingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030016 /* WidgetOnboardingStore.swift */; };
 		B0030017 /* WidgetOnboardingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030017 /* WidgetOnboardingSheet.swift */; };
 		B0030018 /* DuplicatesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030018 /* DuplicatesListView.swift */; };
+		B0030019 /* StitchAbbreviationLinkBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030019 /* StitchAbbreviationLinkBuilder.swift */; };
+		B0030020 /* InteractiveRowReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030020 /* InteractiveRowReaderView.swift */; };
+		B0030021 /* RowCounterBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030021 /* RowCounterBarView.swift */; };
+		B0030022 /* SecondaryCounterConfigSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030022 /* SecondaryCounterConfigSheet.swift */; };
+		B0030023 /* ChartHighlighterOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030023 /* ChartHighlighterOverlayView.swift */; };
 		B0040001 /* EmptyPatterns.json in Resources */ = {isa = PBXBuildFile; fileRef = F0040001 /* EmptyPatterns.json */; };
 		B0040002 /* LottieAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040002 /* LottieAnimationView.swift */; };
 		B0040003 /* AnimatedCrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040003 /* AnimatedCrowView.swift */; };
@@ -91,7 +101,11 @@
 		B0050005 /* WalkingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050005 /* WalkingMascotFrames */; };
 		B0050006 /* PoutyMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050006 /* PoutyMascotFrames */; };
 		B0050007 /* KnittingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050007 /* KnittingMascotFrames */; };
+		B0050008 /* WavingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050008 /* WavingMascotFrames */; };
+		B0050009 /* ThinkingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050009 /* ThinkingMascotFrames */; };
 		B0050010 /* TappableMascotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0050010 /* TappableMascotView.swift */; };
+		B0050011 /* MascotDashboardPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0050011 /* MascotDashboardPanelView.swift */; };
+		B0050012 /* PettingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050012 /* PettingMascotFrames */; };
 		B0060001 /* YarnStashItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0060001 /* YarnStashItem.swift */; };
 		B0060002 /* YarnStashRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0060002 /* YarnStashRepository.swift */; };
 		B0060003 /* YarnStashStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0060003 /* YarnStashStore.swift */; };
@@ -121,6 +135,20 @@
 		B00B0004 /* RavelryUserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0004 /* RavelryUserService.swift */; };
 		B00B0005 /* RavelryImportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0005 /* RavelryImportStore.swift */; };
 		B00B0006 /* PDFTextExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0006 /* PDFTextExtractor.swift */; };
+		B00C0001 /* MascotEconomyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0001 /* MascotEconomyState.swift */; };
+		B00C0002 /* MascotStoryChapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0002 /* MascotStoryChapter.swift */; };
+		B00C0003 /* MascotStoreSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0003 /* MascotStoreSheet.swift */; };
+		B00C0004 /* MascotStoryCutsceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0004 /* MascotStoryCutsceneView.swift */; };
+		B00C0005 /* MascotStoryLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0005 /* MascotStoryLogView.swift */; };
+		B00C0006 /* MascotHelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0006 /* MascotHelpView.swift */; };
+		B00C0007 /* MascotStoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0007 /* MascotStoryStore.swift */; };
+		B00C0008 /* NestDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0008 /* NestDecoration.swift */; };
+		B00C0009 /* DailyRewardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0009 /* DailyRewardStore.swift */; };
+		B00C000A /* AchievementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C000A /* AchievementStore.swift */; };
+		B00C000B /* AchievementBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C000B /* AchievementBadge.swift */; };
+		B00D0001 /* PDFPageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00D0001 /* PDFPageRenderer.swift */; };
+		B00D0002 /* GeminiMultimodalRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00D0002 /* GeminiMultimodalRequest.swift */; };
+		B00D0003 /* ChartImageProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00D0003 /* ChartImageProcessor.swift */; };
 		B0TEST01 /* PatternStepParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST01 /* PatternStepParserTests.swift */; };
 		B0TEST02 /* ContentBlockParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST02 /* ContentBlockParserTests.swift */; };
 		B0TEST03 /* SourcePlatformHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST03 /* SourcePlatformHelperTests.swift */; };
@@ -128,6 +156,13 @@
 		B0TEST05 /* RavelryPatternDetailsParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST05 /* RavelryPatternDetailsParsingTests.swift */; };
 		B0TEST06 /* PDFTextExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST06 /* PDFTextExtractorTests.swift */; };
 		B0TEST07 /* ShareURLExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST07 /* ShareURLExtractorTests.swift */; };
+		WBF00001 /* PatternVaultWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = WFR00001 /* PatternVaultWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		WBF10001 /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00002 /* AppIntent.swift */; };
+		WBF10002 /* PatternVaultWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00003 /* PatternVaultWidgetBundle.swift */; };
+		WBF10003 /* PatternVaultWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00004 /* PatternVaultWidget.swift */; };
+		WBF10004 /* PatternVaultWidgetLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00005 /* PatternVaultWidgetLiveActivity.swift */; };
+		WBF10005 /* RowTrackerWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00006 /* RowTrackerWidget.swift */; };
+		WBF10006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = WFR00007 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -145,6 +180,13 @@
 			remoteGlobalIDString = T0010001;
 			remoteInfo = PatternVault;
 		};
+		WPRX0001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = P0000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = WT000001;
+			remoteInfo = PatternVaultWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -155,6 +197,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				08C7720B2F5B374A00241E4E /* SaveToPatternVault.appex in Embed Foundation Extensions */,
+				WBF00001 /* PatternVaultWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -162,6 +205,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		089B9C6A2F72DE6D00C49CF0 /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = Configuration.storekit; path = PatternVault/Configuration.storekit; sourceTree = "<group>"; };
 		08C772012F5B374A00241E4E /* SaveToPatternVault.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SaveToPatternVault.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		08C7E5B72F58EE8100DCDC30 /* PatternVault.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PatternVault.entitlements; sourceTree = "<group>"; };
 		C00100CC /* Config/Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Config.xcconfig; sourceTree = "<group>"; };
@@ -190,6 +234,9 @@
 		F0010020 /* AIKillSwitchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIKillSwitchService.swift; sourceTree = "<group>"; };
 		F0010021 /* YardageHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YardageHelper.swift; sourceTree = "<group>"; };
 		F0010022 /* PatternDuplicateHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternDuplicateHelper.swift; sourceTree = "<group>"; };
+		F0010023 /* MascotInteractionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotInteractionStore.swift; sourceTree = "<group>"; };
+		F0010024 /* PatternRowParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternRowParser.swift; sourceTree = "<group>"; };
+		F0010025 /* ChartHighlightStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHighlightStore.swift; sourceTree = "<group>"; };
 		F0020001 /* Pattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pattern.swift; sourceTree = "<group>"; };
 		F0020002 /* ProjectNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectNote.swift; sourceTree = "<group>"; };
 		F0020003 /* Tag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
@@ -210,6 +257,8 @@
 		F0020012 /* TagRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagRepository.swift; sourceTree = "<group>"; };
 		F0020013 /* MetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataService.swift; sourceTree = "<group>"; };
 		F0020014 /* PatternYarnLinkRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternYarnLinkRepository.swift; sourceTree = "<group>"; };
+		F0020015 /* RowCounter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowCounter.swift; sourceTree = "<group>"; };
+		F0020016 /* ChartHighlight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHighlight.swift; sourceTree = "<group>"; };
 		F0030001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F0030002 /* PatternCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternCardView.swift; sourceTree = "<group>"; };
 		F0030003 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -234,6 +283,11 @@
 		F0030016 /* WidgetOnboardingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetOnboardingStore.swift; sourceTree = "<group>"; };
 		F0030017 /* WidgetOnboardingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetOnboardingSheet.swift; sourceTree = "<group>"; };
 		F0030018 /* DuplicatesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuplicatesListView.swift; sourceTree = "<group>"; };
+		F0030019 /* StitchAbbreviationLinkBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchAbbreviationLinkBuilder.swift; sourceTree = "<group>"; };
+		F0030020 /* InteractiveRowReaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveRowReaderView.swift; sourceTree = "<group>"; };
+		F0030021 /* RowCounterBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowCounterBarView.swift; sourceTree = "<group>"; };
+		F0030022 /* SecondaryCounterConfigSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecondaryCounterConfigSheet.swift; sourceTree = "<group>"; };
+		F0030023 /* ChartHighlighterOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHighlighterOverlayView.swift; sourceTree = "<group>"; };
 		F0040001 /* EmptyPatterns.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = EmptyPatterns.json; sourceTree = "<group>"; };
 		F0040002 /* LottieAnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieAnimationView.swift; sourceTree = "<group>"; };
 		F0040003 /* AnimatedCrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedCrowView.swift; sourceTree = "<group>"; };
@@ -244,7 +298,11 @@
 		F0050005 /* WalkingMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = WalkingMascotFrames; sourceTree = "<group>"; };
 		F0050006 /* PoutyMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = PoutyMascotFrames; sourceTree = "<group>"; };
 		F0050007 /* KnittingMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = KnittingMascotFrames; sourceTree = "<group>"; };
+		F0050008 /* WavingMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = WavingMascotFrames; sourceTree = "<group>"; };
+		F0050009 /* ThinkingMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ThinkingMascotFrames; sourceTree = "<group>"; };
 		F0050010 /* TappableMascotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TappableMascotView.swift; sourceTree = "<group>"; };
+		F0050011 /* MascotDashboardPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotDashboardPanelView.swift; sourceTree = "<group>"; };
+		F0050012 /* PettingMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = PettingMascotFrames; sourceTree = "<group>"; };
 		F0060001 /* YarnStashItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnStashItem.swift; sourceTree = "<group>"; };
 		F0060002 /* YarnStashRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnStashRepository.swift; sourceTree = "<group>"; };
 		F0060003 /* YarnStashStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnStashStore.swift; sourceTree = "<group>"; };
@@ -274,6 +332,20 @@
 		F00B0004 /* RavelryUserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryUserService.swift; sourceTree = "<group>"; };
 		F00B0005 /* RavelryImportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryImportStore.swift; sourceTree = "<group>"; };
 		F00B0006 /* PDFTextExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTextExtractor.swift; sourceTree = "<group>"; };
+		F00C0001 /* MascotEconomyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotEconomyState.swift; sourceTree = "<group>"; };
+		F00C0002 /* MascotStoryChapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoryChapter.swift; sourceTree = "<group>"; };
+		F00C0003 /* MascotStoreSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoreSheet.swift; sourceTree = "<group>"; };
+		F00C0004 /* MascotStoryCutsceneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoryCutsceneView.swift; sourceTree = "<group>"; };
+		F00C0005 /* MascotStoryLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoryLogView.swift; sourceTree = "<group>"; };
+		F00C0006 /* MascotHelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotHelpView.swift; sourceTree = "<group>"; };
+		F00C0007 /* MascotStoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoryStore.swift; sourceTree = "<group>"; };
+		F00C0008 /* NestDecoration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestDecoration.swift; sourceTree = "<group>"; };
+		F00C0009 /* DailyRewardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyRewardStore.swift; sourceTree = "<group>"; };
+		F00C000A /* AchievementStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementStore.swift; sourceTree = "<group>"; };
+		F00C000B /* AchievementBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementBadge.swift; sourceTree = "<group>"; };
+		F00D0001 /* PDFPageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageRenderer.swift; sourceTree = "<group>"; };
+		F00D0002 /* GeminiMultimodalRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiMultimodalRequest.swift; sourceTree = "<group>"; };
+		F00D0003 /* ChartImageProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartImageProcessor.swift; sourceTree = "<group>"; };
 		F0TEST01 /* PatternStepParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStepParserTests.swift; sourceTree = "<group>"; };
 		F0TEST02 /* ContentBlockParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlockParserTests.swift; sourceTree = "<group>"; };
 		F0TEST03 /* SourcePlatformHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcePlatformHelperTests.swift; sourceTree = "<group>"; };
@@ -282,6 +354,15 @@
 		F0TEST06 /* PDFTextExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTextExtractorTests.swift; sourceTree = "<group>"; };
 		F0TEST07 /* ShareURLExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareURLExtractorTests.swift; sourceTree = "<group>"; };
 		TST0002 /* PatternVaultTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PatternVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		WFR00001 /* PatternVaultWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PatternVaultWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		WFR00002 /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
+		WFR00003 /* PatternVaultWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternVaultWidgetBundle.swift; sourceTree = "<group>"; };
+		WFR00004 /* PatternVaultWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternVaultWidget.swift; sourceTree = "<group>"; };
+		WFR00005 /* PatternVaultWidgetLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternVaultWidgetLiveActivity.swift; sourceTree = "<group>"; };
+		WFR00006 /* RowTrackerWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowTrackerWidget.swift; sourceTree = "<group>"; };
+		WFR00007 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		WFR00008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		WFR00009 /* PatternVaultWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PatternVaultWidget.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -327,6 +408,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		WPH00002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -341,8 +429,10 @@
 		G0010000 = {
 			isa = PBXGroup;
 			children = (
+				089B9C6A2F72DE6D00C49CF0 /* Configuration.storekit */,
 				C00100CC /* Config/Config.xcconfig */,
 				G0010001 /* PatternVault */,
+				WG000001 /* PatternVaultWidget */,
 				08C772022F5B374A00241E4E /* SaveToPatternVault */,
 				G0TEST01 /* PatternVaultTests */,
 				G0010002 /* Products */,
@@ -369,6 +459,9 @@
 				F0050005 /* WalkingMascotFrames */,
 				F0050006 /* PoutyMascotFrames */,
 				F0050007 /* KnittingMascotFrames */,
+				F0050008 /* WavingMascotFrames */,
+				F0050009 /* ThinkingMascotFrames */,
+				F0050012 /* PettingMascotFrames */,
 				F001000E /* Assets.xcassets */,
 				F001000D /* Info.plist */,
 			);
@@ -379,6 +472,7 @@
 			isa = PBXGroup;
 			children = (
 				E0010000 /* PatternVault.app */,
+				WFR00001 /* PatternVaultWidgetExtension.appex */,
 				08C772012F5B374A00241E4E /* SaveToPatternVault.appex */,
 				TST0002 /* PatternVaultTests.xctest */,
 			);
@@ -433,10 +527,16 @@
 				F0030016 /* WidgetOnboardingStore.swift */,
 				F0030017 /* WidgetOnboardingSheet.swift */,
 				F0030018 /* DuplicatesListView.swift */,
+				F0030019 /* StitchAbbreviationLinkBuilder.swift */,
+				F0030020 /* InteractiveRowReaderView.swift */,
+				F0030021 /* RowCounterBarView.swift */,
+				F0030022 /* SecondaryCounterConfigSheet.swift */,
+				F0030023 /* ChartHighlighterOverlayView.swift */,
 				F0040002 /* LottieAnimationView.swift */,
 				F0040003 /* AnimatedCrowView.swift */,
 				F0050002 /* SpriteMascotView.swift */,
 				F0050010 /* TappableMascotView.swift */,
+				F0050011 /* MascotDashboardPanelView.swift */,
 				F0060003 /* YarnStashStore.swift */,
 				F0060004 /* YarnStashListView.swift */,
 				F0060005 /* AddYarnStashView.swift */,
@@ -448,6 +548,10 @@
 				F00A0003 /* FindPatternsView.swift */,
 				F00A0004 /* StashMatchPatternsView.swift */,
 				F00A0005 /* FinishedProjectShareCardView.swift */,
+				F00C0003 /* MascotStoreSheet.swift */,
+				F00C0004 /* MascotStoryCutsceneView.swift */,
+				F00C0005 /* MascotStoryLogView.swift */,
+				F00C0006 /* MascotHelpView.swift */,
 				F0090003 /* PaywallView.swift */,
 				F0090004 /* AdBannerView.swift */,
 			);
@@ -469,6 +573,9 @@
 				F0010014 /* PatternListCacheService.swift */,
 				F0010015 /* CelebrationStore.swift */,
 				F0010016 /* HapticService.swift */,
+				F0010023 /* MascotInteractionStore.swift */,
+				F0010024 /* PatternRowParser.swift */,
+				F0010025 /* ChartHighlightStore.swift */,
 				F0020005 /* SourcePlatformHelper.swift */,
 				F0020013 /* MetadataService.swift */,
 				F0090002 /* SubscriptionStore.swift */,
@@ -479,6 +586,12 @@
 				F00B0004 /* RavelryUserService.swift */,
 				F00B0005 /* RavelryImportStore.swift */,
 				F00B0006 /* PDFTextExtractor.swift */,
+				F00D0001 /* PDFPageRenderer.swift */,
+				F00D0002 /* GeminiMultimodalRequest.swift */,
+				F00D0003 /* ChartImageProcessor.swift */,
+				F00C0007 /* MascotStoryStore.swift */,
+				F00C0009 /* DailyRewardStore.swift */,
+				F00C000A /* AchievementStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -489,12 +602,18 @@
 				F0020001 /* Pattern.swift */,
 				F0020002 /* ProjectNote.swift */,
 				F0020003 /* Tag.swift */,
+				F0020015 /* RowCounter.swift */,
+				F0020016 /* ChartHighlight.swift */,
 				F0030004 /* PatternImage.swift */,
 				F0030009 /* PatternYarnLink.swift */,
 				F0060001 /* YarnStashItem.swift */,
 				F0070001 /* NeedleHookItem.swift */,
 				F0080001 /* PatternMake.swift */,
 				F00A0001 /* PatternDiscoveryResult.swift */,
+				F00C0001 /* MascotEconomyState.swift */,
+				F00C0002 /* MascotStoryChapter.swift */,
+				F00C0008 /* NestDecoration.swift */,
+				F00C000B /* AchievementBadge.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -537,6 +656,21 @@
 			path = PatternVaultTests;
 			sourceTree = "<group>";
 		};
+		WG000001 /* PatternVaultWidget */ = {
+			isa = PBXGroup;
+			children = (
+				WFR00009 /* PatternVaultWidget.entitlements */,
+				WFR00002 /* AppIntent.swift */,
+				WFR00003 /* PatternVaultWidgetBundle.swift */,
+				WFR00004 /* PatternVaultWidget.swift */,
+				WFR00005 /* PatternVaultWidgetLiveActivity.swift */,
+				WFR00006 /* RowTrackerWidget.swift */,
+				WFR00007 /* Assets.xcassets */,
+				WFR00008 /* Info.plist */,
+			);
+			path = PatternVaultWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -575,6 +709,7 @@
 			);
 			dependencies = (
 				08C7720A2F5B374A00241E4E /* PBXTargetDependency */,
+				WDEP0001 /* PBXTargetDependency */,
 			);
 			name = PatternVault;
 			packageProductDependencies = (
@@ -607,6 +742,25 @@
 			productReference = TST0002 /* PatternVaultTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		WT000001 /* PatternVaultWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = WCL00001 /* Build configuration list for PBXNativeTarget "PatternVaultWidgetExtension" */;
+			buildPhases = (
+				WPH00001 /* Sources */,
+				WPH00002 /* Frameworks */,
+				WPH00003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PatternVaultWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = PatternVaultWidgetExtension;
+			productReference = WFR00001 /* PatternVaultWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -623,6 +777,9 @@
 					};
 					T0010001 = {
 						CreatedOnToolsVersion = 15.0;
+					};
+					WT000001 = {
+						CreatedOnToolsVersion = 26.3;
 					};
 				};
 			};
@@ -646,6 +803,7 @@
 			projectRoot = "";
 			targets = (
 				T0010001 /* PatternVault */,
+				WT000001 /* PatternVaultWidgetExtension */,
 				08C772002F5B374A00241E4E /* SaveToPatternVault */,
 				TST0001 /* PatternVaultTests */,
 			);
@@ -672,6 +830,9 @@
 				B0050005 /* WalkingMascotFrames in Resources */,
 				B0050006 /* PoutyMascotFrames in Resources */,
 				B0050007 /* KnittingMascotFrames in Resources */,
+				B0050008 /* WavingMascotFrames in Resources */,
+				B0050009 /* ThinkingMascotFrames in Resources */,
+				B0050012 /* PettingMascotFrames in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -679,6 +840,14 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WPH00003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WBF10006 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -711,6 +880,9 @@
 				B0010014 /* PatternListCacheService.swift in Sources */,
 				B0010015 /* CelebrationStore.swift in Sources */,
 				B0010016 /* HapticService.swift in Sources */,
+				B0010023 /* MascotInteractionStore.swift in Sources */,
+				B0010024 /* PatternRowParser.swift in Sources */,
+				B0010025 /* ChartHighlightStore.swift in Sources */,
 				B0010005 /* AuthGateView.swift in Sources */,
 				B0010006 /* LoginView.swift in Sources */,
 				B0010007 /* SignUpView.swift in Sources */,
@@ -722,6 +894,8 @@
 				B0020001 /* Pattern.swift in Sources */,
 				B0020002 /* ProjectNote.swift in Sources */,
 				B0020003 /* Tag.swift in Sources */,
+				B0020015 /* RowCounter.swift in Sources */,
+				B0020016 /* ChartHighlight.swift in Sources */,
 				B0020004 /* PatternRepository.swift in Sources */,
 				B0020005 /* SourcePlatformHelper.swift in Sources */,
 				B0020006 /* PatternStore.swift in Sources */,
@@ -761,10 +935,16 @@
 				B0030016 /* WidgetOnboardingStore.swift in Sources */,
 				B0030017 /* WidgetOnboardingSheet.swift in Sources */,
 				B0030018 /* DuplicatesListView.swift in Sources */,
+				B0030019 /* StitchAbbreviationLinkBuilder.swift in Sources */,
+				B0030020 /* InteractiveRowReaderView.swift in Sources */,
+				B0030021 /* RowCounterBarView.swift in Sources */,
+				B0030022 /* SecondaryCounterConfigSheet.swift in Sources */,
+				B0030023 /* ChartHighlighterOverlayView.swift in Sources */,
 				B0040002 /* LottieAnimationView.swift in Sources */,
 				B0040003 /* AnimatedCrowView.swift in Sources */,
 				B0050002 /* SpriteMascotView.swift in Sources */,
 				B0050010 /* TappableMascotView.swift in Sources */,
+				B0050011 /* MascotDashboardPanelView.swift in Sources */,
 				B0060001 /* YarnStashItem.swift in Sources */,
 				B0060002 /* YarnStashRepository.swift in Sources */,
 				B0060003 /* YarnStashStore.swift in Sources */,
@@ -788,12 +968,26 @@
 				B00A0003 /* FindPatternsView.swift in Sources */,
 				B00A0004 /* StashMatchPatternsView.swift in Sources */,
 				B00A0005 /* FinishedProjectShareCardView.swift in Sources */,
+				B00C0003 /* MascotStoreSheet.swift in Sources */,
+				B00C0004 /* MascotStoryCutsceneView.swift in Sources */,
+				B00C0005 /* MascotStoryLogView.swift in Sources */,
+				B00C0006 /* MascotHelpView.swift in Sources */,
 				B00B0001 /* KeychainHelper.swift in Sources */,
 				B00B0002 /* OAuth1Signer.swift in Sources */,
 				B00B0003 /* RavelryOAuthService.swift in Sources */,
 				B00B0004 /* RavelryUserService.swift in Sources */,
 				B00B0005 /* RavelryImportStore.swift in Sources */,
 				B00B0006 /* PDFTextExtractor.swift in Sources */,
+				B00D0001 /* PDFPageRenderer.swift in Sources */,
+				B00D0002 /* GeminiMultimodalRequest.swift in Sources */,
+				B00D0003 /* ChartImageProcessor.swift in Sources */,
+				B00C0001 /* MascotEconomyState.swift in Sources */,
+				B00C0002 /* MascotStoryChapter.swift in Sources */,
+				B00C0007 /* MascotStoryStore.swift in Sources */,
+				B00C0008 /* NestDecoration.swift in Sources */,
+				B00C0009 /* DailyRewardStore.swift in Sources */,
+				B00C000A /* AchievementStore.swift in Sources */,
+				B00C000B /* AchievementBadge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -811,6 +1005,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		WPH00001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WBF10001 /* AppIntent.swift in Sources */,
+				WBF10002 /* PatternVaultWidgetBundle.swift in Sources */,
+				WBF10003 /* PatternVaultWidget.swift in Sources */,
+				WBF10004 /* PatternVaultWidgetLiveActivity.swift in Sources */,
+				WBF10005 /* RowTrackerWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -823,6 +1029,11 @@
 			isa = PBXTargetDependency;
 			target = T0010001 /* PatternVault */;
 			targetProxy = TSTDP1 /* PBXContainerItemProxy */;
+		};
+		WDEP0001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = WT000001 /* PatternVaultWidgetExtension */;
+			targetProxy = WPRX0001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -964,6 +1175,62 @@
 			};
 			name = Release;
 		};
+		WCFG0001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C00100CC /* Config/Config.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = PatternVaultWidget/PatternVaultWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AN7ZH3YS3A;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PatternVaultWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PatternVaultWidget;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		WCFG0002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C00100CC /* Config/Config.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = PatternVaultWidget/PatternVaultWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = AN7ZH3YS3A;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PatternVaultWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PatternVaultWidget;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		X0010001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -994,7 +1261,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -1186,6 +1453,15 @@
 			buildConfigurations = (
 				TSTCFG1 /* Debug */,
 				TSTCFG2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		WCL00001 /* Build configuration list for PBXNativeTarget "PatternVaultWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				WCFG0001 /* Debug */,
+				WCFG0002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

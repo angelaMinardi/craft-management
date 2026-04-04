@@ -12,6 +12,15 @@ struct PatternStep: Identifiable {
     let id = UUID()
     let title: String
     let body: String
+    let chartImageUrl: String?
+    let chartLabel: String?
+
+    init(title: String, body: String, chartImageUrl: String? = nil, chartLabel: String? = nil) {
+        self.title = title
+        self.body = body
+        self.chartImageUrl = chartImageUrl
+        self.chartLabel = chartLabel
+    }
 }
 
 enum PatternStepParser {
@@ -131,9 +140,10 @@ enum PatternStepParser {
 
     private static func isJunkBlock(block: String, firstLine: String) -> Bool {
         let lower = firstLine.lowercased()
-        if firstLine.count < 3 { return true }
+        let blockTrimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
+        if blockTrimmed.count < 3 { return true }
         if allJunkPatterns.contains(where: { lower.contains($0) }) { return true }
-        if lower.allSatisfy({ $0.isNumber || $0.isWhitespace || ".,;:/-".contains($0) }) { return true }
+        if blockTrimmed == firstLine, lower.allSatisfy({ $0.isNumber || $0.isWhitespace || ".,;:/-".contains($0) }) { return true }
         if firstLine.hasPrefix("http://") || firstLine.hasPrefix("https://") { return true }
         if block.components(separatedBy: "\n").filter({ $0.trimmingCharacters(in: .whitespaces).hasPrefix("http") }).count > 2 { return true }
         return false
@@ -190,7 +200,7 @@ enum PatternStepParser {
         return false
     }
 
-    /// First line looks like a section heading (e.g. BASE, BODY, ### Finishing).
+    /// First line looks like a section heading (e.g. BASE, BODY, ### Finishing, Toe:, Heel Flap:).
     private static func looksLikeSectionHeading(firstLine: String) -> Bool {
         let t = firstLine.trimmingCharacters(in: .whitespaces)
         if t.isEmpty || t.count > 55 { return false }
@@ -198,6 +208,11 @@ enum PatternStepParser {
         if t.hasPrefix("## ") || t.hasPrefix("### ") { return true }
         let letters = t.filter(\.isLetter)
         if letters.count >= 3, letters.allSatisfy(\.isUppercase) { return true }
+        if t.hasSuffix(":") && t.count <= 45 {
+            let withoutColon = String(t.dropLast()).trimmingCharacters(in: .whitespaces)
+            let words = withoutColon.split(separator: " ")
+            if words.count <= 6, let first = words.first, first.first?.isUppercase == true { return true }
+        }
         return false
     }
 

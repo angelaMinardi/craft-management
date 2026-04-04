@@ -24,6 +24,12 @@ struct StepBodyBlock: Identifiable {
 
 struct FormattedStepBodyView: View {
     let stepBody: String
+    let craftType: String?
+
+    init(stepBody: String, craftType: String? = nil) {
+        self.stepBody = stepBody
+        self.craftType = craftType
+    }
 
     private var blocks: [StepBodyBlock] {
         let trimmed = stepBody.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -212,24 +218,42 @@ struct FormattedStepBodyView: View {
 
     /// Splits text into segments and returns concatenated Text with measurements/numbers emphasized.
     private func measurementEmphasizedText(_ text: String) -> Text {
-        let segments = parseMeasurementSegments(text)
-        return segments.reduce(Text("")) { acc, pair in
-            let (str, emphasized) = pair
-            let t = Text(str)
-                .font(Theme.Typography.body)
-                .foregroundStyle(emphasized ? Theme.softCoral : Theme.deepPlum)
-                .fontWeight(emphasized ? .semibold : .regular)
-            return acc + t
-        }
+        Text(styledAttributedString(text))
     }
+
+    private func styledAttributedString(_ text: String) -> AttributedString {
+        var attributed = StitchAbbreviationLinkBuilder.linkedAttributedString(
+            from: text,
+            explicitCraftType: craftType,
+            contextText: stepBody
+        )
+        let segments = parseMeasurementSegments(text)
+        var cursor = attributed.startIndex
+
+        for pair in segments {
+            let (segmentText, emphasized) = pair
+            guard !segmentText.isEmpty else { continue }
+
+            let count = segmentText.count
+            let remaining = attributed.characters.distance(from: cursor, to: attributed.endIndex)
+            guard count <= remaining else {
+                break
+            }
+            let end = attributed.index(cursor, offsetByCharacters: count)
+
+            attributed[cursor..<end].font = Theme.Typography.body.weight(emphasized ? .semibold : .regular)
+            attributed[cursor..<end].foregroundColor = emphasized ? Theme.softCoral : Theme.deepPlum
+            cursor = end
+        }
+        return attributed
+   }
 
     /// Finds measurement/size segments and knitting abbreviations to emphasize.
     private func parseMeasurementSegments(_ text: String) -> [(String, Bool)] {
         // Order matters: longer patterns first to avoid partial overlaps.
         // 1) Square-bracket sizes; 2) Parenthetical sizes; 3) Number before (; 4) X stitches/inches/rows
-        // 5) X"; 6) X (more) times; 7) hyphenated X-inch; 8) knitting abbreviations (k2tog, ssk, etc.)
-        // 9) k/p + number (k1, k2, p1, K63)
-        let pattern = #"\[\d+(?:\s*[^\]]*)?\]|\(\d+(?:\s*,\s*\d+)*\)|\d+(?:\s*[½¼¾]|\s*\.\s*\d+)?(?=\s*\()|\d+(?:\s*[½¼¾]|\s*\.\s*\d+)?\s*(?:stitches|sts?|inches|rows?)\b|\d+(?:\s*[½¼¾]|\s*\.\s*\d+)?\s*\"|\d+\s+(?:more\s+)?times\b|\d+(?:\s*[½¼¾]|\s*\.\s*\d+)?\s*-\s*inch(es)?\b|\b(?:k2tog|p2tog|ssk|yo|m1l?|m1r?|cdd|s2kp2|p2sso|psso|sl\s*1)\b|\b[kpKP]\d+\b"#
+        // 5) X"; 6) X (more) times; 7) hyphenated X-inch
+        let pattern = #"\[\d+(?:\s*[^\]]*)?\]|\(\d+(?:\s*,\s*\d+)*\)|\d+(?:\s*[½¼¾]|\s*\.\s*\d+)?(?=\s*\()|\d+(?:\s*[½¼¾]|\s*\.\s*\d+)?\s*(?:stitches|sts?|inches|rows?)\b|\d+(?:\s*[½¼¾]|\s*\.\s*\d+)?\s*\"|\d+\s+(?:more\s+)?times\b|\d+(?:\s*[½¼¾]|\s*\.\s*\d+)?\s*-\s*inch(es)?\b"#
         guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
             return [(text, false)]
         }
@@ -294,14 +318,10 @@ struct FormattedStepBodyView: View {
                             .font(Theme.Typography.caption)
                             .fontWeight(.semibold)
                             .foregroundStyle(Theme.softCoral)
-                        Text(rest)
-                            .font(Theme.Typography.body)
-                            .foregroundStyle(Theme.deepPlum)
+                        measurementEmphasizedText(rest)
                     }
                 } else {
-                    Text(line)
-                        .font(Theme.Typography.body)
-                        .foregroundStyle(Theme.deepPlum)
+                    measurementEmphasizedText(line)
                 }
             }
         }
@@ -436,6 +456,7 @@ struct FormattedStepBodyView: View {
         bodyView
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
+            .tint(Theme.dustyBlue)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(stepBody)
     }

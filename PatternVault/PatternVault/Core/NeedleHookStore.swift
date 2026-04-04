@@ -20,7 +20,10 @@ final class NeedleHookStore: ObservableObject {
         do {
             items = try await repo.fetchAll(userId: userId)
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[NeedleHookStore] load failed: \(error)")
+            #endif
+            errorMessage = "Could not load your tools. Please try again."
         }
     }
 
@@ -34,7 +37,10 @@ final class NeedleHookStore: ObservableObject {
             items.append(item)
             items.sort { ($0.type.lowercased(), $0.size) < ($1.type.lowercased(), $1.size) }
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[NeedleHookStore] add failed: \(error)")
+            #endif
+            errorMessage = "Could not save tool. Please try again."
         }
     }
 
@@ -47,7 +53,10 @@ final class NeedleHookStore: ObservableObject {
             }
             items.sort { ($0.type.lowercased(), $0.size) < ($1.type.lowercased(), $1.size) }
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[NeedleHookStore] update failed: \(error)")
+            #endif
+            errorMessage = "Could not update tool. Please try again."
         }
     }
 
@@ -57,7 +66,10 @@ final class NeedleHookStore: ObservableObject {
             try await repo.delete(id: item.id, userId: item.userId)
             items.removeAll { $0.id == item.id }
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[NeedleHookStore] delete failed: \(error)")
+            #endif
+            errorMessage = "Could not delete tool. Please try again."
         }
     }
 

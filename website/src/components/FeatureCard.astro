@@ -3,15 +3,17 @@ interface Props {
   title: string;
   description: string;
   icon?: string;
+  eyebrow?: string;
 }
 
-const { title, description, icon = 'bookmark' } = Astro.props;
+const { title, description, icon = 'bookmark', eyebrow } = Astro.props;
 ---
 
 <article class="feature-card">
   <div class="feature-icon-wrap">
     <span class="feature-icon" aria-hidden="true">{icon}</span>
   </div>
+  {eyebrow && <p class="feature-eyebrow">{eyebrow}</p>}
   <h3 class="feature-title">{title}</h3>
   <p class="feature-desc">{description}</p>
 </article>
@@ -85,6 +87,15 @@ const { title, description, icon = 'bookmark' } = Astro.props;
     color: var(--deep-plum);
     margin: 0 0 var(--space-sm);
     line-height: var(--line-height-tight);
+  }
+
+  .feature-eyebrow {
+    margin: 0 0 var(--space-xs);
+    color: var(--soft-coral);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   .feature-desc {

@@ -12,6 +12,7 @@ interface Props {
 const { title, description, frontmatter } = Astro.props;
 const pageTitle = title ?? frontmatter?.title ?? 'Pattern Vault';
 const pageDescription = description ?? frontmatter?.description ?? 'Pattern Vault — Your craft library, in your pocket. Save patterns from anywhere. Track projects. One place for every pattern.';
+const isDev = import.meta.env.DEV;
 ---
 
 <!doctype html>
@@ -36,6 +37,82 @@ const pageDescription = description ?? frontmatter?.description ?? 'Pattern Vaul
       <slot />
     </main>
     <Footer />
+    <script>
+      function dispatchAnalyticsEvent(eventName, props) {
+        const payload = { ...props, page_path: window.location.pathname };
+
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', eventName, payload);
+        }
+
+        if (typeof window.plausible === 'function') {
+          window.plausible(eventName, { props: payload });
+        }
+
+        if (Array.isArray(window.dataLayer)) {
+          window.dataLayer.push({ event: eventName, ...payload });
+        }
+
+        window.dispatchEvent(new CustomEvent('patternvault:analytics', { detail: { event: eventName, props: payload } }));
+      }
+
+      function getCtaProps(el) {
+        return {
+          cta_destination: el.dataset.destination || 'unknown',
+          cta_mode: el.dataset.mode || 'unknown',
+          page_section: el.dataset.pageSection || 'unknown',
+          fallback_used: el.dataset.fallbackUsed || 'false',
+        };
+      }
+
+      function trackCtaImpressions() {
+        const ctas = document.querySelectorAll('[data-cta]');
+        if (!ctas.length) return;
+
+        const seen = new WeakSet();
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const el = entry.target;
+            if (seen.has(el)) return;
+            seen.add(el);
+            dispatchAnalyticsEvent('cta_impression', getCtaProps(el));
+            io.unobserve(el);
+          });
+        }, { threshold: 0.4 });
+
+        ctas.forEach((cta) => io.observe(cta));
+      }
+
+      function trackCtaClicks() {
+        document.addEventListener('click', (event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          const cta = target.closest('[data-click-event]');
+          if (!(cta instanceof HTMLElement)) return;
+          const eventName = cta.dataset.clickEvent || 'cta_click';
+          dispatchAnalyticsEvent(eventName, getCtaProps(cta));
+        });
+      }
+
+      if ({isDev}) {
+        window.addEventListener('patternvault:analytics', (event) => {
+          if (!(event instanceof CustomEvent)) return;
+          // Dev-only visibility into analytics payloads while integrating providers.
+          console.info('[PatternVault analytics]', event.detail);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          trackCtaImpressions();
+          trackCtaClicks();
+        });
+      } else {
+        trackCtaImpressions();
+        trackCtaClicks();
+      }
+    </script>
   </body>
 </html>
 

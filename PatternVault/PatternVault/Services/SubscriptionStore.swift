@@ -7,6 +7,8 @@
 
 import Foundation
 import StoreKit
+import UIKit
+import FirebaseAnalytics
 
 /// Freemium limits (free tier).
 enum EntitlementLimits {
@@ -25,11 +27,13 @@ final class SubscriptionStore: ObservableObject {
     @Published private(set) var products: [Product] = []
     @Published private(set) var productsLoading = false
     @Published private(set) var productsLoadError: String?
+    @Published private(set) var productsDebugDetails: String?
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseError: String?
 
     private let entitlementRepo = EntitlementRepository()
     private static let appGroupId = "group.com.patternvault.app"
+    private var transactionUpdatesTask: Task<Void, Never>?
 
     /// Product IDs — configure in App Store Connect to match.
     static let monthlyProductId = "com.patternvault.premium.monthly"
@@ -38,6 +42,9 @@ final class SubscriptionStore: ObservableObject {
     private init() {
         Task { await loadProducts() }
         Task { await updateSubscriptionStatus() }
+        transactionUpdatesTask = Task { [weak self] in
+            await self?.observeTransactionUpdates()
+        }
     }
 
     // MARK: - Limits (call these to gate features)
@@ -48,9 +55,13 @@ final class SubscriptionStore: ObservableObject {
     }
 
     func canUseAI() -> Bool {
+        #if DEBUG
+        return true
+        #else
         if isPremium { return true }
         guard let e = entitlement else { return false }
         return e.aiUsageThisMonth < EntitlementLimits.freeAIPerMonth
+        #endif
     }
 
     func canImportYouTube() -> Bool {
@@ -133,22 +144,107 @@ final class SubscriptionStore: ObservableObject {
 
     private func checkCurrentEntitlements() async -> Bool {
         for await result in Transaction.currentEntitlements {
-            if case .verified(_) = result {
+            if case .verified(let transaction) = result {
+                guard Self.premiumProductIds.contains(transaction.productID) else { continue }
+                guard transaction.revocationDate == nil else { continue }
+                if let expiration = transaction.expirationDate, expiration <= Date() {
+                    continue
+                }
                 return true
             }
         }
         return false
     }
 
+    private static let premiumProductIds: Set<String> = [
+        monthlyProductId,
+        yearlyProductId
+    ]
+
     private func loadProducts() async {
         productsLoading = true
         productsLoadError = nil
+        productsDebugDetails = nil
         defer { productsLoading = false }
+        let requestedIds = [Self.monthlyProductId, Self.yearlyProductId]
+        let bundleId = Bundle.main.bundleIdentifier ?? "unknown"
+        var debugLines: [String] = []
+        debugLines.append("bundle=\(bundleId)")
+        debugLines.append("payments=\(AppStore.canMakePayments)")
+        let schemeMarker = ProcessInfo.processInfo.environment["PV_SCHEME_MARKER"] ?? "missing"
+        debugLines.append("schemeMarker=\(schemeMarker)")
+        let args = ProcessInfo.processInfo.arguments
+        if let markerIndex = args.firstIndex(of: "-PV_SCHEME_MARKER"), args.indices.contains(markerIndex + 1) {
+            debugLines.append("argSchemeMarker=\(args[markerIndex + 1])")
+        } else {
+            debugLines.append("argSchemeMarker=missing")
+        }
+        let storekitArgs = args.filter { $0.localizedCaseInsensitiveContains("storekit") }
+        debugLines.append("storekitArgs=\(storekitArgs.isEmpty ? "none" : storekitArgs.joined(separator: "|")))")
+        let env = ProcessInfo.processInfo.environment
+        let storekitEnvKeys = env.keys
+            .filter { $0.localizedCaseInsensitiveContains("storekit") }
+            .sorted()
+        debugLines.append("storekitEnvKeys=\(storekitEnvKeys.isEmpty ? "none" : storekitEnvKeys.joined(separator: "|")))")
+        debugLines.append("ids=\(requestedIds.joined(separator: ","))")
+
         do {
-            products = try await Product.products(for: [Self.monthlyProductId, Self.yearlyProductId])
+            // StoreKit can be briefly unavailable right after launch/installation.
+            // Retry with short backoff before surfacing an empty-state failure.
+            var fetched: [Product] = []
+            let retryDelaysNs: [UInt64] = [
+                0,
+                400_000_000,
+                800_000_000,
+                1_200_000_000,
+                1_600_000_000
+            ]
+            for (index, delay) in retryDelaysNs.enumerated() {
+                if delay > 0 {
+                    try? await Task.sleep(nanoseconds: delay)
+                }
+                fetched = try await Product.products(for: requestedIds)
+                debugLines.append("attempt\(index + 1)=count:\(fetched.count) ids:\(fetched.map(\.id).joined(separator: ","))")
+                if !fetched.isEmpty { break }
+            }
+
+            products = fetched
+            if fetched.isEmpty {
+                debugLines.append("result=empty")
+                productsDebugDetails = debugLines.joined(separator: "\n")
+                #if DEBUG
+                let debugSuffix = "\n\nDebug:\n\(productsDebugDetails ?? "")"
+                #else
+                let debugSuffix = ""
+                #endif
+                productsLoadError = """
+                No subscription products were returned.
+                Requested IDs: \(requestedIds.joined(separator: ", "))
+                Bundle: \(bundleId)
+                Verify StoreKit configuration is attached to this scheme Run action.
+                If needed: Product > Scheme > Edit Scheme > Run > Options > StoreKit Configuration.
+                \(debugSuffix)
+                """
+            } else {
+                debugLines.append("result=success")
+                productsDebugDetails = debugLines.joined(separator: "\n")
+            }
         } catch {
             products = []
-            productsLoadError = error.localizedDescription
+            debugLines.append("result=error")
+            debugLines.append("error=\(error.localizedDescription)")
+            productsDebugDetails = debugLines.joined(separator: "\n")
+            #if DEBUG
+            let debugSuffix = "\n\nDebug:\n\(productsDebugDetails ?? "")"
+            #else
+            let debugSuffix = ""
+            #endif
+            productsLoadError = """
+            \(error.localizedDescription)
+            Requested IDs: \(requestedIds.joined(separator: ", "))
+            Bundle: \(bundleId)
+            \(debugSuffix)
+            """
         }
     }
 
@@ -166,7 +262,9 @@ final class SubscriptionStore: ObservableObject {
             switch result {
             case .success(let verification):
                 switch verification {
-                case .verified(_):
+                case .verified(let transaction):
+                    applyVerifiedTransaction(transaction)
+                    await transaction.finish()
                     await updateSubscriptionStatus()
                     return true
                 case .unverified(_, _):
@@ -197,6 +295,26 @@ final class SubscriptionStore: ObservableObject {
         } catch {
             purchaseError = error.localizedDescription
         }
+    }
+
+    private func observeTransactionUpdates() async {
+        for await result in Transaction.updates {
+            guard case .verified(let transaction) = result else { continue }
+            applyVerifiedTransaction(transaction)
+            await transaction.finish()
+            await updateSubscriptionStatus()
+        }
+    }
+
+    /// Apply known entitlement changes immediately, then reconcile with StoreKit.
+    /// This avoids UI lag where currentEntitlements can take a moment to reflect
+    /// a just-completed local StoreKit transaction.
+    private func applyVerifiedTransaction(_ transaction: Transaction) {
+        guard Self.premiumProductIds.contains(transaction.productID) else { return }
+        guard transaction.revocationDate == nil else { return }
+        if let expiration = transaction.expirationDate, expiration <= Date() { return }
+        isPremium = true
+        syncToAppGroup(entitlement: entitlement, isPremium: true)
     }
 
     private func syncToAppGroup(entitlement: UserEntitlement?, isPremium: Bool) {
@@ -238,5 +356,281 @@ final class SubscriptionStore: ObservableObject {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM"
         return formatter.string(from: Date())
+    }
+
+}
+
+@MainActor
+final class GrowthOrchestrator {
+    static let shared = GrowthOrchestrator()
+
+    // Core pod contract: emit positive-moment events from UX milestones.
+    // Growth pod consumes these signals to tune review/paywall timing externally.
+    enum PositiveEvent: String {
+        case onboardingComplete
+        case firstSave
+        case firstImport
+        case progressLogged
+        case patternCompleted
+        case milestoneCelebration
+    }
+
+    enum FrictionEvent: String {
+        case authFailure
+        case networkRetryError
+        case importOrParsingFailure
+        case purchaseFailure
+        case purchaseCancelled
+        case recentPaywallDismissal
+        case interruptionHeavyFlow
+    }
+
+    enum PaywallPresentationMode: String {
+        case annualOnly
+        case annualPlusMonthly
+    }
+
+    // Core pod owns placement-level paywall context only.
+    // Offer strategy, frequency tuning, and fallback incentives belong to Growth pod.
+    enum PaywallSource: String {
+        case settings
+        case aiLimit
+        case patternLimit
+        case youtubeLimit
+        case notePhotoLimit
+        case dashboard
+        case unknown
+    }
+
+    enum SuppressionReason: String {
+        case onboardingIncomplete
+        case noPositiveEvent
+        case recentFriction
+        case reviewCooldown
+        case reviewAlreadyShownToday
+        case reviewAlreadyShownThisVersion
+        case paywallRecentFriction
+        case paywallDailyCap
+        case paywallVersionCap
+    }
+
+    private struct Keys {
+        static let hasSeenOnboarding = "hasSeenOnboarding"
+        static let installDate = "Growth.installDate"
+        static let lastPositiveEventDate = "Growth.lastPositiveEventDate"
+        static let lastFrictionEventDate = "Growth.lastFrictionEventDate"
+        static let lastReviewAskDate = "Growth.lastReviewAskDate"
+        static let lastReviewAskedVersion = "Growth.lastReviewAskedVersion"
+        static let reviewAsksTodayCount = "Growth.reviewAsksTodayCount"
+        static let reviewAsksTodayDate = "Growth.reviewAsksTodayDate"
+        static let paywallDismissesTodayCount = "Growth.paywallDismissesTodayCount"
+        static let paywallDismissesTodayDate = "Growth.paywallDismissesTodayDate"
+        static let paywallDismissesThisVersionCount = "Growth.paywallDismissesThisVersionCount"
+        static let paywallDismissesVersion = "Growth.paywallDismissesVersion"
+        static let paywallPresentationMode = "Growth.paywallPresentationMode"
+    }
+
+    private let defaults: UserDefaults
+    private let calendar = Calendar.current
+
+    private init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        if defaults.object(forKey: Keys.installDate) == nil {
+            defaults.set(Date(), forKey: Keys.installDate)
+        }
+        resetDailyCountersIfNeeded()
+        resetVersionCountersIfNeeded()
+    }
+
+    var paywallPresentationMode: PaywallPresentationMode {
+        let raw = defaults.string(forKey: Keys.paywallPresentationMode) ?? PaywallPresentationMode.annualPlusMonthly.rawValue
+        return PaywallPresentationMode(rawValue: raw) ?? .annualPlusMonthly
+    }
+
+    func markOnboardingCompleted() {
+        defaults.set(true, forKey: Keys.hasSeenOnboarding)
+        AnalyticsService.shared.track(
+            .onboardingCompleted,
+            properties: [:]
+        )
+    }
+
+    func registerPositiveEvent(_ event: PositiveEvent) {
+        defaults.set(Date(), forKey: Keys.lastPositiveEventDate)
+        AnalyticsService.shared.track(
+            .growthPositiveEvent,
+            properties: [
+                AnalyticsService.Property.eventName: event.rawValue
+            ]
+        )
+    }
+
+    func registerFrictionEvent(_ event: FrictionEvent) {
+        defaults.set(Date(), forKey: Keys.lastFrictionEventDate)
+        AnalyticsService.shared.track(
+            .growthFrictionEvent,
+            properties: [
+                AnalyticsService.Property.eventName: event.rawValue
+            ]
+        )
+    }
+
+    func registerPaywallDismissal(source: PaywallSource) {
+        resetDailyCountersIfNeeded()
+        resetVersionCountersIfNeeded()
+        defaults.set((defaults.integer(forKey: Keys.paywallDismissesTodayCount) + 1), forKey: Keys.paywallDismissesTodayCount)
+        defaults.set((defaults.integer(forKey: Keys.paywallDismissesThisVersionCount) + 1), forKey: Keys.paywallDismissesThisVersionCount)
+        registerFrictionEvent(.recentPaywallDismissal)
+        AnalyticsService.shared.track(
+            .paywallDismissed,
+            properties: [
+                AnalyticsService.Property.entrySurface: source.rawValue
+            ]
+        )
+    }
+
+    func canShowPaywall(source: PaywallSource) -> Bool {
+        if let reason = paywallSuppressionReason(source: source) {
+            AnalyticsService.shared.track(
+                .paywallSuppressed,
+                properties: [
+                    AnalyticsService.Property.entrySurface: source.rawValue,
+                    AnalyticsService.Property.suppressedReason: reason.rawValue
+                ]
+            )
+            return false
+        }
+        return true
+    }
+
+    func paywallSuppressionReason(source: PaywallSource) -> SuppressionReason? {
+        _ = source
+        resetDailyCountersIfNeeded()
+        resetVersionCountersIfNeeded()
+        if recentlyHadFriction(withinHours: 2) {
+            return .paywallRecentFriction
+        }
+        if defaults.integer(forKey: Keys.paywallDismissesTodayCount) >= 2 {
+            return .paywallDailyCap
+        }
+        if defaults.integer(forKey: Keys.paywallDismissesThisVersionCount) >= 6 {
+            return .paywallVersionCap
+        }
+        return nil
+    }
+
+    func requestReviewIfEligible() {
+        if let reason = reviewSuppressionReason() {
+            AnalyticsService.shared.track(
+                .reviewSuppressed,
+                properties: [
+                    AnalyticsService.Property.suppressedReason: reason.rawValue
+                ]
+            )
+            return
+        }
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }) else {
+            return
+        }
+        SKStoreReviewController.requestReview(in: scene)
+        defaults.set(Date(), forKey: Keys.lastReviewAskDate)
+        defaults.set(currentVersion(), forKey: Keys.lastReviewAskedVersion)
+        defaults.set(defaults.integer(forKey: Keys.reviewAsksTodayCount) + 1, forKey: Keys.reviewAsksTodayCount)
+        AnalyticsService.shared.track(.reviewShown, properties: [:])
+    }
+
+    private func reviewSuppressionReason() -> SuppressionReason? {
+        resetDailyCountersIfNeeded()
+        guard defaults.bool(forKey: Keys.hasSeenOnboarding) else { return .onboardingIncomplete }
+        guard defaults.object(forKey: Keys.lastPositiveEventDate) != nil else { return .noPositiveEvent }
+        guard !recentlyHadFriction(withinHours: 48) else { return .recentFriction }
+        if let lastAsk = defaults.object(forKey: Keys.lastReviewAskDate) as? Date {
+            if let minDate = calendar.date(byAdding: .day, value: 120, to: lastAsk), Date() < minDate {
+                return .reviewCooldown
+            }
+        }
+        if defaults.integer(forKey: Keys.reviewAsksTodayCount) >= 1 {
+            return .reviewAlreadyShownToday
+        }
+        let version = currentVersion()
+        if defaults.string(forKey: Keys.lastReviewAskedVersion) == version {
+            return .reviewAlreadyShownThisVersion
+        }
+        return nil
+    }
+
+    private func recentlyHadFriction(withinHours hours: Int) -> Bool {
+        guard let date = defaults.object(forKey: Keys.lastFrictionEventDate) as? Date else { return false }
+        guard let threshold = calendar.date(byAdding: .hour, value: -hours, to: Date()) else { return false }
+        return date >= threshold
+    }
+
+    private func resetDailyCountersIfNeeded() {
+        let dayKey = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none)
+        let reviewDay = defaults.string(forKey: Keys.reviewAsksTodayDate)
+        if reviewDay != dayKey {
+            defaults.set(dayKey, forKey: Keys.reviewAsksTodayDate)
+            defaults.set(0, forKey: Keys.reviewAsksTodayCount)
+        }
+        let paywallDay = defaults.string(forKey: Keys.paywallDismissesTodayDate)
+        if paywallDay != dayKey {
+            defaults.set(dayKey, forKey: Keys.paywallDismissesTodayDate)
+            defaults.set(0, forKey: Keys.paywallDismissesTodayCount)
+        }
+    }
+
+    private func resetVersionCountersIfNeeded() {
+        let version = currentVersion()
+        if defaults.string(forKey: Keys.paywallDismissesVersion) != version {
+            defaults.set(version, forKey: Keys.paywallDismissesVersion)
+            defaults.set(0, forKey: Keys.paywallDismissesThisVersionCount)
+        }
+    }
+
+    private func currentVersion() -> String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+    }
+}
+
+@MainActor
+final class AnalyticsService {
+    static let shared = AnalyticsService()
+
+    enum Event: String {
+        case onboardingCompleted = "onboarding_completed"
+        case onboardingSlideViewed = "onboarding_slide_viewed"
+        case onboardingSkipped = "onboarding_skipped"
+        case growthPositiveEvent = "growth_positive_event"
+        case growthFrictionEvent = "growth_friction_event"
+        case reviewShown = "review_shown"
+        case reviewSuppressed = "review_suppressed"
+        case paywallShown = "paywall_shown"
+        case paywallDismissed = "paywall_dismissed"
+        case paywallConverted = "paywall_converted"
+        case paywallSuppressed = "paywall_suppressed"
+        case tutorialStarted = "tutorial_started"
+        case tutorialStepViewed = "tutorial_step_viewed"
+        case tutorialSkipped = "tutorial_skipped"
+        case tutorialCompleted = "tutorial_completed"
+    }
+
+    enum Property {
+        static let eventName = "event_name"
+        static let entrySurface = "entry_surface"
+        static let suppressedReason = "suppressed_reason"
+        static let stepId = "step_id"
+        static let stepIndex = "step_index"
+        static let isLastStep = "is_last_step"
+        static let appVersion = "app_version"
+    }
+
+    private init() {}
+
+    func track(_ event: Event, properties: [String: String]) {
+        var payload = properties
+        payload[Property.appVersion] = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        Analytics.logEvent(event.rawValue, parameters: payload)
     }
 }

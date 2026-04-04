@@ -53,7 +53,7 @@ final class AppTutorialStore: ObservableObject {
         ),
         AppTutorialStep(
             title: "Getting around",
-            body: "Use these four tabs to get around: Home, Patterns, Stash, and Settings.",
+            body: "Use the tabs to get around: Home, Patterns, Current, Stash, and Settings.",
             tabIndex: 0,
             anchorId: .tabBar
         ),
@@ -96,25 +96,25 @@ final class AppTutorialStore: ObservableObject {
         AppTutorialStep(
             title: "Stash",
             body: "Stash keeps your materials and tools in one place. Tap Next to switch there.",
-            tabIndex: 2,
+            tabIndex: 3,
             anchorId: .tabStash
         ),
         AppTutorialStep(
             title: "Stash & tools",
             body: "Track yarn and materials in Stash; needles and hooks in Tools. You can open Ravelry in Safari from here to search for patterns.",
-            tabIndex: 2,
+            tabIndex: 3,
             anchorId: .stashCards
         ),
         AppTutorialStep(
             title: "Settings",
             body: "Account, backup, and preferences. Tap Next to open Settings.",
-            tabIndex: 3,
+            tabIndex: 4,
             anchorId: .tabSettings
         ),
         AppTutorialStep(
             title: "All set",
             body: "You can run this tour again anytime from here. You're all set!",
-            tabIndex: 3,
+            tabIndex: 4,
             anchorId: .settingsTutorialRow
         ),
     ]
@@ -132,6 +132,8 @@ final class AppTutorialStore: ObservableObject {
     func start() {
         currentStep = 0
         isActive = true
+        AnalyticsService.shared.track(.tutorialStarted, properties: [:])
+        trackCurrentStepViewed()
     }
 
     /// Advance to the next step; finishes if past the last step.
@@ -140,11 +142,19 @@ final class AppTutorialStore: ObservableObject {
             finish()
         } else {
             currentStep += 1
+            trackCurrentStepViewed()
         }
     }
 
     /// Skip the rest of the tutorial and mark as seen.
     func skip() {
+        AnalyticsService.shared.track(
+            .tutorialSkipped,
+            properties: [
+                AnalyticsService.Property.stepIndex: "\(currentStep)",
+                AnalyticsService.Property.stepId: Self.steps[currentStep].anchorId.rawValue
+            ]
+        )
         finish()
     }
 
@@ -152,5 +162,20 @@ final class AppTutorialStore: ObservableObject {
     private func finish() {
         hasSeenAppTutorial = true
         isActive = false
+        AnalyticsService.shared.track(.tutorialCompleted, properties: [:])
     }
+
+    private func trackCurrentStepViewed() {
+        guard currentStep >= 0, currentStep < Self.steps.count else { return }
+        let step = Self.steps[currentStep]
+        AnalyticsService.shared.track(
+            .tutorialStepViewed,
+            properties: [
+                AnalyticsService.Property.stepIndex: "\(currentStep)",
+                AnalyticsService.Property.stepId: step.anchorId.rawValue,
+                AnalyticsService.Property.isLastStep: "\(isLastStep)"
+            ]
+        )
+    }
+
 }

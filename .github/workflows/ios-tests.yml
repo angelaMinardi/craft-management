@@ -1,0 +1,27 @@
+name: iOS Tests
+
+on:
+  push:
+    paths:
+      - "PatternVault/**"
+      - ".github/workflows/ios-tests.yml"
+  pull_request:
+    paths:
+      - "PatternVault/**"
+      - ".github/workflows/ios-tests.yml"
+
+jobs:
+  test:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: PatternVault
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Run unit tests
+        run: xcodebuild test -project PatternVault.xcodeproj -scheme PatternVault -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:PatternVaultTests

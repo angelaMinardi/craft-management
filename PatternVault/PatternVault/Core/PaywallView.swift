@@ -11,6 +11,12 @@ import StoreKit
 struct PaywallView: View {
     @ObservedObject private var subscriptionStore = SubscriptionStore.shared
     @Environment(\.dismiss) private var dismiss
+    let source: GrowthOrchestrator.PaywallSource
+    @State private var purchaseSucceeded = false
+
+    init(source: GrowthOrchestrator.PaywallSource = .unknown) {
+        self.source = source
+    }
 
     var body: some View {
         NavigationStack {
@@ -26,7 +32,7 @@ struct PaywallView: View {
                                 .foregroundStyle(Theme.deepPlum)
                         }
                         .padding(.top, Theme.Spacing.lg)
-                        Text("You have unlimited patterns, project mode, stash matching, AI analyses, YouTube imports, note photos, and an ad-free experience.")
+                        Text("You have unlimited patterns, project mode, stash matching, Row Tracker widget, AI analyses, note photos, and an ad-free experience.")
                             .font(Theme.Typography.body)
                             .foregroundStyle(Theme.deepPlum.opacity(0.8))
                         Spacer(minLength: 40)
@@ -44,18 +50,25 @@ struct PaywallView: View {
                         benefitRow(icon: "square.stack.3d.up.fill", text: "Unlimited patterns")
                         benefitRow(icon: "hammer.fill", text: "Project mode & multiple makes per pattern")
                         benefitRow(icon: "archivebox.fill", text: "Stash matching & yardage calculator")
+                        benefitRow(icon: "gauge.with.dots.needle.33percent", text: "Row Tracker lock screen widget")
                         benefitRow(icon: "wand.and.stars", text: "Unlimited AI analyses per month")
-                        benefitRow(icon: "play.rectangle.fill", text: "Unlimited YouTube pattern imports")
                         benefitRow(icon: "photo.stack.fill", text: "Unlimited note photos")
-                        benefitRow(icon: "nosignappointments", text: "Ad-free experience")
+                        benefitRow(icon: "nosign", text: "Ad-free experience")
 
-                        if !subscriptionStore.products.isEmpty {
+                        if !displayProducts.isEmpty {
                             VStack(spacing: Theme.Spacing.sm) {
-                                ForEach(subscriptionStore.products, id: \.id) { product in
+                                ForEach(displayProducts, id: \.id) { product in
                                     Button {
                                         Task {
                                             let success = await subscriptionStore.purchase(product)
-                                            if success { dismiss() }
+                                            if success {
+                                                purchaseSucceeded = true
+                                                dismiss()
+                                            } else if subscriptionStore.purchaseError != nil {
+                                                GrowthOrchestrator.shared.registerFrictionEvent(.purchaseFailure)
+                                            } else {
+                                                GrowthOrchestrator.shared.registerFrictionEvent(.purchaseCancelled)
+                                            }
                                         }
                                     } label: {
                                         HStack {
@@ -112,6 +125,15 @@ struct PaywallView: View {
                                             .foregroundStyle(Theme.softCoral)
                                             .multilineTextAlignment(.center)
                                     }
+#if DEBUG
+                                    if let debug = subscriptionStore.productsDebugDetails, !debug.isEmpty {
+                                        Text(debug)
+                                            .font(.system(size: 11, weight: .regular, design: .monospaced))
+                                            .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                                            .multilineTextAlignment(.leading)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+#endif
                                     Button("Try again") {
                                         Task { await subscriptionStore.refreshProducts() }
                                     }
@@ -140,6 +162,26 @@ struct PaywallView: View {
         .task {
             await subscriptionStore.updateSubscriptionStatus(userId: nil)
             await subscriptionStore.refreshProducts()
+        }
+        .onAppear {
+            AnalyticsService.shared.track(
+                .paywallShown,
+                properties: [
+                    AnalyticsService.Property.entrySurface: source.rawValue
+                ]
+            )
+        }
+        .onDisappear {
+            if !purchaseSucceeded && !subscriptionStore.isPremium {
+                GrowthOrchestrator.shared.registerPaywallDismissal(source: source)
+            } else if purchaseSucceeded || subscriptionStore.isPremium {
+                AnalyticsService.shared.track(
+                    .paywallConverted,
+                    properties: [
+                        AnalyticsService.Property.entrySurface: source.rawValue
+                    ]
+                )
+            }
         }
     }
 
@@ -173,6 +215,22 @@ struct PaywallView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .background(Theme.cardBackground.opacity(0.8))
         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
+    }
+
+    private var displayProducts: [Product] {
+        let sorted = subscriptionStore.products.sorted {
+            rank(for: $0.id) < rank(for: $1.id)
+        }
+        if GrowthOrchestrator.shared.paywallPresentationMode == .annualOnly {
+            return sorted.filter { $0.id == SubscriptionStore.yearlyProductId }
+        }
+        return sorted
+    }
+
+    private func rank(for productId: String) -> Int {
+        if productId == SubscriptionStore.yearlyProductId { return 0 }
+        if productId == SubscriptionStore.monthlyProductId { return 1 }
+        return 2
     }
 }
 

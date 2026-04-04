@@ -12,6 +12,7 @@ struct SettingsView: View {
     @ObservedObject var tutorialStore: AppTutorialStore
     @ObservedObject private var junkStore = JunkPhraseStore.shared
     @ObservedObject private var celebrationStore = CelebrationStore.shared
+    @ObservedObject private var storyStore = MascotStoryStore.shared
 
     private var currentStepAnchor: TutorialAnchor? {
         guard tutorialStore.isActive, tutorialStore.currentStep < AppTutorialStore.steps.count else { return nil }
@@ -27,6 +28,8 @@ struct SettingsView: View {
     @StateObject private var ravelryImportStore = RavelryImportStore()
     @State private var showRavelryImportConfirm = false
     @State private var ravelryOAuthError: String?
+    @State private var showMascotHelp = false
+    @State private var showStoryDiagnostics = false
 
     var body: some View {
         NavigationStack {
@@ -84,8 +87,16 @@ struct SettingsView: View {
                 exportReadySheet(fileURL: item.url, isUserBackup: item.isUserBackup)
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView()
+                PaywallView(source: .settings)
             }
+            .sheet(isPresented: $showMascotHelp) {
+                MascotHelpView()
+            }
+            #if DEBUG
+            .sheet(isPresented: $showStoryDiagnostics) {
+                MascotStoryDiagnosticsView(storyStore: storyStore)
+            }
+            #endif
             .onReceive(NotificationCenter.default.publisher(for: .ravelryOAuthCallback)) { notification in
                 guard let url = notification.object as? URL, let userId = auth.currentUserId else { return }
                 Task { await processRavelryCallback(url: url, userId: userId) }
@@ -139,6 +150,7 @@ struct SettingsView: View {
             SectionHeaderView(title: "Premium")
 
             Button {
+                // Explicit user intent from Settings should never be suppressed.
                 showPaywall = true
             } label: {
                 HStack(spacing: Theme.Spacing.sm) {
@@ -161,7 +173,7 @@ struct SettingsView: View {
             .accessibilityLabel(SubscriptionStore.shared.isPremium ? "Manage Premium" : "Upgrade to Premium")
 
             if !SubscriptionStore.shared.isPremium {
-                Text("Free: 30 patterns, 5 AI/month, 3 YouTube imports/month, 20 note photos; includes ads. \(Theme.Premium.tagline)")
+                Text("Free: 30 patterns, 5 AI/month, 20 note photos; includes ads. \(Theme.Premium.tagline)")
                     .font(Theme.Typography.caption2)
                     .foregroundStyle(Theme.deepPlum.opacity(0.5))
                     .padding(.horizontal, Theme.Spacing.lg)
@@ -285,6 +297,27 @@ struct SettingsView: View {
                 .font(Theme.Typography.caption2)
                 .foregroundStyle(Theme.deepPlum.opacity(0.5))
                 .padding(.horizontal, Theme.Spacing.lg)
+
+            Button {
+                showStoryDiagnostics = true
+            } label: {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: "book.closed")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Theme.dustyBlue)
+                        .frame(width: 22)
+                    Text("Story progress diagnostics")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(Theme.deepPlum)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.deepPlum.opacity(0.2))
+                }
+                .padding(.vertical, Theme.Spacing.md)
+                .padding(.horizontal, Theme.Spacing.lg)
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -816,6 +849,36 @@ struct SettingsView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Show app tutorial")
                 .accessibilityHint("Walk through the main screens again")
+
+                Divider()
+                    .overlay(Theme.deepPlum.opacity(0.06))
+                    .padding(.leading, 54)
+
+                Button {
+                    showMascotHelp = true
+                } label: {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: "bird.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Theme.softCoral)
+                            .frame(width: 22)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Mascot interactions")
+                                .font(Theme.Typography.body)
+                                .foregroundStyle(Theme.deepPlum)
+                            Text("Learn Store, streaks, hearts, and treats")
+                                .font(Theme.Typography.caption2)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.deepPlum.opacity(0.2))
+                    }
+                    .padding(.vertical, Theme.Spacing.md)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                }
+                .buttonStyle(.plain)
             }
             .borderedCard()
             .tutorialAnchor(.settingsTutorialRow, isActive: currentStepAnchor == .settingsTutorialRow)
@@ -966,7 +1029,11 @@ private final class RavelryAuthContextProvider: NSObject, ASWebAuthenticationPre
             if let key = windowScene.windows.first(where: { $0.isKeyWindow }) { return key }
             if let first = windowScene.windows.first { return first }
         }
-        fatalError("No window available for Ravelry OAuth")
+        if let anyWindowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let first = anyWindowScene.windows.first {
+            return first
+        }
+        return ASPresentationAnchor()
     }
 }
 
@@ -1023,3 +1090,84 @@ private struct DebugPatternEntry: Encodable {
         pdfUrl = p.pdfUrl
     }
 }
+
+#if DEBUG
+private struct MascotStoryDiagnosticsView: View {
+    @ObservedObject var storyStore: MascotStoryStore
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Story Chapters") {
+                    ForEach(storyStore.chapters) { chapter in
+                        HStack(spacing: Theme.Spacing.sm) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(chapter.title)
+                                    .font(Theme.Typography.body)
+                                    .foregroundStyle(Theme.deepPlum)
+                                Text(chapter.id)
+                                    .font(Theme.Typography.caption2)
+                                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                                Text(requirementText(for: chapter.trigger))
+                                    .font(Theme.Typography.caption2)
+                                    .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                            }
+                            Spacer()
+                            let unlocked = storyStore.progress.unlockedIds.contains(chapter.id)
+                            Text(unlocked ? "Unlocked" : "Locked")
+                                .font(Theme.Typography.caption2)
+                                .foregroundStyle(unlocked ? Theme.sageGreen : Theme.softCoral)
+                            if !unlocked {
+                                Button("Unlock") {
+                                    storyStore.forceUnlock(chapterId: chapter.id)
+                                }
+                                .font(Theme.Typography.caption2)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
+                Section("Actions") {
+                    Button("Reset story progress", role: .destructive) {
+                        storyStore.resetProgressForDebug()
+                    }
+                }
+            }
+            .navigationTitle("Story Diagnostics")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func requirementText(for trigger: MascotStoryTrigger) -> String {
+        switch trigger {
+        case .onboardingReturn:
+            return "Requirement: return to dashboard after onboarding"
+        case .streak3:
+            return "Requirement: reach a 3-day streak"
+        case .firstPatternComplete:
+            return "Requirement: complete 1 pattern"
+        case .streak7:
+            return "Requirement: reach a 7-day streak"
+        case .saved10:
+            return "Requirement: save 10 patterns"
+        case .firstNote:
+            return "Requirement: add your first project note"
+        case .completed3:
+            return "Requirement: complete 3 patterns"
+        case .saved25:
+            return "Requirement: save 25 patterns"
+        case .streak14:
+            return "Requirement: reach a 14-day streak"
+        case .seasonal:
+            return "Requirement: open app during seasonal months (Mar, Jun, Sep, Dec)"
+        }
+    }
+}
+#endif

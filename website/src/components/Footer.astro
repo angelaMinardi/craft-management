@@ -1,4 +1,8 @@
 ---
+import CTA from './CTA.astro';
+import { getCtaConfig } from '../config/cta';
+
+const ctaConfig = getCtaConfig(import.meta.env);
 const links = [
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
@@ -8,6 +12,21 @@ const links = [
 
 <footer class="footer" role="contentinfo">
   <div class="footer-inner">
+    <div class="footer-convert-row">
+      <p class="footer-convert-text">
+        {ctaConfig.mode === 'liveFirst' ? 'Not ready to install yet?' : 'Want launch updates?'}
+      </p>
+      <CTA
+        href={ctaConfig.fallback.href}
+        label={ctaConfig.fallback.label}
+        primary={false}
+        dataCta="cta_impression"
+        dataDestination={ctaConfig.fallback.destination}
+        dataMode={ctaConfig.mode}
+        dataPageSection="footer"
+        dataFallbackUsed="true"
+      />
+    </div>
     <div class="footer-brand-row">
       <img src="/images/mascot.png" alt="" class="footer-mascot" width="48" height="48" aria-hidden="true" />
       <span class="footer-brand">Pattern Vault</span>
@@ -48,6 +67,21 @@ const links = [
     align-items: center;
     gap: var(--space-sm);
     margin-bottom: var(--space-md);
+  }
+
+  .footer-convert-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+  }
+
+  .footer-convert-text {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-small);
   }
 
   .footer-mascot {

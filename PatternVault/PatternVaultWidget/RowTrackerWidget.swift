@@ -15,6 +15,9 @@ private let keyActivePatternId = "widgetActivePatternId"
 private let keyActivePatternTitle = "widgetActivePatternTitle"
 private let keyWidgetRowCurrent = "widgetRowCurrent"
 private let keyWidgetRowTotal = "widgetRowTotal"
+private let keyWidgetSecondaryTitle = "widgetSecondaryTitle"
+private let keyWidgetSecondaryCurrent = "widgetSecondaryCurrent"
+private let keyWidgetSecondaryResetAfter = "widgetSecondaryResetAfter"
 
 // Brand colors for widget (match Theme.swift; widget has no access to main app assets)
 // Use dark background for lock-screen visibility on light and dark wallpapers.
@@ -25,17 +28,33 @@ private let widgetSoftCoral = Color(red: 0.91, green: 0.514, blue: 0.42)
 private let widgetTextOnDark = Color.white
 private let widgetSecondaryOnDark = Color.white.opacity(0.85)
 
+private let keyIsPremium = "entitlement_is_premium"
+
 struct RowTrackerEntry: TimelineEntry {
     let date: Date
     let patternId: UUID?
     let patternTitle: String?
     let currentRow: Int
     let totalRows: Int?
+    let secondaryTitle: String?
+    let secondaryCurrent: Int?
+    let secondaryResetAfter: Int?
+    let isPremium: Bool
 }
 
 struct RowTrackerProvider: TimelineProvider {
     func placeholder(in context: Context) -> RowTrackerEntry {
-        RowTrackerEntry(date: Date(), patternId: nil, patternTitle: "My project", currentRow: 12, totalRows: 120)
+        RowTrackerEntry(
+            date: Date(),
+            patternId: nil,
+            patternTitle: "My project",
+            currentRow: 12,
+            totalRows: 120,
+            secondaryTitle: "Cable",
+            secondaryCurrent: 3,
+            secondaryResetAfter: 8,
+            isPremium: true
+        )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (RowTrackerEntry) -> Void) {
@@ -50,17 +69,25 @@ struct RowTrackerProvider: TimelineProvider {
 
     private func readEntry() -> RowTrackerEntry {
         let defaults = UserDefaults(suiteName: suiteName)
+        let isPremium = defaults?.bool(forKey: keyIsPremium) ?? false
         let idString = defaults?.string(forKey: keyActivePatternId)
         let patternId = idString.flatMap { UUID(uuidString: $0) }
         let title = defaults?.string(forKey: keyActivePatternTitle)
         let current = defaults?.object(forKey: keyWidgetRowCurrent) as? Int ?? 0
         let total = defaults?.object(forKey: keyWidgetRowTotal) as? Int
+        let secondaryTitle = defaults?.string(forKey: keyWidgetSecondaryTitle)
+        let secondaryCurrent = defaults?.object(forKey: keyWidgetSecondaryCurrent) as? Int
+        let secondaryResetAfter = defaults?.object(forKey: keyWidgetSecondaryResetAfter) as? Int
         return RowTrackerEntry(
             date: Date(),
             patternId: patternId,
             patternTitle: title,
             currentRow: max(0, current),
-            totalRows: total.map { max(0, $0) }
+            totalRows: total.map { max(0, $0) },
+            secondaryTitle: secondaryTitle,
+            secondaryCurrent: secondaryCurrent.map { max(0, $0) },
+            secondaryResetAfter: secondaryResetAfter.map { max(0, $0) },
+            isPremium: isPremium
         )
     }
 }
@@ -78,12 +105,41 @@ struct RowTrackerWidgetView: View {
     var body: some View {
         switch family {
         case .accessoryRectangular:
-            accessoryRectangularView
+            if entry.isPremium {
+                accessoryRectangularView
+            } else {
+                premiumUpgradeRectangularView
+            }
         case .accessoryInline:
-            accessoryInlineView
+            if entry.isPremium {
+                accessoryInlineView
+            } else {
+                Text("Row Tracker · Premium")
+                    .accessibilityLabel("Row Tracker is a premium feature")
+            }
         default:
-            accessoryRectangularView
+            if entry.isPremium {
+                accessoryRectangularView
+            } else {
+                premiumUpgradeRectangularView
+            }
         }
+    }
+
+    private var premiumUpgradeRectangularView: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("Row Tracker")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(widgetTextOnDark)
+            Text("Upgrade to Premium to track rows from your lock screen.")
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(widgetSecondaryOnDark)
+                .lineLimit(3)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Row Tracker is a premium feature. Open the app to upgrade.")
     }
 
     private var accessoryInlineView: some View {
@@ -174,6 +230,16 @@ struct RowTrackerWidgetView: View {
                                 .scaleEffect(0.78)
                         }
                     }
+
+                    if let secondaryTitle = entry.secondaryTitle,
+                       let secondaryCurrent = entry.secondaryCurrent,
+                       let secondaryResetAfter = entry.secondaryResetAfter,
+                       secondaryResetAfter > 0 {
+                        Text("\(secondaryTitle): \(secondaryCurrent)/\(secondaryResetAfter)")
+                            .font(.system(size: 9, weight: .semibold, design: .rounded))
+                            .foregroundStyle(widgetSecondaryOnDark)
+                            .lineLimit(1)
+                    }
                 }
             }
         }
@@ -248,5 +314,15 @@ struct RowTrackerWidget: Widget {
 #Preview("Row Tracker", as: .accessoryRectangular) {
     RowTrackerWidget()
 } timeline: {
-    RowTrackerEntry(date: .now, patternId: nil, patternTitle: "Fluffy Sweater", currentRow: 38, totalRows: 120)
+    RowTrackerEntry(
+        date: .now,
+        patternId: nil,
+        patternTitle: "Fluffy Sweater",
+        currentRow: 38,
+        totalRows: 120,
+        secondaryTitle: "Lace",
+        secondaryCurrent: 5,
+        secondaryResetAfter: 12,
+        isPremium: true
+    )
 }

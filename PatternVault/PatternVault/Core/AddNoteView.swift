@@ -74,7 +74,9 @@ struct AddNoteView: View {
                                 .multilineTextAlignment(.center)
                             if error.localizedCaseInsensitiveContains("Premium") || (error.localizedCaseInsensitiveContains("photo") && error.localizedCaseInsensitiveContains("limit")) {
                                 Button(Theme.Premium.seePremiumTitle) {
-                                    showPaywall = true
+                                    if GrowthOrchestrator.shared.canShowPaywall(source: .notePhotoLimit) {
+                                        showPaywall = true
+                                    }
                                 }
                                 .font(Theme.Typography.caption)
                                 .foregroundStyle(Theme.softCoral)
@@ -87,7 +89,7 @@ struct AddNoteView: View {
             }
             .scrollContentBackground(.hidden)
             .sheet(isPresented: $showPaywall) {
-                PaywallView()
+                PaywallView(source: .notePhotoLimit)
             }
             .background(Theme.screenGradient.ignoresSafeArea())
             .navigationTitle(isEditing ? "Edit Note" : "Add Note")
@@ -157,6 +159,8 @@ struct AddNoteView: View {
                 if success {
                     HapticService.success()
                     CelebrationStore.shared.unlock("first_note")
+                    UserDefaults.standard.set(true, forKey: "mascot_has_any_note")
+                    UserDefaults(suiteName: "group.com.patternvault.app")?.set(true, forKey: "mascot_has_any_note")
                     dismiss()
                 }
             }

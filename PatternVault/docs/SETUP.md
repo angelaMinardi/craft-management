@@ -12,7 +12,7 @@ Use this as the single setup checklist for local development, auth providers, an
    - `GEMINI_API_KEY` (required for AI analysis features)
 4. Optional keys:
    - `RAVELRY_ACCESS_KEY` / `RAVELRY_PERSONAL_KEY` (Ravelry PDF + Find Patterns)
-   - `RAVELRY_OAUTH_CONSUMER_KEY` / `RAVELRY_OAUTH_CONSUMER_SECRET` (Connect Ravelry + library import)
+   - `RAVELRY_OAUTH2_CLIENT_ID` / `RAVELRY_OAUTH2_CLIENT_SECRET` (Connect Ravelry + library import)
    - Ad IDs and Firebase plist if using ads/analytics
 5. Do not commit `Config/Config.xcconfig` (already gitignored).
 
@@ -29,10 +29,15 @@ Use this as the single setup checklist for local development, auth providers, an
 
 Run migrations in `supabase_migrations/` in order (`001` through latest).
 
-Current milestone migrations include at least:
+Current migrations in this repo (run in order):
 - `001_create_patterns.sql`
 - `002_create_project_notes.sql`
 - `003_create_tags.sql`
+- `004_add_pattern_metadata.sql`
+- `005_create_pattern_images.sql`
+- `006_add_pattern_pdf_and_metadata.sql`
+- `007_pattern_pdfs_bucket.sql`
+- `008_create_pattern_yarn_links.sql`
 - `009_add_parsed_steps.sql`
 - `010_crafter_features.sql`
 - `011_tools_craft_agnostic.sql`
@@ -77,8 +82,8 @@ Used for:
 - Import my Ravelry library
 
 Set:
-- `RAVELRY_OAUTH_CONSUMER_KEY`
-- `RAVELRY_OAUTH_CONSUMER_SECRET`
+- `RAVELRY_OAUTH2_CLIENT_ID`
+- `RAVELRY_OAUTH2_CLIENT_SECRET`
 
 Recommended redirect URI:
 - `patternvault://oauth/ravelry`
@@ -91,7 +96,29 @@ Recommended redirect URI:
 4. Run one AI step analysis (Gemini).
 5. Open Settings and verify key feature sections load without config errors.
 
-## 6) Related docs
+## 6) Edge Functions (required and optional)
+
+Required for account deletion:
+
+- `delete-account` (self-service in-app account + data deletion)
+
+Optional legacy path:
+
+- `extract-pattern-from-video` (legacy YouTube transcript pipeline)
+
+Deploy from `PatternVault/`:
+
+```bash
+supabase functions deploy delete-account
+supabase functions deploy extract-pattern-from-video
+```
+
+Notes:
+
+- `delete-account` requires a signed-in user JWT and uses service-role admin deletion server-side.
+- User-owned table rows are removed by existing `ON DELETE CASCADE` foreign keys.
+
+## 7) Related docs
 
 - `PatternVault/README.md`
 - `PatternVault/docs/TESTING.md`

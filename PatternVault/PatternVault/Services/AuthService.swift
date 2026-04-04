@@ -149,14 +149,18 @@ final class AuthService: ObservableObject {
         }
     }
 
-    /// Sign in with Apple (native). Pass the identity token and optionally the user's name from the credential.
-    func signInWithApple(idToken: String, fullName: (given: String?, family: String?)? = nil) async {
+    /// Sign in with Apple (native). Pass the identity token, request nonce, and optionally the user's name.
+    func signInWithApple(
+        idToken: String,
+        nonce: String? = nil,
+        fullName: (given: String?, family: String?)? = nil
+    ) async {
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         do {
             try await client.auth.signInWithIdToken(
-                credentials: .init(provider: .apple, idToken: idToken)
+                credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
             )
             session = client.auth.currentSession
             if session != nil { HapticService.success() }
@@ -174,7 +178,12 @@ final class AuthService: ObservableObject {
                 )
             }
         } catch {
-            errorMessage = error.localizedDescription
+            let message = error.localizedDescription
+            if message.isEmpty {
+                errorMessage = "Apple sign-in failed."
+            } else {
+                errorMessage = "Apple sign-in failed: \(message)"
+            }
         }
     }
 
@@ -214,11 +223,51 @@ final class AuthService: ObservableObject {
         errorMessage = nil
         defer { isLoading = false }
         do {
+            guard let accessToken = session?.accessToken else {
+                throw NSError(domain: "AuthService", code: -1, userInfo: [NSLocalizedDescriptionKey: "You must be signed in to delete your account."])
+            }
+            try await deleteAccountOnServer(accessToken: accessToken)
             try await client.auth.signOut()
             session = nil
-            // Supabase does not expose user delete from client by default; use Edge Function or dashboard
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func deleteAccountOnServer(accessToken: String) async throws {
+        guard let baseURLString = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String,
+              !baseURLString.isEmpty,
+              !baseURLString.contains("$("),
+              let baseURL = URL(string: baseURLString) else {
+            throw NSError(domain: "AuthService", code: -2, userInfo: [NSLocalizedDescriptionKey: "Supabase URL is not configured."])
+        }
+        guard let anonKey = Bundle.main.object(forInfoDictionaryKey: "SUPABASE_ANON_KEY") as? String,
+              !anonKey.isEmpty,
+              !anonKey.contains("$(") else {
+            throw NSError(domain: "AuthService", code: -3, userInfo: [NSLocalizedDescriptionKey: "Supabase key is not configured."])
+        }
+
+        let endpoint = baseURL
+            .appendingPathComponent("functions")
+            .appendingPathComponent("v1")
+            .appendingPathComponent("delete-account")
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.httpBody = Data("{}".utf8)
+        request.timeoutInterval = 20
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw NSError(domain: "AuthService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Account deletion failed."])
+        }
+        guard (200...299).contains(http.statusCode) else {
+            let message = String(data: data, encoding: .utf8)
+            let detail = (message?.isEmpty == false) ? message! : "Please try again."
+            throw NSError(domain: "AuthService", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "Could not delete account. \(detail)"])
         }
     }
 

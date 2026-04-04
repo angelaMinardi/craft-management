@@ -17,8 +17,10 @@ struct PatternVaultApp: App {
         if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
             FirebaseApp.configure()
         }
-        DispatchQueue.main.async {
-            GADMobileAds.sharedInstance().start(completionHandler: nil)
+        if Self.hasValidAdMobAppId {
+            DispatchQueue.main.async {
+                GADMobileAds.sharedInstance().start(completionHandler: nil)
+            }
         }
     }
     @StateObject private var auth = AuthService.shared
@@ -74,6 +76,12 @@ struct PatternVaultApp: App {
             defaults?.removeObject(forKey: "sharedTitle")
             defaults?.synchronize()
         }
+    }
+
+    private static var hasValidAdMobAppId: Bool {
+        let raw = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
+        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !trimmed.isEmpty && !trimmed.contains("$(")
     }
 }
 

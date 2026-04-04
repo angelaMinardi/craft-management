@@ -27,6 +27,7 @@ Core coverage includes:
 - Sign up, sign in, sign out.
 - Session persists across relaunch.
 - OAuth callbacks return to app successfully (if enabled).
+- Delete Account removes account and user data (test with throwaway account).
 
 ### Patterns
 
@@ -52,6 +53,25 @@ Core coverage includes:
 - Test Ravelry, YouTube/TikTok, and a generic web URL.
 - Validate fallback behavior when extraction fails.
 
+### Visibility and contrast
+
+- Run checks in all three modes: Light, Dark, and Accessibility > Increase Contrast.
+- Save extension (`Save to Pattern Vault`):
+  - Confirm title and description text are readable on warm cream surfaces.
+  - Confirm section headers, metadata labels, and loading text remain readable while loading.
+  - Confirm tag chip labels and remove icons are clearly visible.
+  - Confirm segmented control selected/unselected labels are readable.
+- Pattern detail:
+  - Confirm hero platform pill text is readable over both light and dark thumbnail images.
+- Reward and achievements:
+  - Confirm `DailyRewardOverlayView` title, subtitle, and dismiss icon are readable on honey gradient.
+  - Confirm locked achievement title/hint text is readable without zoom.
+- Chart/PDF surfaces:
+  - Confirm chart thumbnail borders are visible on both light and dark source imagery.
+  - Confirm chart editor handles and annotation markers remain visible against varied backgrounds.
+- Regression note:
+  - Any newly added white text on blur/material or photo backgrounds must include a guaranteed-contrast backing (solid fill or dark scrim).
+
 ### Widget and app group sync
 
 - Widget shows expected values for empty and non-empty states.
@@ -67,6 +87,7 @@ Core coverage includes:
 
 - All unit tests pass on release branch.
 - Manual regression checklist completed.
+- Visibility and contrast checklist completed in Light/Dark/Increase Contrast.
 - Supabase migrations are applied in production and verified.
 - Config values are set for release (no placeholders).
 - Legal URLs in app Info settings resolve.

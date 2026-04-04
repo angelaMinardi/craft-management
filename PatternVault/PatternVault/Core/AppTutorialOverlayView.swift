@@ -26,11 +26,22 @@ struct AppTutorialOverlayView: View {
 
     var body: some View {
         ZStack {
-            // Dimmed background
-            Color.clear
-                .background(Theme.deepPlum.opacity(0.4))
-                .ignoresSafeArea()
-                .onTapGesture { }
+            if store.isActive {
+                // Dimmed background should only exist while tutorial is active.
+                Color.clear
+                    .background(Theme.deepPlum.opacity(0.4))
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
+
+            if store.isActive && store.isLastStep {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        store.next()
+                    }
+            }
 
             if store.isActive {
                 if showingSkipPouty {
@@ -52,17 +63,32 @@ struct AppTutorialOverlayView: View {
                 }
             }
         }
+        .onAppear {
+            normalizeTutorialStateIfNeeded()
+        }
         .onChange(of: store.currentStep) { _, _ in
             bubbleAppeared = false
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8).delay(0.05)) {
                 bubbleAppeared = true
             }
+            normalizeTutorialStateIfNeeded()
+        }
+        .onChange(of: store.isActive) { _, _ in
+            normalizeTutorialStateIfNeeded()
         }
         .onAppear {
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8).delay(0.1)) {
                 bubbleAppeared = true
             }
         }
+    }
+
+    private func normalizeTutorialStateIfNeeded() {
+        guard store.isActive else { return }
+        guard !showingSkipPouty, !showingDoneCelebration else { return }
+        guard store.currentStep >= AppTutorialStore.steps.count else { return }
+        // Safety: never leave the dim layer up with no active bubble step.
+        store.next()
     }
 
     /// Placement: center of the bubble (including tail), size, tail visibility and direction.
@@ -107,8 +133,8 @@ struct AppTutorialOverlayView: View {
             )
 
         case .tabPatterns, .tabStash, .tabSettings:
-            let tabIndex: CGFloat = step.anchorId == .tabPatterns ? 1 : (step.anchorId == .tabStash ? 2 : 3)
-            let tailTipX = size.width * (tabIndex + 0.5) / 4
+            let tabIndex: CGFloat = step.anchorId == .tabPatterns ? 1 : (step.anchorId == .tabStash ? 3 : 4)
+            let tailTipX = size.width * (tabIndex + 0.5) / 5
             let tailTipY = size.height - tabBarHeight - gap
             let preferredCenterY = tailTipY - totalHeight / 2
             let centerY = min(tailTipY - totalHeight / 2, max(safeTop + totalHeight / 2, preferredCenterY))
@@ -262,26 +288,27 @@ struct AppTutorialOverlayView: View {
     private static func mascotPose(for step: AppTutorialStep) -> MascotPose {
         switch step.anchorId {
         case .tabBar:
-            return .walking
+            return .thinking
         default:
             return .idle
         }
     }
 
     private enum MascotPose {
-        case idle, walking
+        case idle, thinking
     }
 
     private func bubbleCardContent(step: AppTutorialStep) -> some View {
         let pose = Self.mascotPose(for: step)
+        let showInteractionHint = store.currentStep > 0 && store.currentStep <= 4
         return VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             // Mascot as the "speaker" of the bubble
             Group {
                 switch pose {
                 case .idle:
                     SpriteMascotView.idle(size: 52)
-                case .walking:
-                    SpriteMascotView.walking(size: 52)
+                case .thinking:
+                    SpriteMascotView.thinking(size: 52)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -294,6 +321,17 @@ struct AppTutorialOverlayView: View {
                     .font(Theme.Typography.body)
                     .foregroundStyle(Theme.deepPlum.opacity(0.8))
                     .fixedSize(horizontal: false, vertical: true)
+
+                if showInteractionHint {
+                    HStack(spacing: 6) {
+                        Image(systemName: "hand.tap")
+                        Text("Tap highlighted areas to try things.")
+                    }
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.65))
+                    .padding(.top, 2)
+                    .accessibilityLabel("Tap highlighted areas to try things")
+                }
             }
 
             HStack(spacing: Theme.Spacing.md) {
@@ -311,11 +349,7 @@ struct AppTutorialOverlayView: View {
                 Spacer()
 
                 Button {
-                    if store.isLastStep {
-                        showingDoneCelebration = true
-                    } else {
-                        store.next()
-                    }
+                    store.next()
                 } label: {
                     HStack(spacing: 6) {
                         Text(store.isLastStep ? "Done" : "Next")

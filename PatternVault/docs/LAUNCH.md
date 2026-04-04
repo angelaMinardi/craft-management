@@ -35,7 +35,9 @@ Single source of truth for release readiness and launch execution.
 
 - Unit tests pass.
 - Manual regression pass completed (see `docs/TESTING.md`).
+- App Review checklist completed (see `docs/APP_REVIEW_CHECKLIST.md`).
 - Share extension smoke-tested on real URLs.
+- In-app account deletion tested end-to-end in staging/production-like environment.
 
 ## 2) Launch day operations
 

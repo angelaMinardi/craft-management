@@ -2,7 +2,7 @@
 
 :root {
   /* Brand colors — hex from Theme.swift UIKit RGB */
-  --warm-cream: #FFF9F0;
+  --warm-cream: #FFF8F0;
   --soft-coral: #E8836B;
   --deep-plum: #4A2040;
   --sage-green: #A8C5A0;
@@ -19,6 +19,13 @@
   --card-bg: #FFFFFF;
   --card-border: rgba(74, 32, 64, 0.08);
   --border: rgba(74, 32, 64, 0.12);
+  --border-strong: rgba(74, 32, 64, 0.22);
+  --surface-subtle: rgba(255, 248, 240, 0.7);
+  --text-on-accent: #FFFFFF;
+  --state-success: var(--sage-green);
+  --state-warning: var(--honey);
+  --state-info: var(--dusty-blue);
+  --state-error: var(--soft-coral);
   --header-footer-bg: rgba(255, 255, 255, 0.85);
   --shadow-soft: 0 2px 12px rgba(74, 32, 64, 0.06);
   --shadow-card: 0 8px 32px rgba(74, 32, 64, 0.08);
@@ -32,6 +39,7 @@
   --duration-fast: 0.2s;
   --duration-normal: 0.35s;
   --duration-slow: 0.6s;
+  --stagger-step: 60ms;
 
   /* Typography — rounded, friendly; tighter for headlines = sleeker */
   --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
@@ -69,6 +77,133 @@
   --header-height: 4rem;
   --content-max: 42rem;
   --content-wide: 56rem;
+}
+
+/* Shared component surfaces */
+.pv-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}
+
+.pv-card-elevated {
+  background: var(--card-bg);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.pv-callout {
+  padding: var(--space-lg);
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border);
+  background: var(--surface-subtle);
+}
+
+.pv-callout-info {
+  border-color: color-mix(in srgb, var(--state-info) 45%, transparent);
+  background: color-mix(in srgb, var(--state-info) 12%, white);
+}
+
+.pv-callout-success {
+  border-color: color-mix(in srgb, var(--state-success) 50%, transparent);
+  background: color-mix(in srgb, var(--state-success) 15%, white);
+}
+
+.pv-callout-warning {
+  border-color: color-mix(in srgb, var(--state-warning) 55%, transparent);
+  background: color-mix(in srgb, var(--state-warning) 16%, white);
+}
+
+.pv-callout-error {
+  border-color: color-mix(in srgb, var(--state-error) 50%, transparent);
+  background: color-mix(in srgb, var(--state-error) 12%, white);
+}
+
+.pv-banner {
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-xl);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-soft);
+}
+
+.pv-button-primary {
+  border: 0;
+  border-radius: var(--radius-full);
+  padding: 0.85rem 1.2rem;
+  background: var(--soft-coral);
+  color: var(--text-on-accent);
+  font-weight: 600;
+  transition:
+    transform var(--duration-fast) var(--ease-out-quint),
+    background-color var(--duration-fast) var(--ease-out-quint);
+}
+
+.pv-button-primary:hover {
+  background: color-mix(in srgb, var(--soft-coral) 85%, black);
+}
+
+.pv-button-primary:active {
+  transform: scale(0.96);
+}
+
+.pv-button-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pv-input-surface {
+  width: 100%;
+  border: 1.2px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--warm-cream) 60%, white);
+  color: var(--text-primary);
+  padding: 0.7rem 0.8rem;
+}
+
+.pv-input-surface:focus-visible {
+  border-color: var(--soft-coral);
+  outline: 2px solid color-mix(in srgb, var(--soft-coral) 35%, transparent);
+  outline-offset: 1px;
+}
+
+.pv-input-surface[aria-invalid="true"] {
+  border-color: color-mix(in srgb, var(--state-error) 75%, transparent);
+}
+
+.pv-paywall-module {
+  background: linear-gradient(140deg, var(--warm-cream), var(--card-bg));
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  padding: var(--space-lg);
+}
+
+/* Growth moment wrappers */
+.pv-moment-peak,
+.pv-moment-purpose,
+.pv-moment-nudge,
+.pv-moment-share {
+  border-radius: 20px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-soft);
+  padding: var(--space-lg);
+}
+
+.pv-moment-peak {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(232, 131, 107, 0.12), transparent),
+    var(--card-bg);
+}
+
+.pv-moment-nudge {
+  border-color: color-mix(in srgb, var(--soft-coral) 35%, transparent);
+}
+
+.pv-moment-share {
+  border-color: color-mix(in srgb, var(--sage-green) 45%, transparent);
 }
 
 /* Premium gradient mesh (brand colors) */
@@ -166,6 +301,13 @@ a:hover {
   margin: var(--space-xl) 0 var(--space-md);
 }
 
+.legal-page h1 {
+  font-size: var(--text-title);
+  font-weight: 700;
+  color: #4A2040;
+  margin: 0 0 var(--space-lg);
+}
+
 .legal-page h2:first-of-type {
   margin-top: 0;
 }
@@ -181,4 +323,9 @@ a:hover {
 
 .legal-page li {
   margin-bottom: var(--space-xs);
+}
+
+.legal-page a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

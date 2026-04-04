@@ -15,6 +15,12 @@ enum SupabaseManager {
         )
         return SupabaseClient(supabaseURL: url, supabaseKey: key, options: options)
     }()
+
+    /// Base URL used to construct Edge Function endpoints.
+    static let baseURL: URL = Bundle.main.resolvedSupabaseURL(anonKey: Bundle.main.supabaseAnonKey)
+
+    /// Anon key for API gateway auth on raw URLSession calls (e.g. Edge Functions).
+    static let anonKey: String = Bundle.main.supabaseAnonKey
 }
 
 // MARK: - Configuration (load from xcconfig or Info.plist; no keys in repo)
@@ -38,7 +44,12 @@ private extension Bundle {
             let derived = "https://\(ref).supabase.co"
             if let u = URL(string: derived) { return u }
         }
+        #if DEBUG
+        assertionFailure("Invalid Supabase configuration. Check SUPABASE_URL and SUPABASE_ANON_KEY.")
         return URL(string: "https://placeholder.supabase.co")!
+        #else
+        preconditionFailure("Invalid Supabase configuration in Release build. Set SUPABASE_URL and SUPABASE_ANON_KEY in Config.xcconfig.")
+        #endif
     }
 
     /// Decode JWT payload and return "ref" (Supabase project ref) if present.
@@ -62,8 +73,16 @@ private extension Bundle {
     }
 
     var supabaseAnonKey: String {
-        (infoDictionary?["SUPABASE_ANON_KEY"] as? String)
+        let value = (infoDictionary?["SUPABASE_ANON_KEY"] as? String)
             ?? ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"]
             ?? "placeholder-anon-key"
+        #if DEBUG
+        return value
+        #else
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        precondition(!trimmed.isEmpty && !trimmed.contains("$(") && trimmed != "placeholder-anon-key",
+                     "Invalid SUPABASE_ANON_KEY in Release build.")
+        return value
+        #endif
     }
 }

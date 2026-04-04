@@ -11,17 +11,30 @@ import GoogleMobileAds
 
 /// Banner ad shown at bottom of main content when user is not Premium.
 struct AdBannerView: View {
-    /// Set from Info.plist GADBannerAdUnitID, or use test ID when nil.
-    static var bannerAdUnitID: String? {
-        Bundle.main.object(forInfoDictionaryKey: "GADBannerAdUnitID") as? String
+    /// Set from Info.plist GADApplicationIdentifier.
+    static var applicationId: String? {
+        let raw = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
+        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty, !trimmed.contains("$(") else { return nil }
+        return trimmed
     }
-    /// Test banner unit ID (Google sample) when no plist value.
-    private static let testBannerAdUnitID = "ca-app-pub-3940256099942544/2934735716"
+
+    /// Set from Info.plist GADBannerAdUnitID.
+    static var bannerAdUnitID: String? {
+        let raw = Bundle.main.object(forInfoDictionaryKey: "GADBannerAdUnitID") as? String
+        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty, !trimmed.contains("$(") else { return nil }
+        return trimmed
+    }
 
     var body: some View {
-        AdBannerRepresentable(adUnitID: Self.bannerAdUnitID ?? Self.testBannerAdUnitID)
-            .frame(height: 50)
-            .background(Color(.systemBackground))
+        Group {
+            if Self.applicationId != nil, let unitId = Self.bannerAdUnitID {
+                AdBannerRepresentable(adUnitID: unitId)
+                    .frame(height: 50)
+                    .background(Color(.systemBackground))
+            }
+        }
     }
 }
 

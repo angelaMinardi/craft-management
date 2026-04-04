@@ -16,6 +16,8 @@ struct SpriteMascotView: View {
     var framesPerSecond: Double = 15
     /// If false, plays once and calls onComplete when done.
     var loop: Bool = true
+    /// Optional fallback folder if `folder` has no readable frames.
+    var fallbackFolder: String?
     var onComplete: (() -> Void)?
 
     init(
@@ -23,12 +25,14 @@ struct SpriteMascotView: View {
         size: CGFloat = 180,
         framesPerSecond: Double = 15,
         loop: Bool = true,
+        fallbackFolder: String? = nil,
         onComplete: (() -> Void)? = nil
     ) {
         self.folder = folder
         self.size = size
         self.framesPerSecond = framesPerSecond
         self.loop = loop
+        self.fallbackFolder = fallbackFolder
         self.onComplete = onComplete
     }
 
@@ -65,18 +69,26 @@ struct SpriteMascotView: View {
     @State private var timerTask: Task<Void, Never>?
 
     private func loadFrames() {
-        var images: [UIImage] = []
-        for i in 0..<maxFrameIndex {
-            let name = String(format: "frame_%03d", i)
-            let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: folder)
-                ?? Bundle.main.url(forResource: name, withExtension: "png")
-            guard let url, let data = try? Data(contentsOf: url), let image = UIImage(data: data) else { continue }
-            images.append(image)
+        var images = loadFrames(from: folder)
+        if images.isEmpty, let fallbackFolder {
+            images = loadFrames(from: fallbackFolder)
         }
         loadedImages = images
         if currentFrame >= images.count && !images.isEmpty {
             currentFrame = 0
         }
+    }
+
+    private func loadFrames(from folderName: String) -> [UIImage] {
+        var images: [UIImage] = []
+        for i in 0..<maxFrameIndex {
+            let name = String(format: "frame_%03d", i)
+            let url = Bundle.main.url(forResource: name, withExtension: "png", subdirectory: folderName)
+                ?? Bundle.main.url(forResource: name, withExtension: "png")
+            guard let url, let data = try? Data(contentsOf: url), let image = UIImage(data: data) else { continue }
+            images.append(image)
+        }
+        return images
     }
 
     private func startTimer() {
@@ -136,6 +148,21 @@ extension SpriteMascotView {
     /// Knitting: craft-in-progress, add pattern, pattern detail. Loops gently.
     static func knitting(size: CGFloat = 80) -> SpriteMascotView {
         SpriteMascotView(folder: "KnittingMascotFrames", size: size, loop: true)
+    }
+
+    /// Waving: greeting moments and discoverability nudges.
+    static func waving(size: CGFloat = 120) -> SpriteMascotView {
+        SpriteMascotView(folder: "WavingMascotFrames", size: size, loop: true, fallbackFolder: "IdleMascotFrames")
+    }
+
+    /// Thinking: processing and helper guidance moments.
+    static func thinking(size: CGFloat = 100) -> SpriteMascotView {
+        SpriteMascotView(folder: "ThinkingMascotFrames", size: size, loop: true, fallbackFolder: "WalkingMascotFrames")
+    }
+
+    /// Petting: one-shot affection reaction to user taps.
+    static func petting(size: CGFloat = 120, onComplete: (() -> Void)? = nil) -> SpriteMascotView {
+        SpriteMascotView(folder: "PettingMascotFrames", size: size, loop: false, fallbackFolder: "JumpingMascotFrames", onComplete: onComplete)
     }
 }
 

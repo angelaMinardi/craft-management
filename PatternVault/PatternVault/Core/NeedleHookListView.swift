@@ -70,7 +70,7 @@ struct NeedleHookListView: View {
     private var loadingView: some View {
         VStack(spacing: Theme.Spacing.xl) {
             Spacer().frame(height: 60)
-            SpriteMascotView.walking(size: 100)
+            SpriteMascotView.thinking(size: 100)
             Text("Loading inventory...")
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.deepPlum.opacity(0.6))

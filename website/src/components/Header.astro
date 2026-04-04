@@ -1,4 +1,8 @@
 ---
+import CTA from './CTA.astro';
+import { getCtaConfig } from '../config/cta';
+
+const ctaConfig = getCtaConfig(import.meta.env);
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/privacy', label: 'Privacy' },
@@ -26,6 +30,19 @@ const navLinks = [
       ))}
     </ul>
   </nav>
+  <div class="header-cta">
+    <CTA
+      href={ctaConfig.primary.href}
+      label={ctaConfig.mode === 'liveFirst' ? 'Download' : 'Join Waitlist'}
+      primary={true}
+      dataCta="cta_impression"
+      dataDestination={ctaConfig.primary.destination}
+      dataMode={ctaConfig.mode}
+      dataPageSection="header"
+      dataFallbackUsed="false"
+      ariaLabel={ctaConfig.mode === 'liveFirst' ? 'Download Pattern Vault on the App Store' : 'Join the Pattern Vault waitlist'}
+    />
+  </div>
 </header>
 
 <style>
@@ -158,6 +175,16 @@ const navLinks = [
     width: 100%;
   }
 
+  .header-cta {
+    margin-left: var(--space-md);
+  }
+
+  .header-cta :global(.cta) {
+    font-size: 0.8125rem;
+    padding: 0.6rem 0.95rem;
+    border-radius: var(--radius-md);
+  }
+
   @media (max-width: 640px) {
     .nav-toggle {
       display: flex;
@@ -174,6 +201,10 @@ const navLinks = [
       max-height: 0;
       overflow: hidden;
       transition: max-height 0.3s var(--ease-out-quint);
+    }
+
+    .header-cta {
+      display: none;
     }
 
     .nav.is-open {

@@ -18,7 +18,8 @@ struct TappableMascotView: View {
     var body: some View {
         Group {
             if isCheering {
-                SpriteMascotView.jumping(size: min(size * 1.2, 100)) {
+                // Keep one-shot reaction slightly larger than idle so the tap feels responsive.
+                SpriteMascotView.petting(size: size * 1.12) {
                     isCheering = false
                 }
                 .frame(width: size, height: size)

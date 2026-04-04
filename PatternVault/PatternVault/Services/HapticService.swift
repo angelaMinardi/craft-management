@@ -16,6 +16,13 @@ enum HapticService {
         generator.impactOccurred()
     }
 
+    /// Selection feedback for picker changes and scrubbing.
+    static func selection() {
+        let generator = UISelectionFeedbackGenerator()
+        generator.prepare()
+        generator.selectionChanged()
+    }
+
     /// Medium impact for success moments (e.g. pattern saved, celebration).
     static func mediumImpact() {
         let generator = UIImpactFeedbackGenerator(style: .medium)

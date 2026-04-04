@@ -20,7 +20,10 @@ final class YarnStashStore: ObservableObject {
         do {
             items = try await repo.fetchAll(userId: userId)
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[YarnStashStore] load failed: \(error)")
+            #endif
+            errorMessage = "Could not load your yarn stash. Please try again."
         }
     }
 
@@ -31,7 +34,10 @@ final class YarnStashStore: ObservableObject {
             let item = try await repo.add(userId: userId, brandName: brandName.trimmingCharacters(in: .whitespaces), colorName: colorName?.trimmingCharacters(in: .whitespaces), weight: weight?.trimmingCharacters(in: .whitespaces), yardagePerSkein: yardagePerSkein, skeinsOwned: max(0, skeinsOwned), location: location?.trimmingCharacters(in: .whitespaces), notes: notes?.trimmingCharacters(in: .whitespaces))
             items.insert(item, at: 0)
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[YarnStashStore] add failed: \(error)")
+            #endif
+            errorMessage = "Could not save yarn. Please try again."
         }
     }
 
@@ -43,7 +49,10 @@ final class YarnStashStore: ObservableObject {
                 items[idx] = updated
             }
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[YarnStashStore] update failed: \(error)")
+            #endif
+            errorMessage = "Could not update yarn. Please try again."
         }
     }
 
@@ -53,7 +62,10 @@ final class YarnStashStore: ObservableObject {
             try await repo.delete(id: item.id, userId: item.userId)
             items.removeAll { $0.id == item.id }
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[YarnStashStore] delete failed: \(error)")
+            #endif
+            errorMessage = "Could not delete yarn. Please try again."
         }
     }
 }

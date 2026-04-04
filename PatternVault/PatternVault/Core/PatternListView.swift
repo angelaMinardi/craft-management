@@ -41,8 +41,14 @@ struct PatternListView: View {
     @State private var isSelectionMode = false
     @State private var selectedPatternIds: Set<UUID> = []
     @State private var showMassDeleteConfirm = false
+    @State private var filteredPatterns: [Pattern] = []
+    @State private var searchDebounceTask: Task<Void, Never>?
+    @AppStorage("onboarding_selected_first_win") private var onboardingFirstWin = "save_first_pattern"
+    @AppStorage("onboarding_first_win_prompt_consumed") private var onboardingFirstWinPromptConsumed = false
+    @State private var showEnrichingAlert = false
+    @State private var enrichingAlertPatternId: UUID?
 
-    private var filteredPatterns: [Pattern] {
+    private func recomputeFilteredPatterns() {
         var result = store.patterns
         if let filterStatus {
             result = result.filter { $0.status == filterStatus }
@@ -70,7 +76,16 @@ struct PatternListView: View {
                 Self.normalizedDifficulty(pattern.difficulty) == diff
             }
         }
-        return result
+        filteredPatterns = result
+    }
+
+    private func debouncedRecomputeFilteredPatterns() {
+        searchDebounceTask?.cancel()
+        searchDebounceTask = Task {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard !Task.isCancelled else { return }
+            recomputeFilteredPatterns()
+        }
     }
 
     /// Maps pattern.difficulty to a filter bucket: "beginner", "intermediate", "advanced".
@@ -83,6 +98,150 @@ struct PatternListView: View {
     }
 
     var body: some View {
+        navigatedContent
+    }
+
+    private var navigatedContent: some View {
+        navigationWithOnAppear
+    }
+
+    private var navigationWithPrimaryChanges: some View {
+        AnyView(
+            navigationWithLoadingActions
+                .onChange(of: sharedURL) { _, newURL in
+                    if newURL != nil { showAddSheet = true }
+                }
+                .onChange(of: savedPatternId) { _, id in
+                    if let id, let pattern = store.patterns.first(where: { $0.id == id }) {
+                        patternToOpen = pattern
+                        savedPatternId = nil
+                    }
+                }
+                .onChange(of: store.patterns.count) { _, _ in
+                    if let id = savedPatternId, let pattern = store.patterns.first(where: { $0.id == id }) {
+                        patternToOpen = pattern
+                        savedPatternId = nil
+                    }
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        Task { await loadPatternTagsMap() }
+                    }
+                }
+        )
+    }
+
+    private var navigationWithFilterChanges: some View {
+        AnyView(
+            navigationWithPrimaryChanges
+                .onChange(of: searchText) { _, _ in
+                    debouncedRecomputeFilteredPatterns()
+                }
+                .onChange(of: filterStatus) { _, _ in
+                    recomputeFilteredPatterns()
+                }
+                .onChange(of: filterTagIds) { _, _ in
+                    recomputeFilteredPatterns()
+                }
+                .onChange(of: craftFilter) { _, _ in
+                    recomputeFilteredPatterns()
+                }
+                .onChange(of: filterDifficulty) { _, _ in
+                    recomputeFilteredPatterns()
+                }
+                .onChange(of: store.patterns) { _, _ in
+                    recomputeFilteredPatterns()
+                }
+        )
+    }
+
+    private var navigationWithDestination: some View {
+        AnyView(
+            navigationWithFilterChanges
+                .navigationDestination(item: $patternToOpen) { p in
+                    PatternDetailView(store: store, pattern: p)
+                }
+        )
+    }
+
+    private var navigationWithOnAppear: some View {
+        AnyView(
+            navigationWithDestination
+                .onAppear {
+                    loadDismissedContinueIds()
+                    if !onboardingFirstWinPromptConsumed && store.patterns.isEmpty {
+                        if onboardingFirstWin == "save_first_pattern" || onboardingFirstWin == "import_from_link" {
+                            showAddSheet = true
+                        }
+                        onboardingFirstWinPromptConsumed = true
+                    }
+                    // Clear stale "cancelled" error so list can show (e.g. after adding a pattern)
+                    if store.errorMessage?.lowercased() == "cancelled" {
+                        store.errorMessage = nil
+                        if let userId = auth.currentUserId {
+                            Task { await store.load(userId: userId) }
+                        }
+                    }
+                }
+        )
+    }
+
+    private var navigationWithLoadingActions: some View {
+        navigationWithSheetsAndDialogs
+            .refreshable {
+                if let userId = auth.currentUserId {
+                    await store.load(userId: userId)
+                }
+                await loadContinueCardProgressFallback()
+            }
+            .task {
+                if store.patterns.isEmpty, let userId = auth.currentUserId {
+                    await store.load(userId: userId)
+                }
+                recomputeFilteredPatterns()
+                await tagStore.loadAllTags()
+                await loadPatternTagsMap()
+                await loadContinueCardProgressFallback()
+            }
+    }
+
+    private var navigationWithSheetsAndDialogs: some View {
+        navigationBase
+            .sheet(isPresented: $showAddSheet, onDismiss: { sharedURL = nil }) {
+                AddPatternView(store: store, prefillURL: sharedURL)
+            }
+            .sheet(isPresented: $showPaywall, onDismiss: {
+                if !SubscriptionStore.shared.isPremium {
+                    GrowthOrchestrator.shared.registerPaywallDismissal(source: .patternLimit)
+                }
+            }) {
+                PaywallView(source: .patternLimit)
+            }
+            .confirmationDialog("Delete \(selectedPatternIds.count) pattern\(selectedPatternIds.count == 1 ? "" : "s")?", isPresented: $showMassDeleteConfirm, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    performMassDelete()
+                }
+                Button("Cancel", role: .cancel) {
+                    showMassDeleteConfirm = false
+                }
+            } message: {
+                Text("This will also delete all notes for these patterns. This cannot be undone.")
+            }
+            .alert("Still Processing", isPresented: $showEnrichingAlert) {
+                Button("Retry Now") {
+                    if let pid = enrichingAlertPatternId,
+                       let pattern = store.patterns.first(where: { $0.id == pid }),
+                       let userId = auth.currentUserId {
+                        Task { await store.retryEnrichment(pattern: pattern, userId: userId) }
+                    }
+                }
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("This pattern is still being analyzed. You'll get a notification when it's ready — feel free to leave and come back!")
+            }
+    }
+
+    private var navigationBase: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
@@ -100,69 +259,6 @@ struct PatternListView: View {
             }
             .background(Theme.screenGradient.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showAddSheet, onDismiss: { sharedURL = nil }) {
-                AddPatternView(store: store, prefillURL: sharedURL)
-            }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView()
-            }
-            .confirmationDialog("Delete \(selectedPatternIds.count) pattern\(selectedPatternIds.count == 1 ? "" : "s")?", isPresented: $showMassDeleteConfirm, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) {
-                    performMassDelete()
-                }
-                Button("Cancel", role: .cancel) {
-                    showMassDeleteConfirm = false
-                }
-            } message: {
-                Text("This will also delete all notes for these patterns. This cannot be undone.")
-            }
-            .refreshable {
-                if let userId = auth.currentUserId {
-                    await store.load(userId: userId)
-                }
-                await loadContinueCardProgressFallback()
-            }
-            .task {
-                if store.patterns.isEmpty, let userId = auth.currentUserId {
-                    await store.load(userId: userId)
-                }
-                await tagStore.loadAllTags()
-                await loadPatternTagsMap()
-                await loadContinueCardProgressFallback()
-            }
-            .onChange(of: sharedURL) { _, newURL in
-                if newURL != nil { showAddSheet = true }
-            }
-            .onChange(of: savedPatternId) { _, id in
-                if let id, let pattern = store.patterns.first(where: { $0.id == id }) {
-                    patternToOpen = pattern
-                    savedPatternId = nil
-                }
-            }
-            .onChange(of: store.patterns.count) { _, _ in
-                if let id = savedPatternId, let pattern = store.patterns.first(where: { $0.id == id }) {
-                    patternToOpen = pattern
-                    savedPatternId = nil
-                }
-            }
-            .onChange(of: scenePhase) { _, newPhase in
-                if newPhase == .active {
-                    Task { await loadPatternTagsMap() }
-                }
-            }
-            .navigationDestination(item: $patternToOpen) { p in
-                PatternDetailView(store: store, pattern: p)
-            }
-            .onAppear {
-                loadDismissedContinueIds()
-                // Clear stale "cancelled" error so list can show (e.g. after adding a pattern)
-                if store.errorMessage?.lowercased() == "cancelled" {
-                    store.errorMessage = nil
-                    if let userId = auth.currentUserId {
-                        Task { await store.load(userId: userId) }
-                    }
-                }
-            }
         }
     }
 
@@ -253,6 +349,8 @@ struct PatternListView: View {
                             .foregroundStyle(Theme.softCoral)
                     }
                 }
+                .accessibilityLabel("Add pattern")
+                .accessibilityHint("Opens form to add a new pattern")
 
                 // Select (mass delete) button
                 Button {
@@ -295,6 +393,7 @@ struct PatternListView: View {
                             .font(.system(size: 14))
                             .foregroundStyle(Theme.deepPlum.opacity(0.3))
                     }
+                    .accessibilityLabel("Clear search")
                 }
             }
             .padding(.horizontal, Theme.Spacing.lg)
@@ -505,6 +604,29 @@ struct PatternListView: View {
             .sorted { $0.updatedAt > $1.updatedAt }
     }
 
+    private func continueCardLabel(pattern: Pattern) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(Theme.softCoral.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.softCoral)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Continue \(pattern.title)")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.deepPlum)
+                    .lineLimit(1)
+                Text("\(Int(continueProgressPercent(for: pattern) * 100))%")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(Theme.deepPlum.opacity(0.45))
+            }
+        }
+    }
+
     @ViewBuilder
     private func continueCard(pattern: Pattern) -> some View {
         if dismissedContinuePatternIds.contains(pattern.id) {
@@ -517,25 +639,14 @@ struct PatternListView: View {
     private func continueCardContent(pattern: Pattern) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Theme.Spacing.md) {
-                NavigationLink(destination: PatternDetailView(store: store, pattern: pattern)) {
-                    HStack(spacing: Theme.Spacing.md) {
-                        ZStack {
-                            Circle()
-                                .fill(Theme.softCoral.opacity(0.12))
-                                .frame(width: 36, height: 36)
-                            Image(systemName: "heart.fill")
-                                .font(.system(size: 13))
-                                .foregroundStyle(Theme.softCoral)
+                Group {
+                    if pattern.isEnriching {
+                        Button { enrichingAlertPatternId = pattern.id; showEnrichingAlert = true } label: {
+                            continueCardLabel(pattern: pattern)
                         }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Continue \(pattern.title)")
-                                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Theme.deepPlum)
-                                .lineLimit(1)
-                            Text("\(Int(continueProgressPercent(for: pattern) * 100))%")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                                .foregroundStyle(Theme.deepPlum.opacity(0.45))
+                    } else {
+                        NavigationLink(destination: PatternDetailView(store: store, pattern: pattern)) {
+                            continueCardLabel(pattern: pattern)
                         }
                     }
                 }
@@ -608,35 +719,41 @@ struct PatternListView: View {
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.deepPlum)
                 Spacer()
-                Button { showAddSheet = true } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 12, weight: .bold))
-                        Text("Add")
-                            .font(Theme.Typography.caption)
-                    }
-                    .foregroundStyle(Theme.softCoral)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Theme.softCoral.opacity(0.12))
-                    .clipShape(Capsule())
-                }
+                Text("Latest wins")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.45))
             }
             .padding(.horizontal, Theme.Spacing.lg)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Theme.Spacing.md) {
                     ForEach(Array(store.patterns.sorted { $0.createdAt > $1.createdAt }.prefix(6).enumerated()), id: \.element.id) { index, pattern in
-                        NavigationLink(destination: PatternDetailView(store: store, pattern: pattern)) {
-                            PatternCardView(
-                                pattern: pattern,
-                                userId: auth.currentUserId,
-                                isFavorite: pattern.status == .wantToMake,
-                                isNew: isRecentlyAdded(pattern),
-                                elevated: true,
-                                subtitle: domainFromURL(pattern.sourceUrl) ?? pattern.sourcePlatform
-                            )
-                            .frame(width: 168)
+                        Group {
+                            if pattern.isEnriching {
+                                Button { enrichingAlertPatternId = pattern.id; showEnrichingAlert = true } label: {
+                                    PatternCardView(
+                                        pattern: pattern,
+                                        userId: auth.currentUserId,
+                                        isFavorite: pattern.status == .wantToMake,
+                                        isNew: isRecentlyAdded(pattern),
+                                        elevated: true,
+                                        subtitle: domainFromURL(pattern.sourceUrl) ?? pattern.sourcePlatform
+                                    )
+                                    .frame(width: 168)
+                                }
+                            } else {
+                                NavigationLink(destination: PatternDetailView(store: store, pattern: pattern)) {
+                                    PatternCardView(
+                                        pattern: pattern,
+                                        userId: auth.currentUserId,
+                                        isFavorite: pattern.status == .wantToMake,
+                                        isNew: isRecentlyAdded(pattern),
+                                        elevated: true,
+                                        subtitle: domainFromURL(pattern.sourceUrl) ?? pattern.sourcePlatform
+                                    )
+                                    .frame(width: 168)
+                                }
+                            }
                         }
                         .buttonStyle(.plain)
                         .staggeredAppear(index: index)
@@ -671,7 +788,7 @@ struct PatternListView: View {
                 ],
                 spacing: Theme.Spacing.md
             ) {
-                ForEach(Array(filteredPatterns.enumerated()), id: \.element.id) { index, pattern in
+                ForEach(filteredPatterns, id: \.id) { pattern in
                     if isSelectionMode {
                         Button {
                             if selectedPatternIds.contains(pattern.id) {
@@ -699,7 +816,19 @@ struct PatternListView: View {
                             }
                         }
                         .buttonStyle(.plain)
-                        .staggeredAppear(index: index)
+                    } else if pattern.isEnriching {
+                        Button { enrichingAlertPatternId = pattern.id; showEnrichingAlert = true } label: {
+                            PatternCardView(
+                                pattern: pattern,
+                                userId: auth.currentUserId,
+                                isFavorite: pattern.status == .wantToMake,
+                                isNew: isRecentlyAdded(pattern)
+                            )
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .contentShape(Rectangle())
                     } else {
                         NavigationLink(destination: PatternDetailView(store: store, pattern: pattern)) {
                             PatternCardView(
@@ -713,7 +842,6 @@ struct PatternListView: View {
                         }
                         .buttonStyle(.plain)
                         .contentShape(Rectangle())
-                        .staggeredAppear(index: index)
                     }
                 }
             }
@@ -727,6 +855,7 @@ struct PatternListView: View {
     private var populatedView: some View {
         headerSection
             .tutorialAnchor(.patternsAdd, isActive: currentStepAnchor == .patternsAdd)
+        nextActionBanner
         searchBar
             .tutorialAnchor(.patternsSearch, isActive: currentStepAnchor == .patternsSearch)
         statusFilters
@@ -757,7 +886,9 @@ struct PatternListView: View {
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.deepPlum.opacity(0.55))
             Button(Theme.Premium.seePremiumTitle) {
-                showPaywall = true
+                if GrowthOrchestrator.shared.canShowPaywall(source: .patternLimit) {
+                    showPaywall = true
+                }
             }
             .font(Theme.Typography.caption)
             .foregroundStyle(Theme.softCoral)
@@ -766,19 +897,58 @@ struct PatternListView: View {
         .padding(.vertical, Theme.Spacing.xs)
     }
 
+    private var nextActionBanner: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.honey)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(nextActionTitle)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.deepPlum)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                Text(nextActionSubtitle)
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.85)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, Theme.Spacing.lg)
+    }
+
+    private var nextActionTitle: String {
+        if !inProgressPatterns.isEmpty {
+            return "Next: continue your active project"
+        }
+        return "Next: add a pattern you'll make soon"
+    }
+
+    private var nextActionSubtitle: String {
+        if !inProgressPatterns.isEmpty {
+            return "A quick update now keeps your momentum and streak alive."
+        }
+        return "Small saves now make planning and progress tracking easier."
+    }
+
     // MARK: - Loading State
 
     private var loadingView: some View {
         VStack(spacing: Theme.Spacing.lg) {
             headerSection
             Spacer().frame(height: 40)
-            SpriteMascotView.walking(size: 100)
+            SpriteMascotView.thinking(size: 100)
+                .accessibilityHidden(true)
             Text("Loading patterns...")
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.deepPlum.opacity(0.6))
             Spacer().frame(height: 100)
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Loading patterns")
     }
 
     // MARK: - Empty State (Welcome)
@@ -793,32 +963,34 @@ struct PatternListView: View {
                 TappableMascotView(size: 160)
 
                 VStack(spacing: Theme.Spacing.sm) {
-                    Text("Welcome to Pattern Vault!")
+                    Text("Ready for your first save?")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.deepPlum)
+                        .minimumScaleFactor(0.85)
 
-                    Text("Discover, organize, and manage\nyour patterns with ease.")
+                    Text("Add one pattern now, then come back to track rows and celebrate progress.")
                         .font(Theme.Typography.body)
                         .foregroundStyle(Theme.deepPlum.opacity(0.55))
                         .multilineTextAlignment(.center)
                         .lineSpacing(3)
+                        .minimumScaleFactor(0.9)
                 }
 
                 Button {
                     HapticService.lightImpact()
                     showAddSheet = true
                 } label: {
-                    Text("Get Started")
+                    Text("Save first pattern")
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.horizontal, 40)
-                .accessibilityLabel("Get Started")
+                .accessibilityLabel("Save first pattern")
                 .accessibilityHint("Add your first pattern")
             }
             .padding(.horizontal, Theme.Spacing.xl)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Welcome to Pattern Vault. Discover, organize, and manage your patterns with ease.")
+        .accessibilityLabel("Ready for your first save. Add one pattern now, then track rows and celebrate progress.")
     }
 
     // MARK: - Error State
@@ -830,6 +1002,7 @@ struct PatternListView: View {
         VStack(spacing: Theme.Spacing.lg) {
             Spacer().frame(height: 40)
             SpriteMascotView.pouty(size: 100)
+                .accessibilityHidden(true)
             Text(error)
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.softCoral)
@@ -847,7 +1020,9 @@ struct PatternListView: View {
             .accessibilityHint("Reload your patterns")
             if error.localizedCaseInsensitiveContains("Premium") || error.localizedCaseInsensitiveContains("limit") {
                 Button(Theme.Premium.seePremiumTitle) {
-                    showPaywall = true
+                    if GrowthOrchestrator.shared.canShowPaywall(source: .patternLimit) {
+                        showPaywall = true
+                    }
                 }
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.softCoral)

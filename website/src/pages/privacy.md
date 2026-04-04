@@ -6,77 +6,76 @@ layout: ../layouts/BaseLayout.astro
 
 <div class="legal-page">
 
-**Privacy Policy**
+# Privacy Policy
 
-This privacy policy applies to the Pattern Vault app (hereby referred to as "Application") for mobile devices that was created by Angela Minardi (hereby referred to as "Service Provider") as a Freemium service. This service is intended for use "AS IS".
+Pattern Vault ("Application") is operated by Angela Minardi ("Service Provider") as a freemium mobile service.
 
-**Information Collection and Use**
+## Information Collection and Use
 
-The Application collects information when you download and use it. This information may include information such as
+The Application collects and processes information needed to provide core product functionality. This may include:
 
-*   Your device's Internet Protocol address (e.g. IP address)
-*   The pages of the Application that you visit, the time and date of your visit, the time spent on those pages
-*   The time spent on the Application
-*   The operating system you use on your mobile device
+* Account information (for example, email address and account identifier)
+* Pattern/library content you save (for example, URLs, titles, descriptions, tags, notes, and linked metadata)
+* User content you create (for example, project notes, stash/tool inventory details, and optional attached photos)
+* Service and usage metadata (for example, subscription/entitlement status and feature usage counters such as monthly AI usage)
+* Device/app technical data needed for operation and security
 
 The Application does not request or collect precise device location data.
 
-The Application uses Artificial Intelligence (AI) technologies to enhance user experience and provide certain features. The AI components may process user data to deliver personalized content, recommendations, or automated functionalities. All AI processing is performed in accordance with this privacy policy and applicable laws. If you have questions about the AI features or data processing, please contact the Service Provider.
+The Application uses AI features (currently Gemini-based flows) for import analysis and step parsing. Content you submit for those features may be processed by AI providers to return structured results.
 
-The Service Provider may use the information you provided to contact you from time to time to provide you with important information, required notices and marketing promotions.
+The Service Provider may use your contact information for required account, legal, and service communications.
 
-For a better experience, while using the Application, the Service Provider may require you to provide us with certain personally identifiable information, including but not limited to email address, account identifier, name (if provided via Sign in with Apple), saved links and URLs, pattern titles, pattern descriptions, project notes and notes text, photos attached to notes, photos attached to patterns, yarn stash information (brand, color, weight, location, notes), needle and hook inventory, pattern project names and sizes, yardage and measurement notes, tags on patterns, subscription status, usage counts (e.g. AI analyses and YouTube imports per month). The information that the Service Provider request will be retained by them and used as described in this privacy policy.
+## Third-Party Services
 
-**Third Party Access**
-
-Only aggregated, anonymized data is periodically transmitted to external services to aid the Service Provider in improving the Application and their service. The Service Provider may share your information with third parties in the ways that are described in this privacy statement.
-
-Please note that the Application utilizes third-party services that have their own Privacy Policy about handling data. Below are the links to the Privacy Policy of the third-party service providers used by the Application:
+The Application may use third-party services. Some are optional and depend on runtime/build configuration.
 
 *   [AdMob](https://support.google.com/admob/answer/6128543?hl=en)
 *   [Google Analytics for Firebase](https://firebase.google.com/support/privacy)
 *   [Firebase Crashlytics](https://firebase.google.com/support/privacy/)
+*   [Google Gemini API](https://ai.google.dev/terms)
 
-The Service Provider may disclose User Provided and Automatically Collected Information:
+Notes:
+* AdMob is used for free-tier ads.
+* Firebase Analytics and Crashlytics are optional and only active when Firebase is configured for the app build.
+* The Service Provider does not sell personal data.
 
-*   as required by law, such as to comply with a subpoena, or similar legal process;
-*   when they believe in good faith that disclosure is necessary to protect their rights, protect your safety or the safety of others, investigate fraud, or respond to a government request;
-*   with their trusted services providers who work on their behalf, do not have an independent use of the information we disclose to them, and have agreed to adhere to the rules set forth in this privacy statement.
+## Data Sharing and Disclosure
 
-**Opt-Out Rights**
+The Service Provider may disclose information:
+
+* as required by law or legal process;
+* to protect rights, safety, or investigate fraud/security issues;
+* to service providers acting on the Service Provider's behalf under applicable contractual/privacy obligations.
+
+## Opt-Out Rights
 
 You can stop all collection of information by the Application easily by uninstalling it. You may use the standard uninstall processes as may be available as part of your mobile device or via the mobile application marketplace or network.
 
-**Data Retention Policy**
+## Data Retention Policy
 
-The Service Provider will retain User Provided data for as long as you use the Application and for a reasonable time thereafter. If you'd like them to delete User Provided Data that you have provided via the Application, please contact them at r.minardi.angela@gmail.com and they will respond in a reasonable time.
+The Service Provider retains data for as long as needed to provide the service and meet legal/operational obligations. If you want account or user-provided data deleted, contact the Service Provider at r.minardi.angela@gmail.com.
 
-**Children**
+## Children
 
-The Service Provider does not use the Application to knowingly solicit data from or market to children under the age of 13.
+The Application is not directed to children under 13. The Service Provider does not knowingly collect personal information from children under 13. If you believe a child has provided personal information, contact r.minardi.angela@gmail.com.
 
-The Application does not address anyone under the age of 13. The Service Provider does not knowingly collect personally identifiable information from children under 13 years of age. In the case the Service Provider discover that a child under 13 has provided personal information, the Service Provider will immediately delete this from their servers. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact the Service Provider (r.minardi.angela@gmail.com) so that they will be able to take the necessary actions.
+## Security
 
-**Security**
+The Service Provider uses reasonable administrative, technical, and organizational safeguards to protect personal information.
 
-The Service Provider is concerned about safeguarding the confidentiality of your information. The Service Provider provides physical, electronic, and procedural safeguards to protect information the Service Provider processes and maintains.
+## Changes
 
-**Changes**
+This Privacy Policy may be updated periodically. Updates are posted on this page with a revised effective date.
 
-This Privacy Policy may be updated from time to time for any reason. The Service Provider will notify you of any changes to the Privacy Policy by updating this page with the new Privacy Policy. You are advised to consult this Privacy Policy regularly for any changes, as continued use is deemed approval of all changes.
+This privacy policy is effective as of 2026-03-19.
 
-This privacy policy is effective as of 2026-03-10
+## Your Consent
 
-**Your Consent**
+By using the Application, you consent to this Privacy Policy.
 
-By using the Application, you are consenting to the processing of your information as set forth in this Privacy Policy now and as amended by us.
-
-**Contact Us**
+## Contact Us
 
 If you have any questions regarding privacy while using the Application, or have questions about the practices, please contact the Service Provider via email at r.minardi.angela@gmail.com.
-
----
-
-This privacy policy page was generated by [App Privacy Policy Generator](https://app-privacy-policy-generator.nisrulz.com/)
 
 </div>

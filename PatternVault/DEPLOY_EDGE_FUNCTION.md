@@ -1,6 +1,7 @@
 # Deploy the extract-pattern-from-video Edge Function
 
 > **Status:** Legacy/optional path. Core in-app AI flow is Gemini-based. Keep this only if you still use the Supabase Edge Function YouTube transcript pipeline.
+> **Canonical guidance:** For normal development and production setup, follow `docs/SETUP.md` and `docs/ROADMAP.md`. Do not treat this file as the primary AI architecture document.
 
 This function lets the Pattern Vault share extension turn a **YouTube URL** into pattern metadata (title, summary, tags, materials, etc.) by fetching the video’s captions and running Claude on the transcript.
 
@@ -15,7 +16,7 @@ While the Edge Function is unavailable (e.g. Anthropic credits exhausted) or not
 - **Create and edit patterns manually** in the app — add title, summary, tags, materials, video URL, PDF, yarn links, etc. All CRUD and filters work.
 - **Share a YouTube link from the share extension** — when the Edge Function fails, the extension falls back to fetching the video **page** (not the transcript). You get the page title and description (and the video URL) pre-filled; you can edit and save. No transcript or AI extraction, but the link is saved.
 - **Share PDFs** — save PDF patterns and attach them to patterns as usual.
-- **Share other web links** — the extension fetches the page and, if an in-app Anthropic key is set, runs AI analysis; otherwise it uses the page title/description as a fallback.
+- **Share other web links** — the extension fetches the page and uses the main in-app Gemini flow (or fallback extraction behavior if unavailable).
 - **Use project notes, tags, and yarn & supplies** — everything that doesn’t depend on the Edge Function works as normal.
 
 ---

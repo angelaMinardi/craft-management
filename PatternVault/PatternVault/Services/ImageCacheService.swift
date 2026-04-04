@@ -12,6 +12,7 @@ import SwiftUI
 
 /// Loads images from local cache when available; otherwise downloads from URL and caches for next time.
 /// Cache is stored in Caches/PatternImageCache/{userId}/ so it can be purged by the system and is per-user.
+/// Enforces a 200 MB size limit with LRU eviction.
 final class ImageCacheService {
     static let shared = ImageCacheService()
 
@@ -22,7 +23,41 @@ final class ImageCacheService {
         return URLSession(configuration: config)
     }()
 
-    private init() {}
+    /// Maximum total cache size in bytes (200 MB).
+    private let maxCacheSize: Int64 = 200_000_000
+
+    /// Running total of bytes stored on disk across all user directories.
+    private var totalCacheSize: Int64 = 0
+
+    /// Last access time per cache file path (absolute path string).
+    private var accessTimes: [String: Date] = [:]
+
+    /// Serial queue protecting mutable cache bookkeeping.
+    private let lock = NSLock()
+
+    private init() {
+        scanExistingCache()
+    }
+
+    /// Walk all files under PatternImageCache to seed `totalCacheSize` and `accessTimes`.
+    private func scanExistingCache() {
+        guard let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+        let root = caches.appendingPathComponent("PatternImageCache", isDirectory: true)
+        guard let enumerator = fileManager.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey, .contentAccessDateKey], options: [.skipsHiddenFiles]) else { return }
+        var size: Int64 = 0
+        var times: [String: Date] = [:]
+        for case let fileURL as URL in enumerator {
+            guard let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .contentAccessDateKey, .isRegularFileKey]),
+                  values.isRegularFile == true else { continue }
+            let fileSize = Int64(values.fileSize ?? 0)
+            size += fileSize
+            times[fileURL.path] = values.contentAccessDate ?? Date.distantPast
+        }
+        lock.lock()
+        totalCacheSize = size
+        accessTimes = times
+        lock.unlock()
+    }
 
     /// Cache directory for a user: Caches/PatternImageCache/{userId}
     private func cacheDirectory(userId: UUID) -> URL? {
@@ -46,7 +81,13 @@ final class ImageCacheService {
     func cachedData(for url: URL, userId: UUID) -> Data? {
         guard let dir = cacheDirectory(userId: userId) else { return nil }
         let fileURL = dir.appendingPathComponent(cacheFilename(for: url))
-        return try? Data(contentsOf: fileURL)
+        guard let data = try? Data(contentsOf: fileURL) else { return nil }
+        // Update LRU access time
+        let path = fileURL.path
+        lock.lock()
+        accessTimes[path] = Date()
+        lock.unlock()
+        return data
     }
 
     /// Load image data: from cache if present, otherwise download, save to cache, and return. Returns nil when offline and not cached.
@@ -68,12 +109,74 @@ final class ImageCacheService {
         guard let dir = cacheDirectory(userId: userId) else { return }
         try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
         let fileURL = dir.appendingPathComponent(cacheFilename(for: remoteURL))
+        let newFileSize = Int64(data.count)
+        let path = fileURL.path
+
+        // If we're overwriting an existing file, subtract old size first
+        lock.lock()
+        if let oldValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+           let oldSize = oldValues.fileSize {
+            totalCacheSize -= Int64(oldSize)
+        }
+        lock.unlock()
+
         try? data.write(to: fileURL)
+
+        lock.lock()
+        totalCacheSize += newFileSize
+        accessTimes[path] = Date()
+        lock.unlock()
+
+        evictIfNeeded()
+    }
+
+    /// Remove least recently accessed files until total cache size is within the limit.
+    private func evictIfNeeded() {
+        lock.lock()
+        guard totalCacheSize > maxCacheSize else {
+            lock.unlock()
+            return
+        }
+        // Sort by access time ascending (oldest first)
+        let sorted = accessTimes.sorted { $0.value < $1.value }
+        lock.unlock()
+
+        for (path, _) in sorted {
+            lock.lock()
+            let currentSize = totalCacheSize
+            lock.unlock()
+            if currentSize <= maxCacheSize { break }
+
+            let fileURL = URL(fileURLWithPath: path)
+            guard let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+                  let fileSize = values.fileSize else { continue }
+            do {
+                try fileManager.removeItem(at: fileURL)
+                lock.lock()
+                totalCacheSize -= Int64(fileSize)
+                accessTimes.removeValue(forKey: path)
+                lock.unlock()
+            } catch {
+                // File may already be gone; skip
+            }
+        }
     }
 
     /// Remove all cached images for a user (e.g. on logout). Optional.
     func clearCache(userId: UUID) {
         guard let dir = cacheDirectory(userId: userId) else { return }
+        let dirPath = dir.path
+        // Remove matching entries from bookkeeping before deleting
+        lock.lock()
+        let pathsToRemove = accessTimes.keys.filter { $0.hasPrefix(dirPath) }
+        for path in pathsToRemove {
+            if let values = try? URL(fileURLWithPath: path).resourceValues(forKeys: [.fileSizeKey]),
+               let fileSize = values.fileSize {
+                totalCacheSize -= Int64(fileSize)
+            }
+            accessTimes.removeValue(forKey: path)
+        }
+        lock.unlock()
         try? fileManager.removeItem(at: dir)
     }
 }

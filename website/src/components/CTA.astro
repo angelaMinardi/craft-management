@@ -3,12 +3,46 @@ interface Props {
   href?: string;
   label: string;
   primary?: boolean;
+  ariaLabel?: string;
+  target?: '_self' | '_blank';
+  rel?: string;
+  dataCta?: string;
+  dataClickEvent?: string;
+  dataDestination?: string;
+  dataMode?: string;
+  dataPageSection?: string;
+  dataFallbackUsed?: 'true' | 'false';
 }
 
-const { href = '#', label, primary = true } = Astro.props;
+const {
+  href = '#',
+  label,
+  primary = true,
+  ariaLabel,
+  target = '_self',
+  rel,
+  dataCta,
+  dataClickEvent = 'cta_click',
+  dataDestination,
+  dataMode,
+  dataPageSection,
+  dataFallbackUsed,
+} = Astro.props;
 ---
 
-<a href={href} class={`cta ${primary ? 'cta-primary' : 'cta-secondary'}`}>
+<a
+  href={href}
+  class={`cta ${primary ? 'cta-primary' : 'cta-secondary'}`}
+  aria-label={ariaLabel}
+  target={target}
+  rel={rel}
+  data-cta={dataCta}
+  data-click-event={dataClickEvent}
+  data-destination={dataDestination}
+  data-mode={dataMode}
+  data-page-section={dataPageSection}
+  data-fallback-used={dataFallbackUsed}
+>
   {label}
 </a>
 

@@ -13,6 +13,7 @@ struct YarnStashListView: View {
     @State private var itemToEdit: YarnStashItem?
     @State private var itemToDelete: YarnStashItem?
     @State private var showDeleteConfirm = false
+    @State private var showPaywall = false
 
     var body: some View {
         Group {
@@ -53,6 +54,9 @@ struct YarnStashListView: View {
             AddYarnStashView(stashStore: stashStore, existingItem: itemToEdit)
                 .onDisappear { itemToEdit = nil }
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(source: .settings)
+        }
         .confirmationDialog("Remove from stash?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
                 if let item = itemToDelete {
@@ -74,7 +78,7 @@ struct YarnStashListView: View {
     private var loadingView: some View {
         VStack(spacing: Theme.Spacing.xl) {
             Spacer().frame(height: 60)
-            SpriteMascotView.walking(size: 100)
+            SpriteMascotView.thinking(size: 100)
             Text("Loading your stash...")
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.deepPlum.opacity(0.6))
@@ -169,10 +173,18 @@ struct YarnStashListView: View {
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
-                NavigationLink {
-                    StashMatchPatternsView(store: store, stashItem: item)
-                } label: {
-                    Label("Match patterns", systemImage: "magnifyingglass")
+                if SubscriptionStore.shared.isPremium {
+                    NavigationLink {
+                        StashMatchPatternsView(store: store, stashItem: item)
+                    } label: {
+                        Label("Match patterns", systemImage: "magnifyingglass")
+                    }
+                } else {
+                    Button {
+                        showPaywall = true
+                    } label: {
+                        Label("Match patterns", systemImage: "lock.fill")
+                    }
                 }
                 Button(role: .destructive) {
                     itemToDelete = item

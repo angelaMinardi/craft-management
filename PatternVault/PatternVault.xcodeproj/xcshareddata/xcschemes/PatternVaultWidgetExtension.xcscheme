@@ -29,8 +29,8 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "081C80F52F5F975C0044B8C6"
-               BuildableName = "PatternVaultWidgetExtension"
+               BlueprintIdentifier = "WT000001"
+               BuildableName = "PatternVaultWidgetExtension.appex"
                BlueprintName = "PatternVaultWidgetExtension"
                ReferencedContainer = "container:PatternVault.xcodeproj">
             </BuildableReference>

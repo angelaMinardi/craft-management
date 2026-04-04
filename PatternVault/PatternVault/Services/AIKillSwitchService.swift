@@ -29,22 +29,22 @@ enum AIKillSwitchService {
 
     /// Whether AI is allowed (kill switch off). Default true if never fetched or on error.
     static var isAIEnabled: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        if let value = inMemoryEnabled, let updated = inMemoryUpdated, Date().timeIntervalSince(updated) < cacheTTL {
-            return value
+        lock.withLock {
+            if let value = inMemoryEnabled, let updated = inMemoryUpdated, Date().timeIntervalSince(updated) < cacheTTL {
+                return value
+            }
+            // Fallback: read from App Group (main app or extension may have written)
+            let defaults = UserDefaults(suiteName: appGroupId)
+            let updated = defaults?.object(forKey: cacheKeyUpdated) as? Date
+            if let updated, Date().timeIntervalSince(updated) < cacheTTL,
+               defaults?.object(forKey: cacheKeyEnabled) != nil {
+                let value = defaults?.bool(forKey: cacheKeyEnabled) ?? true
+                inMemoryEnabled = value
+                inMemoryUpdated = updated
+                return value
+            }
+            return true
         }
-        // Fallback: read from App Group (main app or extension may have written)
-        let defaults = UserDefaults(suiteName: appGroupId)
-        let updated = defaults?.object(forKey: cacheKeyUpdated) as? Date
-        if let updated, Date().timeIntervalSince(updated) < cacheTTL,
-           defaults?.object(forKey: cacheKeyEnabled) != nil {
-            let value = defaults?.bool(forKey: cacheKeyEnabled) ?? true
-            inMemoryEnabled = value
-            inMemoryUpdated = updated
-            return value
-        }
-        return true
     }
 
     /// Fetches from Supabase and updates cache + App Group. Call on app launch / foreground.
@@ -58,10 +58,10 @@ enum AIKillSwitchService {
                 .execute()
                 .value
             let enabled = rows.first?.aiEnabled ?? true
-            lock.lock()
-            inMemoryEnabled = enabled
-            inMemoryUpdated = Date()
-            lock.unlock()
+            lock.withLock {
+                inMemoryEnabled = enabled
+                inMemoryUpdated = Date()
+            }
             let defaults = UserDefaults(suiteName: appGroupId)
             defaults?.set(enabled, forKey: cacheKeyEnabled)
             defaults?.set(Date(), forKey: cacheKeyUpdated)

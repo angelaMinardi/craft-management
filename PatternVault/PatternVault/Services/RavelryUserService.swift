@@ -56,7 +56,8 @@ enum RavelryUserService {
         guard let (accessToken, _) = RavelryOAuthService.shared.tokens(for: userId) else {
             throw RavelryUserError.notConnected
         }
-        let path = "people/\(username)/library/search.json"
+        guard let encodedUsername = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return [] }
+        let path = "people/\(encodedUsername)/library/search.json"
         var comp = URLComponents(url: apiBase.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         comp.queryItems = [
             URLQueryItem(name: "page", value: "\(page)"),
@@ -103,7 +104,8 @@ enum RavelryUserService {
         guard let (accessToken, _) = RavelryOAuthService.shared.tokens(for: userId) else {
             throw RavelryUserError.notConnected
         }
-        let path = "people/\(username)/favorites/list.json"
+        guard let encodedUsername = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return [] }
+        let path = "people/\(encodedUsername)/favorites/list.json"
         var comp = URLComponents(url: apiBase.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         comp.queryItems = [
             URLQueryItem(name: "types", value: "pattern"),
@@ -128,7 +130,8 @@ enum RavelryUserService {
         guard let (accessToken, _) = RavelryOAuthService.shared.tokens(for: userId) else {
             throw RavelryUserError.notConnected
         }
-        let path = "projects/\(username)/list.json"
+        guard let encodedUsername = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return [] }
+        let path = "projects/\(encodedUsername)/list.json"
         var comp = URLComponents(url: apiBase.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         comp.queryItems = [
             URLQueryItem(name: "page", value: "\(page)"),
@@ -152,7 +155,8 @@ enum RavelryUserService {
         guard let (accessToken, _) = RavelryOAuthService.shared.tokens(for: userId) else {
             throw RavelryUserError.notConnected
         }
-        let path = "people/\(username)/queue/list.json"
+        guard let encodedUsername = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return [] }
+        let path = "people/\(encodedUsername)/queue/list.json"
         var comp = URLComponents(url: apiBase.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         comp.queryItems = [
             URLQueryItem(name: "page", value: "\(page)"),
@@ -187,7 +191,8 @@ enum RavelryUserService {
         guard let (accessToken, _) = RavelryOAuthService.shared.tokens(for: userId) else {
             throw RavelryUserError.notConnected
         }
-        let path = "people/\(username)/stash/list.json"
+        guard let encodedUsername = username.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else { return [] }
+        let path = "people/\(encodedUsername)/stash/list.json"
         var comp = URLComponents(url: apiBase.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
         comp.queryItems = [
             URLQueryItem(name: "page", value: "\(page)"),
@@ -248,7 +253,6 @@ enum RavelryUserService {
         }
         if let first = result.first {
             print("[Ravelry] first pattern id=\(first.key), hasPdfUrl=\(first.value.pdfUrl != nil)")
-            if let url = first.value.pdfUrl { print("[Ravelry] first pdfUrl: \(url.prefix(80))\(url.count > 80 ? "…" : "")") }
         }
         #endif
         return result
@@ -260,8 +264,8 @@ enum RavelryUserService {
         guard let payload = patternsPayload else { return result }
         if let arr = payload as? [[String: Any]] {
             for item in arr {
-                let pattern = (item["pattern"] as? [String: Any]) ?? (item as? [String: Any])
-                guard let pattern = pattern, let patternId = pattern["id"] as? Int else { continue }
+                let pattern = (item["pattern"] as? [String: Any]) ?? item
+                guard let patternId = pattern["id"] as? Int else { continue }
                 result[patternId] = extractImageAndPdfUrl(from: pattern)
             }
         } else if let patternsMap = payload as? [String: Any] {

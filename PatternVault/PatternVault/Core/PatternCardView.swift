@@ -19,6 +19,11 @@ struct PatternCardView: View {
     var subtitle: String? = nil
 
     private var imageHeight: CGFloat { elevated ? 180 : 160 }
+    private var placeholderAssetName: String {
+        let options = ["CrowMascot", "CrowExpressions"]
+        let seed = pattern.id.uuidString.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return options[seed % options.count]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -42,8 +47,10 @@ struct PatternCardView: View {
                             placeholderImage
                         }
                     }
+                    .accessibilityLabel("Thumbnail for \(pattern.title)")
                 } else {
                     placeholderImage
+                        .accessibilityLabel("No thumbnail for \(pattern.title)")
                 }
                 // Badges on image (small, top corner)
                 if isFavorite || isNew {
@@ -55,6 +62,7 @@ struct PatternCardView: View {
                                 .padding(5)
                                 .background(Theme.softCoral.opacity(0.85))
                                 .clipShape(Circle())
+                                .accessibilityLabel("Favorite")
                         }
                         if isNew {
                             Text("NEW")
@@ -78,12 +86,37 @@ struct PatternCardView: View {
                     .foregroundStyle(Theme.deepPlum)
                     .lineLimit(2)
                     .truncationMode(.tail)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.system(size: elevated ? 11 : 10, weight: .medium, design: .rounded))
                         .foregroundStyle(Theme.deepPlum.opacity(0.6))
                         .lineLimit(1)
                         .truncationMode(.tail)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if pattern.isEnriching {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .controlSize(.mini)
+                            Text("Processing…")
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .foregroundStyle(Theme.dustyBlue)
+                        }
+                        Text("We'll notify you when it's ready")
+                            .font(.system(size: 9, weight: .regular, design: .rounded))
+                            .foregroundStyle(Theme.deepPlum.opacity(0.45))
+                    }
+                } else if pattern.enrichmentFailed {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(Theme.softCoral)
+                        Text("Details incomplete")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(Theme.softCoral)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -94,7 +127,8 @@ struct PatternCardView: View {
             Theme.statusColor(for: pattern.status)
                 .frame(height: 3)
         }
-        .frame(width: elevated ? 168 : nil)
+        .frame(width: elevated ? 168 : nil, alignment: .leading)
+        .frame(minWidth: 0, maxWidth: elevated ? 168 : .infinity, alignment: .leading)
         .contentShape(Rectangle())
         .cardStyle(elevated: elevated)
         .accessibilityElement(children: .combine)
@@ -113,12 +147,11 @@ struct PatternCardView: View {
                 endPoint: .bottomTrailing
             )
             VStack(spacing: 6) {
-                Image(systemName: "scissors")
-                    .font(.system(size: 24, weight: .light))
-                    .foregroundStyle(Theme.deepPlum.opacity(0.2))
-                Image(systemName: "oval.portrait")
-                    .font(.system(size: 14, weight: .light))
-                    .foregroundStyle(Theme.softCoral.opacity(0.25))
+                Image(placeholderAssetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 76, height: 76)
+                    .opacity(0.9)
             }
         }
         .frame(height: imageHeight)

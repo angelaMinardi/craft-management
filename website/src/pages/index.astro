@@ -2,27 +2,28 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import FeatureCard from '../components/FeatureCard.astro';
 import CTA from '../components/CTA.astro';
+import { getCtaConfig } from '../config/cta';
+
+const ctaConfig = getCtaConfig(import.meta.env);
 
 const features = [
   {
-    title: 'Save anything from anywhere',
-    description: 'Share a link from Ravelry, Etsy, TikTok, YouTube, or any blog. Pattern Vault saves it and recognizes the source — add a title or just save and go.',
+    eyebrow: 'Step 1',
+    title: 'Spot a pattern you love',
+    description: 'Share from Ravelry, Etsy, TikTok, YouTube, or blogs. Pattern Vault captures it before inspiration slips away.',
     icon: '🔗',
   },
   {
-    title: 'Track your journey',
-    description: 'Want to Make, In Progress, or Completed. Move patterns between stages and see at a glance how many you\'ve saved and how many you\'ve finished.',
+    eyebrow: 'Step 2',
+    title: 'Keep your next project in view',
+    description: 'Move patterns from Want to Make to In Progress to Completed, so your queue feels calm and actionable.',
     icon: '✓',
   },
   {
-    title: 'Project notes that stick',
-    description: 'Yarn info, modifications, progress updates — all attached to the pattern. Timestamped notes and photos so you never lose track of what you did.',
-    icon: '📝',
-  },
-  {
-    title: 'Tags and filters',
-    description: 'Crochet, knitting, easy, blanket, gift idea — search and filter so "show me all my beginner crochet blanket patterns" is one tap.',
-    icon: '🏷️',
+    eyebrow: 'Step 3',
+    title: 'Finish with confidence',
+    description: 'Add notes, materials, and progress details right where you need them to create repeatable small wins.',
+    icon: '🧶',
   },
 ];
 ---
@@ -45,20 +46,49 @@ const features = [
       <p class="hero-tagline">
         Save from Ravelry, Etsy, TikTok, YouTube, blogs. Track status. Add notes. One thread that ties your crafting world together.
       </p>
-      <div class="hero-cta">
-        <CTA href="#" label="Download on the App Store" primary={true} />
+      <div class="hero-cta-stack">
+        <div class="hero-cta">
+          <CTA
+            href={ctaConfig.primary.href}
+            label={ctaConfig.primary.label}
+            primary={true}
+            dataCta="cta_impression"
+            dataDestination={ctaConfig.primary.destination}
+            dataMode={ctaConfig.mode}
+            dataPageSection="hero"
+            dataFallbackUsed="false"
+          />
+        </div>
+        <div class="hero-cta">
+          <CTA
+            href={ctaConfig.fallback.href}
+            label={ctaConfig.fallback.label}
+            primary={false}
+            dataCta="cta_impression"
+            dataDestination={ctaConfig.fallback.destination}
+            dataMode={ctaConfig.mode}
+            dataPageSection="hero"
+            dataFallbackUsed="true"
+          />
+        </div>
       </div>
       <p class="hero-note">
-        Coming soon on the App Store. iOS only.
+        {ctaConfig.mode === 'liveFirst' ? 'iOS only. Designed for crafters who save patterns from everywhere.' : 'Launch is coming soon on iOS. Join the waitlist for first access.'}
       </p>
     </section>
 
+    <section class="trust-row" aria-label="Trust signals">
+      <p class="trust-chip reveal">Built by crafters</p>
+      <p class="trust-chip reveal">Privacy-first by default</p>
+      <p class="trust-chip reveal">Clear support and legal pages</p>
+    </section>
+
     <section class="features" aria-labelledby="features-heading">
-      <h2 id="features-heading" class="section-title reveal">How it works</h2>
+      <h2 id="features-heading" class="section-title reveal">How it works in 3 gentle steps</h2>
       <div class="features-grid">
         {features.map((f, i) => (
           <div class="feature-wrap reveal" style={`--reveal-order: ${i}`}>
-            <FeatureCard title={f.title} description={f.description} icon={f.icon} />
+            <FeatureCard title={f.title} description={f.description} icon={f.icon} eyebrow={f.eyebrow} />
           </div>
         ))}
       </div>
@@ -67,8 +97,27 @@ const features = [
     <section class="cta-section gradient-mesh" aria-labelledby="cta-heading">
       <h2 id="cta-heading" class="visually-hidden">Get the app</h2>
       <p class="cta-text reveal">Your private craft notebook — made by crafters, for crafters.</p>
-      <div class="reveal">
-        <CTA href="#" label="Get Pattern Vault" primary={true} />
+      <div class="cta-actions reveal">
+        <CTA
+          href={ctaConfig.primary.href}
+          label={ctaConfig.primary.label}
+          primary={true}
+          dataCta="cta_impression"
+          dataDestination={ctaConfig.primary.destination}
+          dataMode={ctaConfig.mode}
+          dataPageSection="closing"
+          dataFallbackUsed="false"
+        />
+        <CTA
+          href={ctaConfig.fallback.href}
+          label={ctaConfig.fallback.label}
+          primary={false}
+          dataCta="cta_impression"
+          dataDestination={ctaConfig.fallback.destination}
+          dataMode={ctaConfig.mode}
+          dataPageSection="closing"
+          dataFallbackUsed="true"
+        />
       </div>
     </section>
   </div>
@@ -173,8 +222,17 @@ const features = [
   }
 
   .hero-cta {
-    margin-bottom: var(--space-md);
+    margin-bottom: var(--space-sm);
     animation: fade-in-up var(--duration-slow) var(--ease-out-expo) 0.6s both;
+  }
+
+  .hero-cta-stack {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
   }
 
   .hero-note {
@@ -212,6 +270,26 @@ const features = [
     padding: var(--space-4xl) 0;
   }
 
+  .trust-row {
+    margin: 0 auto;
+    max-width: var(--content-max);
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    padding: 0 var(--space-md);
+  }
+
+  .trust-chip {
+    margin: 0;
+    font-size: var(--text-small);
+    color: var(--deep-plum);
+    background: rgba(168, 197, 160, 0.18);
+    border: 1px solid rgba(74, 32, 64, 0.08);
+    border-radius: var(--radius-full);
+    padding: 0.45rem 0.85rem;
+  }
+
   .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -229,6 +307,13 @@ const features = [
     font-weight: 600;
     color: var(--deep-plum);
     margin: 0 0 var(--space-lg);
+  }
+
+  .cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    justify-content: center;
   }
 
   .visually-hidden {

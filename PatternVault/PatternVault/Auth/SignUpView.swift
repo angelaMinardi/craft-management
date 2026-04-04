@@ -8,6 +8,8 @@ import SwiftUI
 struct SignUpView: View {
     @EnvironmentObject var auth: AuthService
     @Binding var isPresented: Bool
+    var titleOverride: String? = nil
+    var subtitleOverride: String? = nil
 
     @State private var email = ""
     @State private var password = ""
@@ -24,9 +26,18 @@ struct SignUpView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Theme.Spacing.xl) {
-                Text("Create account")
-                    .font(Theme.Typography.largeTitle)
-                    .foregroundStyle(Theme.deepPlum)
+                VStack(spacing: Theme.Spacing.xs) {
+                    Text(titleOverride ?? "Create account")
+                        .font(Theme.Typography.largeTitle)
+                        .foregroundStyle(Theme.deepPlum)
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.85)
+                    Text(subtitleOverride ?? "Create your account to save and sync your first win.")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.9)
+                }
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     Text("Email")

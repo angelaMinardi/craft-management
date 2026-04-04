@@ -234,7 +234,15 @@ struct StepEditorView: View {
 
         excludedBlockIndices = []
 
-        // Priority 2: AI-parsed steps → approximate block indices
+        // Priority 2a: v2 AI-parsed instructions → approximate block indices
+        if let aiInstructions = pattern.decodedParsedInstructions, aiInstructions.count > 1, !blocks.isEmpty {
+            let patternSteps = aiInstructions.map { $0.toPatternStep() }
+            stepBreakIndices = Set((1..<patternSteps.count).map { (blocks.count * $0) / patternSteps.count })
+            stepTitles = (1...patternSteps.count).enumerated().reduce(into: [Int: String]()) { $0[$1.offset + 1] = patternSteps[$1.offset].title }
+            return
+        }
+
+        // Priority 2b: v1 AI-parsed steps → approximate block indices
         if let aiSteps = pattern.decodedParsedSteps, aiSteps.count > 1, !blocks.isEmpty {
             stepBreakIndices = Set((1..<aiSteps.count).map { (blocks.count * $0) / aiSteps.count })
             stepTitles = (1...aiSteps.count).enumerated().reduce(into: [Int: String]()) { $0[$1.offset + 1] = aiSteps[$1.offset].title }

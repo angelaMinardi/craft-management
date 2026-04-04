@@ -13,5 +13,8 @@ struct PatternVaultWidgetBundle: WidgetBundle {
     var body: some Widget {
         PatternVaultWidget()
         RowTrackerWidget()
+        if #available(iOSApplicationExtension 16.1, *) {
+            PatternVaultWidgetLiveActivity()
+        }
     }
 }

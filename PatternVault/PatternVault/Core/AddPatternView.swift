@@ -181,6 +181,9 @@ struct AddPatternView: View {
                 attachedPdfData = try? Data(contentsOf: first)
             }
         }
+        // This form is designed for the app's light brand palette.
+        // Force light mode here so field text and section headers stay readable.
+        .environment(\.colorScheme, .light)
     }
 
     private func scheduleFetch(for urlString: String) {
@@ -231,6 +234,7 @@ struct AddPatternView: View {
             return
         }
         duplicateExisting = nil
+        let wasEmptyVault = store.patterns.isEmpty
         isSaving = true
         Task {
             let desc = description.isEmpty ? nil : description
@@ -248,6 +252,11 @@ struct AddPatternView: View {
             isSaving = false
             if success {
                 HapticService.success()
+                if wasEmptyVault {
+                    let firstWinEvent: GrowthOrchestrator.PositiveEvent = (prefillURL?.isEmpty == false) ? .firstImport : .firstSave
+                    GrowthOrchestrator.shared.registerPositiveEvent(firstWinEvent)
+                    GrowthOrchestrator.shared.requestReviewIfEligible()
+                }
                 if store.patterns.count == 1 { CelebrationStore.shared.unlock("first_pattern") }
                 if store.patterns.count == 10 { CelebrationStore.shared.unlock("vault_10") }
                 dismiss()

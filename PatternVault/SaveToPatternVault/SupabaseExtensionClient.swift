@@ -56,6 +56,11 @@ struct VideoExtractionResult {
     }
 }
 
+struct SavePatternResult {
+    let patternId: String
+    let warnings: [String]
+}
+
 enum SupabaseExtensionError: Error, LocalizedError {
     case notAuthenticated
     case missingConfig
@@ -104,15 +109,21 @@ enum SupabaseExtensionClient {
     static func authInfo() -> AuthInfo? {
         // Try Keychain first (secure, shared via App Group access group)
         if let token = readFromSharedKeychain(account: keychainTokenAccount),
-           let userId = readFromSharedKeychain(account: keychainUserIdAccount),
-           !token.isEmpty, !userId.isEmpty {
-            return AuthInfo(accessToken: token, userId: userId)
+           !token.isEmpty {
+            let keychainUserId = readFromSharedKeychain(account: keychainUserIdAccount)
+            let jwtUserId = jwtSub(from: token)
+            if let userId = jwtUserId ?? keychainUserId, !userId.isEmpty {
+                return AuthInfo(accessToken: token, userId: userId)
+            }
         }
         // Fallback to UserDefaults for users who haven't re-launched the main app yet
         let defaults = UserDefaults(suiteName: appGroupId)
         guard let token = defaults?.string(forKey: "supabase_access_token"),
-              let userId = defaults?.string(forKey: "supabase_user_id"),
-              !token.isEmpty, !userId.isEmpty else {
+              !token.isEmpty else {
+            return nil
+        }
+        let defaultsUserId = defaults?.string(forKey: "supabase_user_id")
+        guard let userId = jwtSub(from: token) ?? defaultsUserId, !userId.isEmpty else {
             return nil
         }
         return AuthInfo(accessToken: token, userId: userId)
@@ -137,6 +148,27 @@ enum SupabaseExtensionClient {
             return nil
         }
         return value
+    }
+
+    /// Extracts JWT subject (`sub`) from a Supabase access token.
+    /// Using `sub` avoids stale cached user-id mismatches in extension storage paths.
+    private static func jwtSub(from token: String) -> String? {
+        let segments = token.split(separator: ".")
+        guard segments.count >= 2 else { return nil }
+        var payload = String(segments[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = payload.count % 4
+        if remainder > 0 {
+            payload += String(repeating: "=", count: 4 - remainder)
+        }
+        guard let data = Data(base64Encoded: payload),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let sub = json["sub"] as? String,
+              !sub.isEmpty else {
+            return nil
+        }
+        return sub
     }
 
     /// URL for the extract-pattern-from-video Edge Function (YouTube transcript + Claude).
@@ -243,14 +275,18 @@ enum SupabaseExtensionClient {
         pdfDataToUpload: Data? = nil,
         yarnLinks: [(brandName: String, officialUrl: String?, storeUrl: String?)] = [],
         imageUrls: [String] = [],
+        enrichmentStatus: String? = nil,
         progressCallback: ((String) -> Void)? = nil
-    ) async throws -> String {
+    ) async throws -> SavePatternResult {
         guard let auth = authInfo() else { throw SupabaseExtensionError.notAuthenticated }
         guard let config = config() else { throw SupabaseExtensionError.missingConfig }
 
         let patternId = UUID().uuidString
 
-        // If PDF was shared, upload it first and set pdf_url
+        var warnings: [String] = []
+
+        // If PDF was shared, upload it first and set pdf_url.
+        // Do not fail the entire save if PDF upload fails; save metadata and warn instead.
         var pdfUrlToUse: String? = pdfUrl
         if let pdfData = pdfDataToUpload, !pdfData.isEmpty {
             progressCallback?("Uploading PDF...")
@@ -258,7 +294,7 @@ enum SupabaseExtensionClient {
                 let uploaded = try await uploadPdfToStorage(pdfData: pdfData, patternId: patternId, auth: auth, config: config)
                 pdfUrlToUse = uploaded
             } catch {
-                throw error
+                warnings.append("PDF upload failed (\(error.localizedDescription)), but the pattern was still saved.")
             }
         }
 
@@ -284,6 +320,7 @@ enum SupabaseExtensionClient {
         if let techniques, !techniques.isEmpty { payload["techniques"] = techniques }
         if let parsedSteps, !parsedSteps.isEmpty { payload["parsed_steps"] = parsedSteps }
         if let pdfUrlToUse, !pdfUrlToUse.isEmpty { payload["pdf_url"] = pdfUrlToUse }
+        if let enrichmentStatus, !enrichmentStatus.isEmpty { payload["enrichment_status"] = enrichmentStatus }
 
         // Insert pattern (retry once on network failure)
         try await postToSupabase(
@@ -305,42 +342,43 @@ enum SupabaseExtensionClient {
             ]
             if let u = link.officialUrl, !u.isEmpty { linkPayload["official_url"] = u }
             if let u = link.storeUrl, !u.isEmpty { linkPayload["store_url"] = u }
-            try? await postToSupabase(
-                config: config,
-                auth: auth,
-                table: "pattern_yarn_links",
-                payload: linkPayload
-            )
+            do {
+                try await postToSupabase(
+                    config: config,
+                    auth: auth,
+                    table: "pattern_yarn_links",
+                    payload: linkPayload
+                )
+            } catch {
+                warnings.append("Some yarn links could not be saved.")
+                break
+            }
         }
 
-        // Insert tags if any
+        // Link tags that already exist in public.tags.
+        // The tags table is read-only for clients; inserting here can fail by design.
         for tagName in tags {
-            let tagId = UUID().uuidString
-            let tagPayload: [String: Any] = [
-                "id": tagId,
-                "user_id": auth.userId,
-                "name": tagName
-            ]
-            // Tags may already exist — use upsert (on conflict do nothing)
-            try? await postToSupabase(
+            guard let tagId = try await fetchExistingTagId(
                 config: config,
                 auth: auth,
-                table: "tags",
-                payload: tagPayload,
-                prefer: "resolution=merge-duplicates"
-            )
-
-            // Link pattern to tag
+                tagName: tagName
+            ) else {
+                continue
+            }
             let linkPayload: [String: Any] = [
                 "pattern_id": patternId,
                 "tag_id": tagId
             ]
-            try? await postToSupabase(
-                config: config,
-                auth: auth,
-                table: "pattern_tags",
-                payload: linkPayload
-            )
+            do {
+                try await postToSupabase(
+                    config: config,
+                    auth: auth,
+                    table: "pattern_tags",
+                    payload: linkPayload
+                )
+            } catch {
+                warnings.append("Some tags could not be linked to the pattern.")
+            }
         }
 
         // Upload pattern images (max 5, compressed)
@@ -368,20 +406,24 @@ enum SupabaseExtensionClient {
                         "image_url": publicUrl,
                         "display_order": index
                     ]
-                    try? await postToSupabase(
-                        config: config,
-                        auth: auth,
-                        table: "pattern_images",
-                        payload: imagePayload
-                    )
+                    do {
+                        try await postToSupabase(
+                            config: config,
+                            auth: auth,
+                            table: "pattern_images",
+                            payload: imagePayload
+                        )
+                    } catch {
+                        warnings.append("Some images could not be saved.")
+                    }
                 } catch {
-                    // Skip failed images silently — don't block the save
+                    warnings.append("Some images could not be downloaded.")
                     continue
                 }
             }
         }
 
-        return patternId
+        return SavePatternResult(patternId: patternId, warnings: Array(Set(warnings)))
     }
 
     // MARK: - Image Helpers
@@ -403,7 +445,8 @@ enum SupabaseExtensionClient {
         bucket: String,
         path: String,
         data: Data,
-        contentType: String
+        contentType: String,
+        upsert: Bool = false
     ) async throws -> String {
         guard let url = URL(string: "\(config.url)/storage/v1/object/\(bucket)/\(path)") else {
             throw SupabaseExtensionError.saveFailed("Invalid storage URL")
@@ -415,16 +458,46 @@ enum SupabaseExtensionClient {
         request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(auth.accessToken)", forHTTPHeaderField: "Authorization")
+        if upsert {
+            request.setValue("true", forHTTPHeaderField: "x-upsert")
+        }
         request.timeoutInterval = 30
 
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (responseData, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
-            throw SupabaseExtensionError.saveFailed("Storage upload HTTP \(code)")
+            let responseText = String(data: responseData, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if responseText.isEmpty {
+                throw SupabaseExtensionError.saveFailed("Storage upload HTTP \(code)")
+            }
+            throw SupabaseExtensionError.saveFailed("Storage upload HTTP \(code): \(responseText)")
         }
 
         return "\(config.url)/storage/v1/object/public/\(bucket)/\(path)"
+    }
+
+    /// Uploads a chart image to the pattern-images bucket. Called by ExtensionChartProcessor.
+    /// - Parameters:
+    ///   - imageData: JPEG data for the chart.
+    ///   - storagePath: Path within pattern-images bucket (e.g. "patternId/chart_uuid.jpg").
+    /// - Returns: Public URL of the uploaded chart image.
+    static func uploadChartImage(imageData: Data, storagePath: String) async throws -> String {
+        guard let auth = authInfo() else {
+            throw SupabaseExtensionError.saveFailed("Not authenticated")
+        }
+        guard let cfg = config() else {
+            throw SupabaseExtensionError.saveFailed("Missing Supabase config")
+        }
+        return try await uploadToStorage(
+            config: cfg,
+            auth: auth,
+            bucket: "pattern-images",
+            path: storagePath,
+            data: imageData,
+            contentType: "image/jpeg"
+        )
     }
 
     /// Uploads PDF to pattern-pdfs bucket. Path: userId/patternId/uuid.pdf. Returns public URL.
@@ -434,15 +507,37 @@ enum SupabaseExtensionClient {
         auth: AuthInfo,
         config: (url: String, anonKey: String)
     ) async throws -> String {
-        let path = "\(auth.userId)/\(patternId)/\(UUID().uuidString).pdf"
-        return try await uploadToStorage(
-            config: config,
-            auth: auth,
-            bucket: "pattern-pdfs",
-            path: path,
-            data: pdfData,
-            contentType: "application/pdf"
-        )
+        let bucket = "pattern-pdfs"
+        let path = "\(auth.userId.lowercased())/\(patternId.lowercased())/\(UUID().uuidString.lowercased()).pdf"
+        do {
+            return try await uploadToStorage(
+                config: config,
+                auth: auth,
+                bucket: bucket,
+                path: path,
+                data: pdfData,
+                contentType: "application/pdf"
+            )
+        } catch {
+            // Retry once with permissive content type + upsert for stricter bucket settings.
+            do {
+                return try await uploadToStorage(
+                    config: config,
+                    auth: auth,
+                    bucket: bucket,
+                    path: path,
+                    data: pdfData,
+                    contentType: "application/octet-stream",
+                    upsert: true
+                )
+            } catch {
+                throw SupabaseExtensionError.saveFailed(
+                    "PDF upload failed in bucket '\(bucket)' at path '\(path)'. " +
+                    "Verify Storage RLS policies for pattern-pdfs are applied (migration 016). " +
+                    "Underlying error: \(error.localizedDescription)"
+                )
+            }
+        }
     }
 
     private static func postToSupabase(
@@ -488,6 +583,57 @@ enum SupabaseExtensionClient {
             }
         }
         throw lastError ?? SupabaseExtensionError.saveFailed("Save failed after retries")
+    }
+
+    private static func fetchExistingTagId(
+        config: (url: String, anonKey: String),
+        auth: AuthInfo,
+        tagName: String
+    ) async throws -> String? {
+        let normalized = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return nil }
+
+        var components = URLComponents(string: "\(config.url)/rest/v1/tags")
+        components?.queryItems = [
+            URLQueryItem(name: "select", value: "id,name"),
+            URLQueryItem(name: "name", value: "ilike.\(normalized)"),
+            URLQueryItem(name: "limit", value: "1")
+        ]
+        guard let url = components?.url else { return nil }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(auth.accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 12
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            return nil
+        }
+        guard let rows = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+              let first = rows.first,
+              let id = first["id"] as? String,
+              !id.isEmpty else {
+            return nil
+        }
+        return id
+    }
+
+    /// Fire-and-forget request to the enrich-pattern Edge Function.
+    /// The function runs AI analysis server-side and updates the pattern row.
+    static func requestEnrichment(patternId: String) async {
+        guard let auth = authInfo(), let config = config() else { return }
+        guard let url = URL(string: "\(config.url)/functions/v1/enrich-pattern") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(auth.accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["pattern_id": patternId])
+        request.timeoutInterval = 10
+        _ = try? await URLSession.shared.data(for: request)
     }
 
     /// Calls RPC increment_ai_usage for the current user. Returns true if increment succeeded (used for entitlement).

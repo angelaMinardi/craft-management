@@ -229,9 +229,10 @@ enum WebContentExtractor {
         let text = result.joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Limit to ~10000 chars, truncating at last paragraph break
-        if text.count > 10000 {
-            let truncated = String(text.prefix(10000))
+        // Limit to ~100k chars, truncating at last paragraph break.
+        // Gemini 2.5 Flash supports ~1M tokens; 100k chars is well within budget.
+        if text.count > 100_000 {
+            let truncated = String(text.prefix(100_000))
             if let lastBreak = truncated.range(of: "\n\n", options: .backwards) {
                 return String(truncated[..<lastBreak.lowerBound])
             }

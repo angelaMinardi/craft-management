@@ -4,14 +4,18 @@
 //
 
 import AuthenticationServices
+import CryptoKit
 import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject var auth: AuthService
     @Binding var isPresented: Bool
+    var titleOverride: String? = nil
+    var subtitleOverride: String? = nil
 
     @State private var email = ""
     @State private var password = ""
+    @State private var currentAppleNonce: String?
     @FocusState private var focusedField: Field?
 
     enum Field { case email, password }
@@ -26,12 +30,16 @@ struct LoginView: View {
                 SpriteMascotView.idle(size: 80)
 
                 VStack(spacing: Theme.Spacing.sm) {
-                    Text("Pattern Vault")
+                    Text(titleOverride ?? "Pattern Vault")
                         .font(Theme.Typography.largeTitle)
                         .foregroundStyle(Theme.deepPlum)
-                    Text("Your personal craft library")
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.85)
+                    Text(subtitleOverride ?? "Sign in to save and sync your craft library")
                         .font(Theme.Typography.body)
                         .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .minimumScaleFactor(0.9)
                 }
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -92,12 +100,16 @@ struct LoginView: View {
                 .accessibilityHint("Sign in with your email and password")
 
                 SignInWithAppleButton(.signIn) { request in
+                    focusedField = nil
                     request.requestedScopes = [.fullName, .email]
+                    let nonce = randomNonceString()
+                    currentAppleNonce = nonce
+                    request.nonce = sha256(nonce)
                 } onCompletion: { result in
                     handleAppleSignIn(result)
                 }
                 .signInWithAppleButtonStyle(.black)
-                .frame(height: 50)
+                .frame(maxWidth: .infinity, minHeight: 50, maxHeight: 50)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.pill))
 
                 Button(action: signInWithGoogle) {
@@ -127,7 +139,6 @@ struct LoginView: View {
             .padding(Theme.Spacing.xl)
         }
         .background(Theme.screenGradient.ignoresSafeArea())
-        .simultaneousGesture(TapGesture().onEnded { focusedField = nil })
     }
 
     private func signIn() {
@@ -151,18 +162,49 @@ struct LoginView: View {
                 return
             }
             let name: (given: String?, family: String?)? = credential.fullName.map { (given: $0.givenName, family: $0.familyName) }
+            let nonce = currentAppleNonce
+            currentAppleNonce = nil
             Task {
-                await auth.signInWithApple(idToken: idToken, fullName: name)
+                await auth.signInWithApple(idToken: idToken, nonce: nonce, fullName: name)
             }
         case .failure(let error):
             let nsError = error as NSError
             #if DEBUG
             print("[AppleSignIn] Error: domain=\(nsError.domain) code=\(nsError.code) desc=\(error.localizedDescription)")
             #endif
-            if nsError.code != ASAuthorizationError.canceled.rawValue {
-                auth.errorMessage = "Apple sign-in failed. Make sure you're signed into iCloud and try again."
+            auth.errorMessage = "Apple sign-in failed (\(nsError.code)): \(error.localizedDescription)"
+        }
+    }
+
+    private func randomNonceString(length: Int = 32) -> String {
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+
+        while remainingLength > 0 {
+            let randoms: [UInt8] = (0..<16).map { _ in
+                var random: UInt8 = 0
+                let status = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+                if status != errSecSuccess { random = 0 }
+                return random
+            }
+
+            randoms.forEach { random in
+                if remainingLength == 0 { return }
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
             }
         }
+
+        return result
+    }
+
+    private func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashed = SHA256.hash(data: inputData)
+        return hashed.map { String(format: "%02x", $0) }.joined()
     }
 
     private func isValidEmail(_ email: String) -> Bool {

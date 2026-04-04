@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import WidgetKit
 
 /// Stable hash of source content for invalidating custom step layout when content changes.
 func contentHashForStepLayout(_ sourceContent: String?) -> Int {
@@ -168,13 +169,24 @@ final class PatternProgressStore: ObservableObject {
         objectWillChange.send()
     }
 
-    func setRows(patternId: UUID, makeId: UUID? = nil, completed: Int, total: Int?) {
+    func setRows(patternId: UUID, makeId: UUID? = nil, completed: Int, total: Int?, patternTitle: String? = nil) {
         var data = resolve(patternId: patternId, makeId: makeId) ?? PatternProgressData(currentStepIndex: 0, stepCount: nil, rowsCompleted: nil, totalRows: nil, yarnColorName: nil, customStepLayout: nil)
         data.rowsCompleted = completed
         data.totalRows = total
         write(patternId: patternId, makeId: makeId, data)
         saveToDefaults()
         objectWillChange.send()
+        // Sync to Row Tracker widget
+        WidgetDataService.writeRowTrackerData(
+            activePatternId: patternId,
+            title: patternTitle,
+            currentRow: completed,
+            totalRows: total,
+            makeId: makeId,
+            secondaryTitle: nil,
+            secondaryCurrent: nil,
+            secondaryResetAfter: nil
+        )
     }
 
     func setYarnColor(patternId: UUID, makeId: UUID? = nil, colorName: String?) {
@@ -236,5 +248,191 @@ private extension Dictionary {
         reduce(into: [K: Value]()) { result, pair in
             result[transform(pair.key)] = pair.value
         }
+    }
+}
+
+@MainActor
+final class RowCounterStore: ObservableObject {
+    static let shared = RowCounterStore()
+
+    @Published private(set) var states: [String: RowCounterState] = [:]
+
+    private let defaultsKey = "row_counter_states"
+    private let defaults: UserDefaults
+    private static let defaultMakeSuffix = "default"
+
+    private init() {
+        defaults = UserDefaults(suiteName: "group.com.patternvault.app") ?? .standard
+        loadFromDefaults()
+    }
+
+    private func key(patternId: UUID, makeId: UUID?) -> String {
+        if let makeId {
+            return "\(patternId.uuidString)_\(makeId.uuidString)"
+        }
+        return "\(patternId.uuidString)_\(Self.defaultMakeSuffix)"
+    }
+
+    func state(for patternId: UUID, makeId: UUID?) -> RowCounterState {
+        states[key(patternId: patternId, makeId: makeId)] ?? RowCounterState()
+    }
+
+    func setTotalRows(patternId: UUID, makeId: UUID?, totalRows: Int?) {
+        var current = state(for: patternId, makeId: makeId)
+        current.totalRows = totalRows
+        setState(current, patternId: patternId, makeId: makeId)
+    }
+
+    func jumpToRow(patternId: UUID, makeId: UUID?, row: Int, patternTitle: String? = nil) {
+        var current = state(for: patternId, makeId: makeId)
+        let maxRow = max(current.totalRows ?? row, 1)
+        current.globalRow = min(max(1, row), maxRow)
+        setState(current, patternId: patternId, makeId: makeId)
+        syncProgress(patternId: patternId, makeId: makeId, patternTitle: patternTitle)
+    }
+
+    func incrementGlobal(patternId: UUID, makeId: UUID?, patternTitle: String? = nil) {
+        var current = state(for: patternId, makeId: makeId)
+        let maxRow = max(current.totalRows ?? (current.globalRow + 1), 1)
+        current.globalRow = min(maxRow, current.globalRow + 1)
+        current.secondaryCounters = current.secondaryCounters.map { counter in
+            guard counter.isActive, counter.linkMode != .unlinked else { return counter }
+            return Self.advance(counter: counter)
+        }
+        setState(current, patternId: patternId, makeId: makeId)
+        syncProgress(patternId: patternId, makeId: makeId, patternTitle: patternTitle)
+    }
+
+    func decrementGlobal(patternId: UUID, makeId: UUID?, patternTitle: String? = nil) {
+        var current = state(for: patternId, makeId: makeId)
+        current.globalRow = max(1, current.globalRow - 1)
+        setState(current, patternId: patternId, makeId: makeId)
+        syncProgress(patternId: patternId, makeId: makeId, patternTitle: patternTitle)
+    }
+
+    func addSecondaryCounter(
+        patternId: UUID,
+        makeId: UUID?,
+        title: String,
+        resetAfter: Int,
+        maxResets: Int?,
+        linkMode: SecondaryCounter.LinkMode,
+        color: String
+    ) {
+        var current = state(for: patternId, makeId: makeId)
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let counter = SecondaryCounter(
+            title: trimmed,
+            resetAfter: max(1, resetAfter),
+            maxResets: maxResets,
+            linkMode: linkMode,
+            color: color
+        )
+        current.secondaryCounters.append(counter)
+        setState(current, patternId: patternId, makeId: makeId)
+    }
+
+    func removeSecondaryCounter(patternId: UUID, makeId: UUID?, counterId: UUID) {
+        var current = state(for: patternId, makeId: makeId)
+        current.secondaryCounters.removeAll { $0.id == counterId }
+        setState(current, patternId: patternId, makeId: makeId)
+    }
+
+    func updateSecondaryCounter(patternId: UUID, makeId: UUID?, counter: SecondaryCounter) {
+        var current = state(for: patternId, makeId: makeId)
+        guard let idx = current.secondaryCounters.firstIndex(where: { $0.id == counter.id }) else { return }
+        current.secondaryCounters[idx] = counter
+        setState(current, patternId: patternId, makeId: makeId)
+    }
+
+    func incrementSecondary(
+        patternId: UUID,
+        makeId: UUID?,
+        counterId: UUID,
+        patternTitle: String? = nil
+    ) {
+        var current = state(for: patternId, makeId: makeId)
+        guard let idx = current.secondaryCounters.firstIndex(where: { $0.id == counterId }) else { return }
+        var counter = current.secondaryCounters[idx]
+        guard counter.isActive else { return }
+        counter = Self.advance(counter: counter)
+        current.secondaryCounters[idx] = counter
+
+        if counter.linkMode == .twoWay {
+            let maxRow = max(current.totalRows ?? (current.globalRow + 1), 1)
+            current.globalRow = min(maxRow, current.globalRow + 1)
+        }
+        setState(current, patternId: patternId, makeId: makeId)
+        syncProgress(patternId: patternId, makeId: makeId, patternTitle: patternTitle)
+    }
+
+    private static func advance(counter: SecondaryCounter) -> SecondaryCounter {
+        var next = counter
+        next.currentCount += 1
+        guard next.currentCount >= max(1, next.resetAfter) else { return next }
+        next.currentCount = 1
+        next.totalResets += 1
+        if let maxResets = next.maxResets, next.totalResets >= maxResets {
+            next.isActive = false
+        }
+        return next
+    }
+
+    private func syncProgress(patternId: UUID, makeId: UUID?, patternTitle: String?) {
+        let current = state(for: patternId, makeId: makeId)
+        let primarySecondary = current.secondaryCounters.first(where: { $0.isActive })
+        PatternProgressStore.shared.setRows(
+            patternId: patternId,
+            makeId: makeId,
+            completed: current.globalRow,
+            total: current.totalRows,
+            patternTitle: patternTitle
+        )
+        WidgetDataService.writeRowTrackerData(
+            activePatternId: patternId,
+            title: patternTitle,
+            currentRow: current.globalRow,
+            totalRows: current.totalRows,
+            makeId: makeId,
+            secondaryTitle: primarySecondary?.title,
+            secondaryCurrent: primarySecondary?.currentCount,
+            secondaryResetAfter: primarySecondary?.resetAfter
+        )
+#if canImport(ActivityKit)
+        if let title = patternTitle {
+            Task { @MainActor in
+                await LiveActivityService.updateCounterActivity(
+                    patternId: patternId,
+                    patternTitle: title,
+                    rowCurrent: current.globalRow,
+                    rowTotal: current.totalRows,
+                    secondaryTitle: primarySecondary?.title,
+                    secondaryCurrent: primarySecondary?.currentCount,
+                    secondaryResetAfter: primarySecondary?.resetAfter
+                )
+            }
+        }
+#endif
+        MascotInteractionStore.shared.rewardForRowProgress()
+    }
+
+    private func setState(_ state: RowCounterState, patternId: UUID, makeId: UUID?) {
+        states[key(patternId: patternId, makeId: makeId)] = state
+        saveToDefaults()
+        objectWillChange.send()
+    }
+
+    private func loadFromDefaults() {
+        guard let data = defaults.data(forKey: defaultsKey),
+              let decoded = try? JSONDecoder().decode([String: RowCounterState].self, from: data) else {
+            return
+        }
+        states = decoded
+    }
+
+    private func saveToDefaults() {
+        guard let data = try? JSONEncoder().encode(states) else { return }
+        defaults.set(data, forKey: defaultsKey)
     }
 }

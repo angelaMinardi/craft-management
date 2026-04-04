@@ -28,9 +28,17 @@ final class ProjectNoteRepository: ObservableObject {
         let note_type: String
         let content: String
         let photo_url: String?
+        let duration_minutes: Int?
     }
 
-    func addNote(patternId: UUID, userId: UUID, noteType: ProjectNoteType, content: String, photoUrl: String?) async throws -> ProjectNote {
+    func addNote(
+        patternId: UUID,
+        userId: UUID,
+        noteType: ProjectNoteType,
+        content: String,
+        photoUrl: String?,
+        durationMinutes: Int?
+    ) async throws -> ProjectNote {
         let id = UUID()
         let payload = InsertPayload(
             id: id.uuidString,
@@ -38,7 +46,8 @@ final class ProjectNoteRepository: ObservableObject {
             user_id: userId.uuidString,
             note_type: noteType.rawValue,
             content: content,
-            photo_url: photoUrl
+            photo_url: photoUrl,
+            duration_minutes: durationMinutes
         )
         let response: ProjectNote = try await client
             .from("project_notes")

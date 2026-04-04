@@ -56,8 +56,9 @@ final class PatternImageRepository: ObservableObject {
             .execute()
     }
 
-    func uploadImage(imageData: Data, patternId: UUID) async throws -> String {
-        let path = "\(patternId.uuidString)/\(UUID().uuidString).jpg"
+    func uploadImage(imageData: Data, patternId: UUID, userId: UUID? = nil) async throws -> String {
+        let userFolder = (userId ?? UUID()).uuidString.lowercased()
+        let path = "\(userFolder)/\(patternId.uuidString.lowercased())/\(UUID().uuidString.lowercased()).jpg"
         try await client.storage
             .from("pattern-images")
             .upload(path, data: imageData, options: .init(contentType: "image/jpeg"))

@@ -1,5 +1,9 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import CTA from '../components/CTA.astro';
+import { getCtaConfig } from '../config/cta';
+
+const ctaConfig = getCtaConfig(import.meta.env);
 ---
 
 <BaseLayout
@@ -16,8 +20,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <a href="mailto:support@patternvault.app">support@patternvault.app</a>
     </p>
     <p class="contact-note">
-      We’ll do our best to respond within a few business days. For privacy or terms-related requests, you can also refer to our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms of Service</a>.
+      We’ll do our best to respond within a few business days. For privacy or terms-related requests, you can also refer to our <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms &amp; Conditions</a>.
     </p>
+    <div class="contact-cta">
+      <p class="contact-cta-text">
+        {ctaConfig.mode === 'liveFirst' ? 'Not ready to install yet?' : 'Want launch updates while we get ready?'}
+      </p>
+      <CTA
+        href={ctaConfig.fallback.href}
+        label={ctaConfig.fallback.label}
+        primary={false}
+        dataCta="cta_impression"
+        dataDestination={ctaConfig.fallback.destination}
+        dataMode={ctaConfig.mode}
+        dataPageSection="contact"
+        dataFallbackUsed="true"
+      />
+    </div>
   </div>
 </BaseLayout>
 
@@ -39,6 +58,22 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     margin-top: var(--space-xl);
     font-size: var(--text-small);
     color: #5C3A52;
+  }
+
+  .contact-cta {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .contact-cta-text {
+    margin: 0;
+    font-size: var(--text-small);
+    color: var(--text-muted);
   }
 
   .contact-page a {

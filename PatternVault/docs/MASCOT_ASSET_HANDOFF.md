@@ -14,6 +14,11 @@ Provide these files exactly as named.
 2. Website mascot image:
    - `website/public/images/mascot.png`
 
+Current mapped import profile (Mar 2026):
+
+- `Pattern_Vault_Assets/excited_happy_static.png` -> `PatternVault/PatternVault/Assets.xcassets/CrowMascot.imageset/skein_mascot_crow.png`
+- `Pattern_Vault_Assets/caw_static.png` -> `PatternVault/PatternVault/Assets.xcassets/CrowExpressions.imageset/skein_expression_sheet_mascot_crow.png`
+
 ### B) Sprite animation folders for iOS app
 
 Create these folders at:
@@ -24,6 +29,19 @@ Create these folders at:
 - `PatternVault/PatternVault/JumpingMascotFrames/`
 - `PatternVault/PatternVault/PoutyMascotFrames/`
 - `PatternVault/PatternVault/KnittingMascotFrames/`
+
+Current source-of-truth working folder:
+
+- `Pattern_Vault_Assets/`
+
+Current mapped import profile (Mar 2026):
+
+- `Pattern_Vault_Assets/jump` -> `OnboardingMascotFrames`
+- `Pattern_Vault_Assets/idle` -> `IdleMascotFrames`
+- `Pattern_Vault_Assets/knitting` -> `WalkingMascotFrames`
+- `Pattern_Vault_Assets/jump` -> `JumpingMascotFrames`
+- `Pattern_Vault_Assets/idle` -> `PoutyMascotFrames`
+- `Pattern_Vault_Assets/knitting` -> `KnittingMascotFrames`
 
 Each folder should contain PNG frames named:
 

@@ -206,10 +206,10 @@ final class PatternStore: ObservableObject {
     }
 
     /// Creates ChartHighlight objects from AI-detected chart metadata and saves them to ChartHighlightStore.
-    /// Crops each full page image to the AI-detected grid_boundary so the stored image is tightly
-    /// focused on the grid. Heuristic insets compensate for printed row/column numbers that the AI
-    /// inevitably includes — approximately one cell's width on each edge. Falls back to chart_crop
-    /// if grid_boundary is missing.
+    /// Crops each full page image to `chart_crop` (the generous bounding box including labels/legend),
+    /// then derives per-side grid insets from `grid_boundary` so the overlay knows where the actual
+    /// grid cells live within the image. Falls back to an asymmetric heuristic when `grid_boundary`
+    /// is missing (labels are typically on the right for row numbers and bottom for column numbers).
     @MainActor
     static func createChartHighlights(
         from detectedCharts: [AIStepParserService.DetectedChart],
@@ -224,7 +224,9 @@ final class PatternStore: ObservableObject {
             guard chart.chartImageIndex >= 0, chart.chartImageIndex < images.count else { continue }
             let pageImageData = images[chart.chartImageIndex]
 
-            let cropRegion = chart.gridBoundary ?? chart.chartCrop
+            // Always crop to chart_crop (full chart region including labels).
+            // Grid insets below tell the overlay where the actual grid cells are.
+            let cropRegion = chart.chartCrop
             let chartImageData: Data
             if ChartImageProcessor.isCropFullImage(cropRegion) {
                 chartImageData = pageImageData
@@ -236,7 +238,29 @@ final class PatternStore: ObservableObject {
 
             let rows = max(1, chart.chartRows)
             let cols = max(1, chart.chartColumns)
-            let insets = Self.heuristicLabelInsets(rows: rows, columns: cols)
+
+            // Derive per-side insets from the AI's grid_boundary (precise),
+            // or fall back to an asymmetric heuristic when grid_boundary is absent.
+            let rawInsets: (left: Double, top: Double, right: Double, bottom: Double)
+            if chart.gridBoundary != nil {
+                let computed = AIStepParserService.computeGridInsets(
+                    chartCrop: chart.chartCrop,
+                    gridBoundary: chart.gridBoundary
+                )
+                rawInsets = computed
+            } else {
+                let hInset = min(0.18, max(0.04, 1.8 / Double(cols + 2)))
+                let vInset = min(0.18, max(0.04, 1.8 / Double(rows + 2)))
+                rawInsets = (left: 0, top: 0, right: hInset, bottom: vInset)
+            }
+
+            // Sanity check: if insets consume >70% of either axis, zero them out.
+            let insets: (left: Double, top: Double, right: Double, bottom: Double)
+            if rawInsets.left + rawInsets.right > 0.7 || rawInsets.top + rawInsets.bottom > 0.7 {
+                insets = (0, 0, 0, 0)
+            } else {
+                insets = rawInsets
+            }
 
             let highlight = ChartHighlight(
                 patternId: patternId,
@@ -254,10 +278,10 @@ final class PatternStore: ObservableObject {
                 rowCounterLink: .global,
                 columnCounterLink: .global,
                 extractedChartPNGData: chartImageData,
-                gridInsetLeft: insets.horizontal,
-                gridInsetTop: insets.vertical,
-                gridInsetRight: insets.horizontal,
-                gridInsetBottom: insets.vertical,
+                gridInsetLeft: insets.left,
+                gridInsetTop: insets.top,
+                gridInsetRight: insets.right,
+                gridInsetBottom: insets.bottom,
                 chartLabel: chart.chartLabel,
                 isAIExtracted: true
             )
@@ -267,14 +291,6 @@ final class PatternStore: ObservableObject {
         #if DEBUG
         print("[ChartExtraction] Created \(created) ChartHighlight(s) for pattern \(patternId)")
         #endif
-    }
-
-    /// Estimates grid insets to skip printed row/column number labels that the AI typically
-    /// includes in its grid_boundary. Labels plus spacing occupy roughly 1.5 cells on each edge.
-    private static func heuristicLabelInsets(rows: Int, columns: Int) -> (horizontal: Double, vertical: Double) {
-        let h = min(0.18, max(0.04, 1.8 / Double(columns + 2)))
-        let v = min(0.18, max(0.04, 1.8 / Double(rows + 2)))
-        return (h, v)
     }
 
     /// Adds a pattern (persists pdf_url via repo). UI shows "Download Pattern" / "View PDF" and wand when pattern.pdfUrl != nil.

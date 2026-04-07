@@ -2,7 +2,7 @@
 //  AIPatternAnalyzer.swift
 //  SaveToPatternVault
 //
-//  Calls Claude API to extract structured pattern metadata from webpage content.
+//  Uses Gemini 2.5 Flash to extract structured pattern metadata from webpage content.
 //
 
 import Foundation
@@ -22,6 +22,9 @@ struct AIPatternResult: Sendable {
     let techniques: String?
     /// Yarn brands mentioned with optional official and store URLs (for linking in UI).
     let yarnLinks: [YarnLinkEntry]
+    /// JSON string of AI-parsed instructions (v2): [{"section":"...", "start_row":0, ...}]
+    /// Falls back to v1 format [{"title":"...", "body":"..."}] for older imports.
+    let parsedStepsJSON: String?
 }
 
 struct YarnLinkEntry: Sendable {
@@ -32,15 +35,20 @@ struct YarnLinkEntry: Sendable {
 
 enum AIPatternAnalyzer {
 
-    private static var apiKey: String? {
-        Bundle.main.object(forInfoDictionaryKey: "ANTHROPIC_API_KEY") as? String
+    private static var geminiApiKey: String? {
+        let key = Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as? String
+        guard let key, !key.isEmpty, key != "placeholder" else { return nil }
+        return key
     }
 
-    static func analyze(content: ExtractedContent) async -> AIPatternResult? {
-        guard let apiKey, !apiKey.isEmpty, apiKey != "placeholder" else {
+    static func analyze(content: ExtractedContent, images: [Data] = []) async -> AIPatternResult? {
+        guard let key = geminiApiKey, let result = await analyzeWithGemini(content: content, images: images, apiKey: key) else {
             return fallbackResult(from: content)
         }
+        return result
+    }
 
+    private static func analyzeWithGemini(content: ExtractedContent, images: [Data], apiKey: String) async -> AIPatternResult? {
         var contextParts: [String] = []
         if let t = content.ogTitle { contextParts.append("Page title: \(t)") }
         if let d = content.ogDescription { contextParts.append("Page description: \(d)") }
@@ -49,78 +57,39 @@ enum AIPatternAnalyzer {
         }
         if let p = content.pageText { contextParts.append("Page content: \(p)") }
         let pageContext = contextParts.joined(separator: "\n\n")
+        guard !pageContext.isEmpty else { return fallbackResult(from: content) }
 
-        guard !pageContext.isEmpty else {
-            return fallbackResult(from: content)
-        }
-
+        let hasImages = !images.isEmpty
         let systemPrompt = """
-        You are a craft pattern analyzer. Given webpage content about a craft pattern (knitting, crochet, sewing, etc.), extract structured information. Respond ONLY with valid JSON, no markdown fences. Output the short metadata fields first (title, summary, tags, craft_type, difficulty, materials, video_url, gauge, needle_hook_sizes, yarn_weight_yardage, techniques, yarn_links), then cleaned_content LAST so that if the response is truncated, the metadata is still captured.
+        You are a craft pattern analyzer. The pattern can be ANY craft: knitting, crochet, sewing, leatherworking, beading, jewelry, weaving, embroidery, paper craft, woodworking, etc. Extract structured information appropriate to the craft. Respond ONLY with valid JSON, no markdown fences. Output the short metadata fields first (title, summary, tags, craft_type, etc.), then instructions, then cleaned_content LAST so that if the response is truncated, the metadata and instructions are still captured. Extract individual working instructions grouped by construction section with row/round numbers when available.
         """
+        let userPrompt = buildPatternExtractionUserPrompt(pageContext: pageContext, hasImages: hasImages)
+        let fullPrompt = systemPrompt + "\n\n" + userPrompt
 
-        let userPrompt = """
-        Analyze this craft pattern webpage and extract the following as JSON.
-        IMPORTANT: Output fields in EXACTLY this order (metadata first, cleaned_content LAST):
-        {
-          "title": "a short, catchy, friendly name for this pattern",
-          "summary": "2-3 sentence description of the pattern",
-          "tags": ["tag1", "tag2", "tag3"],
-          "craft_type": "knitting/crochet/sewing/etc or null",
-          "difficulty": "beginner/intermediate/advanced/expert or null",
-          "materials": "brief materials summary or null",
-          "video_url": "single best tutorial or pattern walkthrough URL from the page, or null",
-          "gauge": "e.g. 22 sts x 30 rows = 4 in stockinette, or null",
-          "needle_hook_sizes": "e.g. US 7 (4.5 mm), US 8 (5 mm), or null",
-          "yarn_weight_yardage": "e.g. Worsted; 800-1200 yd or DK, 400 yd, or null",
-          "techniques": "comma-separated skills e.g. cables, k2tog, short rows, or null",
-          "yarn_links": [{"brand_name": "Brand Name", "official_url": "https://... or null", "store_url": "https://... or null"}],
-          "cleaned_content": "the relevant pattern content only (see rules below) — OUTPUT THIS FIELD LAST"
+        var parts: [[String: Any]] = [["text": fullPrompt]]
+        for imageData in images {
+            parts.append([
+                "inline_data": [
+                    "mime_type": "image/jpeg",
+                    "data": imageData.base64EncodedString()
+                ]
+            ])
         }
-        YARN_LINKS: From materials or page content, identify specific yarn BRAND names (e.g. Malabrigo, Lion Brand, Cascade). For each brand return brand_name and when possible official_url (brand website) and store_url (e.g. Ravelry, LoveCrafts, or main retailer). Use null when URL unknown. Do not link generic terms like worsted or DK. Max 8 entries.
 
-        TITLE RULES: Create a cute, memorable name — NOT the webpage title. Keep it short (2-5 words). Use the garment/item type and a descriptive or whimsical word. Examples: "Chunky Poncho Sweater", "Cozy Cable Beanie", "Lacy Summer Top", "Patchwork Baby Blanket". Never include "FREE", "pattern", website names, colons, or ellipses.
-
-        Tags should include: craft type, garment type, technique, season/occasion if applicable. Max 6 tags.
-
-        VIDEO_URL: If "Video URLs found on page" is provided, pick the one that is clearly a pattern tutorial or walkthrough. Otherwise leave null.
-
-        CLEANED_CONTENT RULES: Extract ONLY the useful pattern information from the page content. Keep:
-        - Pattern description and overview
-        - Materials/yarn requirements
-        - Gauge information
-        - Sizing charts and measurement tables (preserve ALL rows and columns using pipe | separators)
-        - Construction notes and techniques
-        - Skills needed
-        - Key pattern details (stitch counts, needle sizes, etc.)
-        - Abbreviations and glossary
-        IMPORTANT: Sizing/measurement tables are critical — always include the FULL table with every row and column. Format tables with | separators like: Size | Height | Width | Length
-        Remove ALL of the following (do not include in cleaned_content):
-        - Navigation links, menus, "skip to content"
-        - Ads, affiliate disclosures, cookie notices
-        - Social sharing prompts, comment sections
-        - "Get the PDF", "Buy now", promotional CTAs
-        - SEO filler text, author bios, unrelated blog content
-        - Duplicate content
-        - "You may also like" / related patterns, newsletter signups
-        - Full blog narrative not about the pattern itself, unrelated product carousels
-        - Promotional paragraphs that do not describe materials or construction
-        Use \\n\\n for paragraph breaks and \\n- for bullet items. Be THOROUGH — include ALL useful pattern information. It is better to include too much useful content than to leave out important details like sizing tables, stitch counts, or construction notes. Do NOT summarize or abbreviate pattern instructions.
-
-        Webpage content:
-        \(pageContext)
-        """
-
+        let maxTokens = 8192
         let requestBody: [String: Any] = [
-            "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 4096,
-            "messages": [
-                ["role": "user", "content": userPrompt]
-            ],
-            "system": systemPrompt
+            "contents": [["parts": parts]],
+            "generationConfig": [
+                "responseMimeType": "application/json",
+                "maxOutputTokens": maxTokens,
+                "thinkingConfig": ["thinkingBudget": 0]
+            ]
         ]
 
-        guard let url = URL(string: "https://api.anthropic.com/v1/messages"),
-              let bodyData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+        guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent") else {
+            return fallbackResult(from: content)
+        }
+        guard let bodyData = try? JSONSerialization.data(withJSONObject: requestBody) else {
             return fallbackResult(from: content)
         }
 
@@ -128,31 +97,103 @@ enum AIPatternAnalyzer {
         request.httpMethod = "POST"
         request.httpBody = bodyData
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        request.timeoutInterval = 30
+        request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
+        request.timeoutInterval = hasImages ? 90 : 60
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse,
-                  (200...299).contains(httpResponse.statusCode) else {
+            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
                 return fallbackResult(from: content)
             }
-
             let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-            guard let contentArray = json?["content"] as? [[String: Any]],
-                  let textBlock = contentArray.first(where: { ($0["type"] as? String) == "text" }),
-                  let text = textBlock["text"] as? String else {
+            guard let candidates = json?["candidates"] as? [[String: Any]],
+                  let first = candidates.first,
+                  let contentObj = first["content"] as? [String: Any],
+                  let parts = contentObj["parts"] as? [[String: Any]] else {
                 return fallbackResult(from: content)
             }
-
-            let stopReason = json?["stop_reason"] as? String
-            let wasTruncated = (stopReason == "max_tokens")
-
+            // Gemini 2.5+ may include thought parts; find the actual output text.
+            let outputPart = parts.last(where: { ($0["thought"] as? Bool) != true && $0["text"] != nil })
+            guard let text = outputPart?["text"] as? String else {
+                return fallbackResult(from: content)
+            }
+            let finishReason = first["finishReason"] as? String
+            let wasTruncated = (finishReason == "MAX_TOKENS")
             return parseAIResponse(text, fallbackContent: content, wasTruncated: wasTruncated)
         } catch {
             return fallbackResult(from: content)
         }
+    }
+
+    private static func buildPatternExtractionUserPrompt(pageContext: String, hasImages: Bool = false) -> String {
+        let chartSection: String
+        if hasImages {
+            chartSection = """
+
+            CHART DETECTION (images are provided):
+            I have also provided images from this pattern (numbered starting at 0).
+            Some may contain stitch charts, colorwork charts, or construction diagrams.
+            For each instruction that references or requires a chart, include these additional fields in the instruction object:
+            - "chart_image_index": the 0-based index of the image containing the chart
+            - "chart_label": a short descriptive name for the chart (e.g., "Skull Sampler Toe Chart")
+            - "chart_crop": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0} — normalized bounding box (0.0 to 1.0) of the chart region within that image. Use the full image if the chart fills it entirely.
+            If an instruction does not reference a chart, omit these fields.
+            """
+        } else {
+            chartSection = ""
+        }
+
+        return """
+        Analyze this craft pattern webpage and extract the following as JSON. The pattern may be any craft (knitting, crochet, sewing, leatherworking, beading, jewelry, etc.). Extract craft-appropriate metadata. Leave gauge, needle_hook_sizes, yarn_weight_yardage null when not applicable.
+        IMPORTANT: Output fields in EXACTLY this order (metadata first, cleaned_content LAST):
+        {
+          "title": "a short, catchy, friendly name for this pattern",
+          "summary": "2-3 sentence description of the pattern",
+          "tags": ["tag1", "tag2", "tag3"],
+          "craft_type": "knitting/crochet/sewing/leatherworking/beading/jewelry/etc or null",
+          "difficulty": "beginner/intermediate/advanced/expert or null",
+          "materials": "brief materials or supplies summary or null",
+          "video_url": "single best tutorial URL from the page, or null",
+          "gauge": "e.g. 22 sts x 30 rows = 4 in stockinette, or null",
+          "needle_hook_sizes": "e.g. US 7 (4.5 mm), or null",
+          "yarn_weight_yardage": "e.g. Worsted; 800 yd, or null",
+          "techniques": "comma-separated skills, or null",
+          "yarn_links": [{"brand_name": "Brand name", "official_url": "https://... or null", "store_url": "https://... or null"}],
+          "instructions": [{"section": "Toe", "start_row": 0, "end_row": 0, "instruction": "full text", "stitch_count": null, "note": null}],
+          "cleaned_content": "the relevant pattern content only — OUTPUT THIS FIELD LAST"
+        }
+
+        YARN_LINKS: For fiber crafts use yarn brand names. For other crafts use supplier/brand names. Max 8 entries.
+
+        INSTRUCTIONS: Extract every individual working instruction, organized by construction section with row/round numbers.
+        Each instruction object:
+        - "section": The construction section name (1-4 words). Use the pattern's own headings when present. Capitalize naturally. If row/round numbering restarts within a single named section (e.g., two separate "Row 1" entries under "Heel"), split into descriptive sub-sections (e.g., "Heel Short Rows" and "Heel Closing").
+        - "start_row"/"end_row": Row or round numbers from the text. Single row: both equal. Range: use the range. For unnumbered instructions: both 0. NEVER invent row numbers not in the source text.
+        - "instruction": The COMPLETE instruction text exactly as written. Do NOT summarize, paraphrase, or truncate. Preserve all size variations, stitch abbreviations, and details.
+        - "stitch_count": If the instruction explicitly states a resulting count, extract the smallest size as integer. Otherwise null.
+        - "note": Important side information not in the instruction itself. Otherwise null.
+        - Each distinct row, round, or standalone instruction is its own entry.
+        - Do NOT include materials, gauge, abbreviations, sizing charts, or designer commentary as instructions.
+        - If no real instructions exist, return [].
+        - Instructions must be in working order.
+        \(chartSection)
+
+        TITLE RULES: Create a cute, memorable name — NOT the webpage title. Keep it short (2-5 words). Use the garment/item type and a descriptive or whimsical word. Never include "FREE", "pattern", website names, colons, or ellipses.
+
+        Tags should include: craft type, garment type, technique, season/occasion if applicable. Max 6 tags.
+
+        VIDEO_URL: If "Video URLs found on page" is provided, pick the pattern tutorial. Otherwise null.
+
+        CLEANED_CONTENT RULES:
+        Start: Include from the first substantive pattern section. Omit long intro paragraphs.
+        Keep: Materials, Gauge, Sizing tables (preserve ALL rows/columns with | separators), Construction notes, Abbreviations.
+        End: STOP at the last actual instruction. Omit social/promo/nav content.
+        Remove throughout: Nav links, menus, ads, affiliate disclosures, cookie notices, SEO filler, author bios, "You may also like".
+        Use \\n\\n for paragraph breaks and \\n- for bullet items. Be THOROUGH. Do NOT summarize instructions.
+
+        Webpage content:
+        \(pageContext)
+        """
     }
 
     private static func parseAIResponse(_ text: String, fallbackContent: ExtractedContent, wasTruncated: Bool = false) -> AIPatternResult {
@@ -180,7 +221,8 @@ enum AIPatternAnalyzer {
                 summary: fallbackContent.ogDescription ?? "",
                 tags: [], craftType: nil, difficulty: nil, materials: nil,
                 cleanedContent: nil, videoUrl: nil, gauge: nil, needleHookSizes: nil, yarnWeightYardage: nil, techniques: nil,
-                yarnLinks: []
+                yarnLinks: [],
+                parsedStepsJSON: nil
             )
         }
 
@@ -196,6 +238,7 @@ enum AIPatternAnalyzer {
         let yarnWeightYardage = json["yarn_weight_yardage"] as? String
         let techniques = json["techniques"] as? String
         let yarnLinks = parseYarnLinks(json["yarn_links"])
+        let parsedStepsJSON = encodeInstructionsJSON(json["instructions"]) ?? encodeStepsJSON(json["steps"])
 
         // If the response was truncated, cleaned_content is likely cut off or missing.
         // Use the AI-extracted value only if it looks complete; otherwise fall back to pageText.
@@ -214,70 +257,141 @@ enum AIPatternAnalyzer {
             cleanedContent: cleanedContent,
             videoUrl: videoUrl, gauge: gauge, needleHookSizes: needleHookSizes,
             yarnWeightYardage: yarnWeightYardage, techniques: techniques,
-            yarnLinks: yarnLinks
+            yarnLinks: yarnLinks,
+            parsedStepsJSON: parsedStepsJSON
         )
     }
 
-    /// Attempts to repair truncated JSON by finding the last complete key-value pair
-    /// and closing the object. This lets us salvage metadata fields (title, tags, gauge, etc.)
+    /// Attempts to repair truncated JSON by scanning for unmatched braces/brackets
+    /// and closing them in LIFO order. This lets us salvage metadata fields (title, tags, gauge, etc.)
     /// even when cleaned_content was cut off mid-string.
     private static func repairTruncatedJSON(_ text: String) -> [String: Any]? {
-        let repaired = text
+        var json = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Strategy: find the last complete "key": value pair, trim everything after it, close the object.
-        // Look for the last complete string value ending with a quote followed by comma or nothing.
-        // Try progressively more aggressive truncation until we get valid JSON.
-
-        // First, try just closing open strings/arrays/objects
-        let closers: [String] = [
-            "\"]}",   // close string + array + object (inside yarn_links)
-            "\"}",    // close string + object
-            "}",      // close object
-            "]}",     // close array + object
-            "\"]}"    // close string + array + object
-        ]
-
-        for closer in closers {
-            // Find last comma before any incomplete value and truncate there
-            let candidate = repaired + closer
-            if let data = candidate.data(using: .utf8),
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                return json
-            }
+        // Strip markdown code fences if present
+        if json.hasPrefix("```") {
+            json = json.replacingOccurrences(of: "```json", with: "").replacingOccurrences(of: "```", with: "")
+            json = json.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        // More aggressive: find the last `", "` or `",\n` (end of a complete key-value pair)
-        // and truncate everything after it, then close the object.
+        // Try as-is first
+        if let result = tryParseJSON(json) { return result }
+
+        // Track nesting by scanning character by character
+        var stack: [Character] = []
+        var inString = false
+        var prevChar: Character = " "
+
+        for char in json {
+            if inString {
+                if char == "\"" && prevChar != "\\" {
+                    inString = false
+                }
+            } else {
+                switch char {
+                case "\"": inString = true
+                case "{": stack.append("}")
+                case "[": stack.append("]")
+                case "}", "]":
+                    if !stack.isEmpty { stack.removeLast() }
+                default: break
+                }
+            }
+            prevChar = char
+        }
+
+        // If we're inside a string, close it
+        if inString { json += "\"" }
+
+        // Remove trailing comma before closing
+        json = json.replacingOccurrences(of: #",\s*$"#, with: "", options: .regularExpression)
+
+        // Close all open structures in reverse (LIFO) order
+        let closers = String(stack.reversed())
+        json += closers
+
+        if let result = tryParseJSON(json) { return result }
+
+        // Aggressive fallback: find last complete key-value pair, truncate, re-close
         let lastCommaPatterns = ["\",", "null,", "true,", "false,", "],"]
         for pattern in lastCommaPatterns {
-            if let lastRange = repaired.range(of: pattern, options: .backwards) {
-                let truncated = String(repaired[..<lastRange.upperBound])
-                // Remove the trailing comma and close
-                let withoutTrailingComma = truncated.trimmingCharacters(in: .whitespacesAndNewlines)
-                    .replacingOccurrences(of: ",$", with: "", options: .regularExpression)
+            if let lastRange = json.range(of: pattern, options: .backwards) {
+                var truncated = String(json[json.startIndex..<lastRange.upperBound])
+                truncated = truncated.replacingOccurrences(of: #",\s*$"#, with: "", options: .regularExpression)
 
-                // Count open braces/brackets and close them
-                var openBraces = 0
-                var openBrackets = 0
-                for char in withoutTrailingComma {
-                    if char == "{" { openBraces += 1 }
-                    else if char == "}" { openBraces -= 1 }
-                    else if char == "[" { openBrackets += 1 }
-                    else if char == "]" { openBrackets -= 1 }
+                // Re-scan for open structures on the truncated string
+                var fallbackStack: [Character] = []
+                var fbInString = false
+                var fbPrev: Character = " "
+                for char in truncated {
+                    if fbInString {
+                        if char == "\"" && fbPrev != "\\" { fbInString = false }
+                    } else {
+                        switch char {
+                        case "\"": fbInString = true
+                        case "{": fallbackStack.append("}")
+                        case "[": fallbackStack.append("]")
+                        case "}", "]":
+                            if !fallbackStack.isEmpty { fallbackStack.removeLast() }
+                        default: break
+                        }
+                    }
+                    fbPrev = char
                 }
+                if fbInString { truncated += "\"" }
+                truncated += String(fallbackStack.reversed())
 
-                var closed = withoutTrailingComma
-                for _ in 0..<max(0, openBrackets) { closed += "]" }
-                for _ in 0..<max(0, openBraces) { closed += "}" }
-
-                if let data = closed.data(using: .utf8),
-                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    return json
-                }
+                if let result = tryParseJSON(truncated) { return result }
             }
         }
 
         return nil
+    }
+
+    private static func tryParseJSON(_ string: String) -> [String: Any]? {
+        guard let data = string.data(using: .utf8) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+
+    /// Encodes v2 instruction-level format for DB storage. Preserves chart fields when present.
+    private static func encodeInstructionsJSON(_ value: Any?) -> String? {
+        guard let arr = value as? [[String: Any]], !arr.isEmpty else { return nil }
+        guard let first = arr.first, first["section"] != nil, first["instruction"] != nil else { return nil }
+        let instructions: [[String: Any]] = arr.compactMap { item in
+            guard let section = item["section"] as? String, !section.isEmpty,
+                  let instruction = item["instruction"] as? String, !instruction.isEmpty else { return nil }
+            var obj: [String: Any] = [
+                "section": section,
+                "start_row": (item["start_row"] as? Int) ?? 0,
+                "end_row": (item["end_row"] as? Int) ?? 0,
+                "instruction": instruction
+            ]
+            if let sc = item["stitch_count"] as? Int { obj["stitch_count"] = sc }
+            if let note = item["note"] as? String, !note.isEmpty { obj["note"] = note }
+            if let chartIdx = item["chart_image_index"] as? Int { obj["chart_image_index"] = chartIdx }
+            if let chartLabel = item["chart_label"] as? String, !chartLabel.isEmpty { obj["chart_label"] = chartLabel }
+            if let chartCrop = item["chart_crop"] as? [String: Any] { obj["chart_crop"] = chartCrop }
+            if let chartUrl = item["chart_image_url"] as? String, !chartUrl.isEmpty { obj["chart_image_url"] = chartUrl }
+            return obj
+        }
+        guard !instructions.isEmpty,
+              let data = try? JSONSerialization.data(withJSONObject: instructions),
+              let json = String(data: data, encoding: .utf8) else { return nil }
+        return json
+    }
+
+    /// Encodes v1 step format (legacy fallback when AI returns old-style steps).
+    private static func encodeStepsJSON(_ value: Any?) -> String? {
+        guard let arr = value as? [[String: Any]], !arr.isEmpty else { return nil }
+        let steps = arr.compactMap { item -> [String: String]? in
+            guard let title = item["title"] as? String, !title.isEmpty,
+                  let body = item["body"] as? String, !body.isEmpty else { return nil }
+            return ["title": title, "body": body]
+        }
+        guard !steps.isEmpty,
+              let data = try? JSONSerialization.data(withJSONObject: steps),
+              let json = String(data: data, encoding: .utf8) else { return nil }
+        return json
     }
 
     private static func parseYarnLinks(_ value: Any?) -> [YarnLinkEntry] {
@@ -292,12 +406,32 @@ enum AIPatternAnalyzer {
         }
     }
 
+    /// Generates 2-3 fallback tags from the source URL and any available metadata.
+    static func fallbackTags(sourceUrl: String, craftType: String? = nil) -> [String] {
+        var tags: [String] = []
+        let host = URL(string: sourceUrl)?.host?.lowercased() ?? ""
+        if host.contains("ravelry") { tags.append("Ravelry") }
+        else if host.contains("tiktok") { tags.append("TikTok") }
+        else if host.contains("youtube") || host.contains("youtu.be") { tags.append("YouTube") }
+        else if host.contains("etsy") { tags.append("Etsy") }
+        else if host.contains("lovecrafts") { tags.append("LoveCrafts") }
+        else if sourceUrl.hasPrefix("file://") { tags.append("imported") }
+        else { tags.append("pattern") }
+
+        if let craft = craftType, !craft.isEmpty {
+            tags.append(craft.lowercased())
+        }
+        if tags.count < 2 { tags.append("to-make") }
+        return tags
+    }
+
     private static func fallbackResult(from content: ExtractedContent) -> AIPatternResult? {
         guard content.ogTitle != nil || content.ogDescription != nil else { return nil }
+        let tags = fallbackTags(sourceUrl: content.sourceUrl)
         return AIPatternResult(
             title: content.ogTitle ?? "Untitled Pattern",
             summary: content.ogDescription ?? "",
-            tags: [],
+            tags: tags,
             craftType: nil,
             difficulty: nil,
             materials: nil,
@@ -307,7 +441,8 @@ enum AIPatternAnalyzer {
             needleHookSizes: nil,
             yarnWeightYardage: nil,
             techniques: nil,
-            yarnLinks: []
+            yarnLinks: [],
+            parsedStepsJSON: nil
         )
     }
 }

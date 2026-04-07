@@ -44,3 +44,12 @@ enable_confirmations = false
 # Called by share extension with Bearer token; verify_jwt = true so only signed-in users can call.
 [functions.extract-pattern-from-video]
 verify_jwt = true
+
+# delete-account: self-service account deletion. Verifies JWT, then deletes auth user
+# with service role; user-owned rows are removed by ON DELETE CASCADE.
+[functions.delete-account]
+verify_jwt = true
+
+# enrich-pattern: server-side enrichment for non-video pattern imports.
+[functions.enrich-pattern]
+verify_jwt = true

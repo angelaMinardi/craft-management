@@ -12,14 +12,53 @@ struct PatternStep: Identifiable {
     let id = UUID()
     let title: String
     let body: String
+    let chartImageUrl: String?
+    let chartLabel: String?
+
+    init(title: String, body: String, chartImageUrl: String? = nil, chartLabel: String? = nil) {
+        self.title = title
+        self.body = body
+        self.chartImageUrl = chartImageUrl
+        self.chartLabel = chartLabel
+    }
 }
 
 enum PatternStepParser {
 
+    /// Truncates content at the first end-of-pattern sentinel so promo/social never appear in steps or display.
+    static func truncateAtEndOfPattern(_ content: String?) -> String? {
+        guard let s = content?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return content }
+        let lower = s.lowercased()
+        let sentinels = [
+            "learn about", "more free knitting", "more worsted", "similar posts you might enjoy",
+            "you might also like", "buy sunshower", "to top", "looks like an excellent", "leave a reply",
+            "share your progress", "tag your pics", "we can't wait to see what you make",
+            "shop our entire collection", "looking for more inspiration", "we have over "
+        ]
+        var earliestOffset: Int?
+        for sentinel in sentinels {
+            if let range = lower.range(of: sentinel) {
+                let offset = lower.distance(from: lower.startIndex, to: range.lowerBound)
+                if let e = earliestOffset {
+                    if offset < e { earliestOffset = offset }
+                } else {
+                    earliestOffset = offset
+                }
+            }
+        }
+        if let offset = earliestOffset, offset > 0 {
+            let start = s.index(s.startIndex, offsetBy: offset)
+            let lineStart = s[..<start].lastIndex(of: "\n").map { s.index(after: $0) } ?? s.startIndex
+            return String(s[..<lineStart]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return s
+    }
+
     /// Parses pattern content into steps. Uses sourceContent first; falls back to patternDescription as a single step.
     /// Treats Ravelry nav/sidebar as non-content and uses description fallback so we don't show "Step 1: ravelry, patterns, yarns...".
     static func parseSteps(sourceContent: String?, patternDescription: String?) -> [PatternStep] {
-        if let content = sourceContent, !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !looksLikeRavelryChrome(content) {
+        let contentForSteps = truncateAtEndOfPattern(sourceContent) ?? sourceContent
+        if let content = contentForSteps, !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !looksLikeRavelryChrome(content) {
             let steps = parseStepsFromContent(content)
             if !steps.isEmpty { return steps }
         }
@@ -85,7 +124,11 @@ enum PatternStepParser {
         "advertisement", "sponsored", "affiliate", "disclosure", "copyright ©", "all rights reserved",
         "follow on", "like us", "watch on", "download pattern", "free pattern", "pattern by ",
         "my notebook", "sign in", "create an account", "more from ", "see them all",
-        "visits in the last 24 hours", "visitors right now"
+        "visits in the last 24 hours", "visitors right now",
+        "share your progress", "tag your pics", "connect with the community",
+        "we can't wait to see what you make", "similar posts", "you might also like",
+        "to top", "buy sunshower", "similar posts you might enjoy", "leave a reply",
+        "looks like an excellent"
     ]
 
     /// Combined hardcoded + user-learned junk patterns.
@@ -97,9 +140,10 @@ enum PatternStepParser {
 
     private static func isJunkBlock(block: String, firstLine: String) -> Bool {
         let lower = firstLine.lowercased()
-        if firstLine.count < 3 { return true }
+        let blockTrimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
+        if blockTrimmed.count < 3 { return true }
         if allJunkPatterns.contains(where: { lower.contains($0) }) { return true }
-        if lower.allSatisfy({ $0.isNumber || $0.isWhitespace || ".,;:/-".contains($0) }) { return true }
+        if blockTrimmed == firstLine, lower.allSatisfy({ $0.isNumber || $0.isWhitespace || ".,;:/-".contains($0) }) { return true }
         if firstLine.hasPrefix("http://") || firstLine.hasPrefix("https://") { return true }
         if block.components(separatedBy: "\n").filter({ $0.trimmingCharacters(in: .whitespaces).hasPrefix("http") }).count > 2 { return true }
         return false
@@ -136,12 +180,109 @@ enum PatternStepParser {
 
     // MARK: - Step parsing
 
+    /// Section headings that are reference info (materials, gauge, sizes, notes), merged into one "Pattern details" step. Excludes "pattern" (container).
+    private static let referenceHeadingTitles: Set<String> = [
+        "materials", "gauge", "sizes", "notes", "abbreviations", "slip stitches",
+        "abbreviation", "pattern notes", "sizing", "yarn", "needles", "hooks"
+    ]
+
+    /// Generic "PATTERN" section header: do not merge into Pattern details and do not create a step for it.
+    private static func isContainerHeading(_ title: String) -> Bool {
+        title.lowercased().trimmingCharacters(in: .whitespaces) == "pattern"
+    }
+
+    private static func isReferenceHeading(_ title: String) -> Bool {
+        if isContainerHeading(title) { return false }
+        let normalized = title.lowercased().trimmingCharacters(in: .whitespaces)
+        if referenceHeadingTitles.contains(normalized) { return true }
+        if normalized.contains("gauge") || normalized.contains("materials") || normalized.contains("abbreviations") { return true }
+        if normalized.hasPrefix("slip stitch") { return true }
+        return false
+    }
+
+    /// First line looks like a section heading (e.g. BASE, BODY, ### Finishing, Toe:, Heel Flap:).
+    private static func looksLikeSectionHeading(firstLine: String) -> Bool {
+        let t = firstLine.trimmingCharacters(in: .whitespaces)
+        if t.isEmpty || t.count > 55 { return false }
+        if t.hasSuffix(".") || t.hasSuffix(",") { return false }
+        if t.hasPrefix("## ") || t.hasPrefix("### ") { return true }
+        let letters = t.filter(\.isLetter)
+        if letters.count >= 3, letters.allSatisfy(\.isUppercase) { return true }
+        if t.hasSuffix(":") && t.count <= 45 {
+            let withoutColon = String(t.dropLast()).trimmingCharacters(in: .whitespaces)
+            let words = withoutColon.split(separator: " ")
+            if words.count <= 6, let first = words.first, first.first?.isUppercase == true { return true }
+        }
+        return false
+    }
+
+    /// Build steps by grouping blocks under section headings. Reference sections (Materials, Gauge, etc.) are merged into one "Pattern details" step; construction sections become separate steps.
+    private static func parseStepsBySectionHeadings(blocks: [String]) -> [PatternStep]? {
+        var headingIndices: [(Int, String)] = []
+        for (idx, block) in blocks.enumerated() {
+            let first = block.components(separatedBy: "\n").first?.trimmingCharacters(in: .whitespaces) ?? ""
+            if looksLikeSectionHeading(firstLine: first) {
+                let title: String
+                if first.hasPrefix("### ") {
+                    title = String(first.dropFirst(4)).trimmingCharacters(in: .whitespaces)
+                } else if first.hasPrefix("## ") {
+                    title = String(first.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                } else {
+                    title = first
+                }
+                if !title.isEmpty { headingIndices.append((idx, title)) }
+            }
+        }
+        if headingIndices.isEmpty { return nil }
+
+        let referenceRanges = headingIndices.enumerated().filter { isReferenceHeading($0.element.1) }
+        let constructionRanges = headingIndices.enumerated().filter { !isReferenceHeading($0.element.1) && !isContainerHeading($0.element.1) }
+
+        var steps: [PatternStep] = []
+
+        if !referenceRanges.isEmpty {
+            let startIdx = referenceRanges.first!.element.0
+            let firstNonReferenceOffset = headingIndices.firstIndex(where: { isContainerHeading($0.1) || !isReferenceHeading($0.1) }) ?? headingIndices.count
+            let endBlockIdx = firstNonReferenceOffset < headingIndices.count ? headingIndices[firstNonReferenceOffset].0 : blocks.count
+            let referenceBlocks = (startIdx..<endBlockIdx).map { blocks[$0] }
+            let body = referenceBlocks.joined(separator: "\n\n")
+            let cleanedBody = cleanStepBody(body)
+            if !cleanedBody.isEmpty {
+                steps.append(PatternStep(title: "Pattern details", body: cleanedBody))
+            }
+        }
+
+        for (j, (_, (start, title))) in constructionRanges.enumerated() {
+            let nextConstruction = constructionRanges.dropFirst(j + 1).first
+            let end = nextConstruction.map { headingIndices[$0.offset].0 } ?? blocks.count
+            let sectionBlocks = blocks[start..<end]
+            let body = sectionBlocks.joined(separator: "\n\n")
+            let cleanedBody = cleanStepBody(body)
+            if !cleanedBody.isEmpty {
+                steps.append(PatternStep(title: cleanStepTitle(title), body: cleanedBody))
+            }
+        }
+
+        if steps.isEmpty { return nil }
+        if constructionRanges.isEmpty {
+            return steps
+        }
+        if steps.count == 1 && referenceRanges.isEmpty {
+            return nil
+        }
+        return steps
+    }
+
     private static func parseStepsFromContent(_ text: String) -> [PatternStep] {
         let normalized = normalizeInput(text)
         var blocks = blocksFromNormalized(normalized)
         blocks = blocks.filter { block in
             let first = block.components(separatedBy: "\n").first?.trimmingCharacters(in: .whitespaces) ?? ""
             return !isJunkBlock(block: block, firstLine: first)
+        }
+
+        if let sectionSteps = parseStepsBySectionHeadings(blocks: blocks), !sectionSteps.isEmpty {
+            return sectionSteps
         }
 
         var steps: [PatternStep] = []
@@ -154,7 +295,8 @@ enum PatternStepParser {
             if let (title, body) = parseStepBlock(firstLine: firstLine, block: block) {
                 let cleanedBody = cleanStepBody(body)
                 if !cleanedBody.isEmpty {
-                    steps.append(PatternStep(title: cleanStepTitle(title), body: cleanedBody))
+                    let stepTitle = firstLine.count > 60 ? shortTitleForRowOrRound(firstLine: firstLine) : cleanStepTitle(title)
+                    steps.append(PatternStep(title: stepTitle, body: cleanedBody))
                 }
                 i += 1
                 continue
@@ -232,6 +374,19 @@ enum PatternStepParser {
         }.filter { !$0.body.isEmpty }
     }
 
+    /// Short title for Row N / Round N when the first line is long, to avoid duplicating it in the UI.
+    private static func shortTitleForRowOrRound(firstLine: String) -> String {
+        if firstLine.range(of: #"^Round\s+\d+"#, options: .regularExpression) != nil,
+           let numPart = firstLine.split(separator: " ").dropFirst().first {
+            return "Round \(numPart)"
+        }
+        if firstLine.range(of: #"^Rows?\s+\d+"#, options: .regularExpression) != nil,
+           let numPart = firstLine.split(separator: " ").dropFirst().first {
+            return "Row \(numPart)"
+        }
+        return String(firstLine.prefix(50)).trimmingCharacters(in: .whitespaces)
+    }
+
     private static func parseStepBlock(firstLine: String, block: String) -> (title: String, body: String)? {
         if firstLine.range(of: #"^Step\s+\d+"#, options: .regularExpression) != nil {
             let lines = block.components(separatedBy: "\n")
@@ -241,9 +396,15 @@ enum PatternStepParser {
         }
         if firstLine.range(of: #"^Rows?\s+\d+"#, options: .regularExpression) != nil {
             let lines = block.components(separatedBy: "\n")
-            let title = lines.first ?? "Step"
-            let body = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespaces)
-            return (title, body.isEmpty ? title : body)
+            let rest = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespaces)
+            let body = rest.isEmpty ? block : block
+            return (firstLine, body)
+        }
+        if firstLine.range(of: #"^Round\s+\d+"#, options: .regularExpression) != nil {
+            let lines = block.components(separatedBy: "\n")
+            let rest = lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .whitespaces)
+            let body = rest.isEmpty ? block : block
+            return (firstLine, body)
         }
         return nil
     }

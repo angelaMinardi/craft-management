@@ -19,6 +19,8 @@ build/
 Packages/
 Package.pins
 Package.resolved
+# Keep SPM resolution for PatternVault so Xcode does not show "Missing package product"
+!PatternVault/PatternVault.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 
 # CocoaPods (if used)
 Pods/

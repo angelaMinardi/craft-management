@@ -59,25 +59,47 @@ final class VoiceRowService: ObservableObject {
             return
         }
         // Microphone permission
-        let session = AVAudioSession.sharedInstance()
-        switch session.recordPermission {
-        case .denied:
-            authorizationStatus = .denied
-            errorMessage = "Microphone access is denied. Enable it in Settings to use voice row counting."
-            return
-        case .granted:
-            break
-        case .undetermined:
-            let granted = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-                session.requestRecordPermission { cont.resume(returning: $0) }
-            }
-            if !granted {
+        if #available(iOS 17.0, *) {
+            switch AVAudioApplication.shared.recordPermission {
+            case .denied:
                 authorizationStatus = .denied
-                errorMessage = "Microphone access is required for voice row counting."
+                errorMessage = "Microphone access is denied. Enable it in Settings to use voice row counting."
+                return
+            case .granted:
+                break
+            case .undetermined:
+                let granted = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+                    AVAudioApplication.requestRecordPermission { cont.resume(returning: $0) }
+                }
+                if !granted {
+                    authorizationStatus = .denied
+                    errorMessage = "Microphone access is required for voice row counting."
+                }
+            @unknown default:
+                authorizationStatus = .denied
+                errorMessage = "Microphone access could not be determined."
             }
-        @unknown default:
-            authorizationStatus = .denied
-            errorMessage = "Microphone access could not be determined."
+        } else {
+            let session = AVAudioSession.sharedInstance()
+            switch session.recordPermission {
+            case .denied:
+                authorizationStatus = .denied
+                errorMessage = "Microphone access is denied. Enable it in Settings to use voice row counting."
+                return
+            case .granted:
+                break
+            case .undetermined:
+                let granted = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+                    session.requestRecordPermission { cont.resume(returning: $0) }
+                }
+                if !granted {
+                    authorizationStatus = .denied
+                    errorMessage = "Microphone access is required for voice row counting."
+                }
+            @unknown default:
+                authorizationStatus = .denied
+                errorMessage = "Microphone access could not be determined."
+            }
         }
     }
 

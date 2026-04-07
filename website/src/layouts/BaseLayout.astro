@@ -1,0 +1,148 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  frontmatter?: { title?: string; description?: string };
+}
+
+const { title, description, frontmatter } = Astro.props;
+const pageTitle = title ?? frontmatter?.title ?? 'Pattern Vault';
+const pageDescription = description ?? frontmatter?.description ?? 'Pattern Vault — Your craft library, in your pocket. Save patterns from anywhere. Track projects. One place for every pattern.';
+const isDev = import.meta.env.DEV;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/png" href="/images/app-icon.png" />
+    <link rel="apple-touch-icon" href="/images/app-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={pageDescription} />
+    <meta property="og:image" content="/images/app-icon.png" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{pageTitle}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <Header />
+    <main id="main-content" class="main" tabindex="-1">
+      <slot />
+    </main>
+    <Footer />
+    <script>
+      function dispatchAnalyticsEvent(eventName, props) {
+        const payload = { ...props, page_path: window.location.pathname };
+
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', eventName, payload);
+        }
+
+        if (typeof window.plausible === 'function') {
+          window.plausible(eventName, { props: payload });
+        }
+
+        if (Array.isArray(window.dataLayer)) {
+          window.dataLayer.push({ event: eventName, ...payload });
+        }
+
+        window.dispatchEvent(new CustomEvent('patternvault:analytics', { detail: { event: eventName, props: payload } }));
+      }
+
+      function getCtaProps(el) {
+        return {
+          cta_destination: el.dataset.destination || 'unknown',
+          cta_mode: el.dataset.mode || 'unknown',
+          page_section: el.dataset.pageSection || 'unknown',
+          fallback_used: el.dataset.fallbackUsed || 'false',
+        };
+      }
+
+      function trackCtaImpressions() {
+        const ctas = document.querySelectorAll('[data-cta]');
+        if (!ctas.length) return;
+
+        const seen = new WeakSet();
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const el = entry.target;
+            if (seen.has(el)) return;
+            seen.add(el);
+            dispatchAnalyticsEvent('cta_impression', getCtaProps(el));
+            io.unobserve(el);
+          });
+        }, { threshold: 0.4 });
+
+        ctas.forEach((cta) => io.observe(cta));
+      }
+
+      function trackCtaClicks() {
+        document.addEventListener('click', (event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          const cta = target.closest('[data-click-event]');
+          if (!(cta instanceof HTMLElement)) return;
+          const eventName = cta.dataset.clickEvent || 'cta_click';
+          dispatchAnalyticsEvent(eventName, getCtaProps(cta));
+        });
+      }
+
+      if ({isDev}) {
+        window.addEventListener('patternvault:analytics', (event) => {
+          if (!(event instanceof CustomEvent)) return;
+          // Dev-only visibility into analytics payloads while integrating providers.
+          console.info('[PatternVault analytics]', event.detail);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          trackCtaImpressions();
+          trackCtaClicks();
+        });
+      } else {
+        trackCtaImpressions();
+        trackCtaClicks();
+      }
+    </script>
+  </body>
+</html>
+
+<style>
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: var(--space-md);
+    z-index: 200;
+    padding: var(--space-md) var(--space-lg);
+    background: var(--sage-green);
+    color: var(--deep-plum);
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    transition: top var(--duration-fast);
+  }
+
+  .skip-link:focus {
+    top: var(--space-md);
+  }
+
+  .main {
+    min-height: calc(100vh - var(--header-height) - 8rem);
+    padding: var(--space-xl) var(--space-lg);
+  }
+
+  @media (min-width: 640px) {
+    .main {
+      padding-left: var(--space-xl);
+      padding-right: var(--space-xl);
+    }
+  }
+</style>

@@ -1,0 +1,129 @@
+---
+import CTA from './CTA.astro';
+import { getCtaConfig } from '../config/cta';
+
+const ctaConfig = getCtaConfig(import.meta.env);
+const links = [
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/terms', label: 'Terms' },
+  { href: '/contact', label: 'Contact' },
+];
+---
+
+<footer class="footer" role="contentinfo">
+  <div class="footer-inner">
+    <div class="footer-convert-row">
+      <p class="footer-convert-text">
+        {ctaConfig.mode === 'liveFirst' ? 'Not ready to install yet?' : 'Want launch updates?'}
+      </p>
+      <CTA
+        href={ctaConfig.fallback.href}
+        label={ctaConfig.fallback.label}
+        primary={false}
+        dataCta="cta_impression"
+        dataDestination={ctaConfig.fallback.destination}
+        dataMode={ctaConfig.mode}
+        dataPageSection="footer"
+        dataFallbackUsed="true"
+      />
+    </div>
+    <div class="footer-brand-row">
+      <img src="/images/mascot.png" alt="" class="footer-mascot" width="48" height="48" aria-hidden="true" />
+      <span class="footer-brand">Pattern Vault</span>
+    </div>
+    <nav class="footer-nav" aria-label="Footer">
+      <ul class="footer-links">
+        {links.map(({ href, label }) => (
+          <li>
+            <a href={href}>{label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <p class="footer-copy">
+      &copy; {new Date().getFullYear()} Pattern Vault. Your craft library, in your pocket.
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    margin-top: auto;
+    padding: var(--space-2xl) var(--space-xl);
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(74, 32, 64, 0.06);
+  }
+
+  .footer-inner {
+    max-width: var(--content-wide);
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .footer-brand-row {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .footer-convert-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+  }
+
+  .footer-convert-text {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-small);
+  }
+
+  .footer-mascot {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    opacity: 0.9;
+  }
+
+  .footer-brand {
+    font-weight: 700;
+    font-size: var(--text-small);
+    letter-spacing: var(--letter-tight);
+    color: var(--deep-plum);
+    margin: 0;
+  }
+
+  .footer-links {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--space-lg);
+    margin: 0 0 var(--space-md);
+    padding: 0;
+    list-style: none;
+  }
+
+  .footer-links a {
+    font-size: var(--text-small);
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color var(--duration-fast);
+  }
+
+  .footer-links a:hover {
+    color: var(--soft-coral);
+  }
+
+  .footer-copy {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin: 0;
+    opacity: 0.9;
+  }
+</style>

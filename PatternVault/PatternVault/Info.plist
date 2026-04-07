@@ -16,9 +16,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
@@ -26,8 +26,13 @@
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 	</dict>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>WarmCream</string>
+	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -49,8 +54,8 @@
 	<string>$(RAVELRY_ACCESS_KEY)</string>
 	<key>RAVELRY_PERSONAL_KEY</key>
 	<string>$(RAVELRY_PERSONAL_KEY)</string>
-	<key>ANTHROPIC_API_KEY</key>
-	<string>$(ANTHROPIC_API_KEY)</string>
+	<key>GEMINI_API_KEY</key>
+	<string>$(GEMINI_API_KEY)</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Pattern Vault uses the microphone so you can say your current row or round number hands-free while crafting.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
@@ -67,6 +72,39 @@
 			<key>CFBundleURLName</key>
 			<string>auth</string>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>patternvault</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>Ravelry OAuth</string>
+		</dict>
 	</array>
+	<key>RAVELRY_OAUTH2_CLIENT_ID</key>
+	<string>$(RAVELRY_OAUTH2_CLIENT_ID)</string>
+	<key>RAVELRY_OAUTH2_CLIENT_SECRET</key>
+	<string>$(RAVELRY_OAUTH2_CLIENT_SECRET)</string>
+	<key>GADApplicationIdentifier</key>
+	<string>$(GAD_APPLICATION_ID)</string>
+	<key>GADBannerAdUnitID</key>
+	<string>$(GAD_BANNER_AD_UNIT_ID)</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>PrivacyPolicyURL</key>
+	<string>https://patternvault.app/privacy</string>
+	<key>TermsOfServiceURL</key>
+	<string>https://patternvault.app/terms</string>
+	<key>SupportURL</key>
+	<string>https://patternvault.app/contact</string>
 </dict>
 </plist>

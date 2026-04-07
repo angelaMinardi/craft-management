@@ -114,6 +114,60 @@ enum Theme {
         static let large: CGFloat = 16
         static let pill: CGFloat = 100
     }
+
+    // MARK: - Semantic Surface and Text Roles
+
+    enum Semantic {
+        static let textPrimary = deepPlum
+        static let textSecondary = deepPlum.opacity(0.72)
+        static let textTertiary = deepPlum.opacity(0.62)
+        static let textOnAccent = Color.white
+        static let iconMuted = deepPlum.opacity(0.58)
+        static let surfaceBase = cardBackground
+        static let surfaceSubtle = warmCream.opacity(0.7)
+        static let borderSubtle = deepPlum.opacity(0.08)
+        static let borderStandard = deepPlum.opacity(0.12)
+        static let borderStrong = deepPlum.opacity(0.22)
+        static let accent = softCoral
+        static let success = sageGreen
+        static let warning = honey
+        static let info = dustyBlue
+        static let error = softCoral
+    }
+
+    // MARK: - Elevation
+
+    enum Elevation {
+        static let cardShadowColor = Color.black.opacity(0.06)
+        static let cardShadowRadius: CGFloat = 10
+        static let cardShadowY: CGFloat = 4
+        static let softShadowColor = Color.black.opacity(0.04)
+        static let softShadowRadius: CGFloat = 4
+        static let softShadowY: CGFloat = 2
+    }
+
+    // MARK: - Motion Guardrails
+
+    enum Motion {
+        static let quick: Double = 0.2
+        static let standard: Double = 0.35
+        static let expressive: Double = 0.6
+        static let pressScale: CGFloat = 0.96
+        static let maxConcurrentAnimatedElements = 2
+        static let staggerStep: Double = 0.06
+        static let mascotLoopFramesPerSecond: Double = 15
+    }
+
+    // MARK: - Premium (consistent copy across app)
+
+    enum Premium {
+        /// One-line value prop used in Settings, Paywall, and limit messages.
+        static let tagline = "Unlimited vault, project mode, Row Tracker widget, stash matching, and ad-free."
+        /// Short teaser for non-intrusive placements (Dashboard, list).
+        static let teaser = "Unlimited patterns, project mode, no ads & more with Premium"
+        /// CTA when user hits a limit or we want to surface Premium.
+        static let seePremiumTitle = "See Premium"
+    }
 }
 
 // MARK: - View Modifiers
@@ -138,9 +192,14 @@ struct CardModifier: ViewModifier {
 struct ElevatedCardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(Theme.cardBackground)
+            .background(Theme.Semantic.surfaceBase)
             .clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
+            .shadow(
+                color: Theme.Elevation.cardShadowColor,
+                radius: Theme.Elevation.cardShadowRadius,
+                x: 0,
+                y: Theme.Elevation.cardShadowY
+            )
     }
 }
 
@@ -150,10 +209,10 @@ struct PrimaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(14)
             .background(configuration.isPressed ? Theme.softCoral.opacity(0.8) : Theme.softCoral)
-            .foregroundStyle(.white)
+            .foregroundStyle(Theme.Semantic.textOnAccent)
             .font(Theme.Typography.headline)
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.pill))
-            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .scaleEffect(configuration.isPressed ? Theme.Motion.pressScale : 1.0)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
@@ -182,7 +241,7 @@ struct StaggeredAppearModifier: ViewModifier {
             .offset(y: appeared ? 0 : 16)
             .animation(
                 .spring(response: 0.4, dampingFraction: 0.8)
-                .delay(Double(index) * 0.06),
+                .delay(Double(index) * Theme.Motion.staggerStep),
                 value: appeared
             )
             .onAppear { appeared = true }
@@ -216,6 +275,117 @@ struct AccentBorderedCardModifier: ViewModifier {
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(Theme.softCoral.opacity(0.35), lineWidth: 1.5)
+            )
+    }
+}
+
+enum CalloutKind {
+    case neutral
+    case info
+    case success
+    case warning
+    case error
+
+    var borderColor: Color {
+        switch self {
+        case .neutral: return Theme.Semantic.borderStandard
+        case .info: return Theme.Semantic.info.opacity(0.45)
+        case .success: return Theme.Semantic.success.opacity(0.5)
+        case .warning: return Theme.Semantic.warning.opacity(0.55)
+        case .error: return Theme.Semantic.error.opacity(0.5)
+        }
+    }
+
+    var backgroundColor: Color {
+        switch self {
+        case .neutral: return Theme.Semantic.surfaceSubtle
+        case .info: return Theme.Semantic.info.opacity(0.12)
+        case .success: return Theme.Semantic.success.opacity(0.15)
+        case .warning: return Theme.Semantic.warning.opacity(0.16)
+        case .error: return Theme.Semantic.error.opacity(0.12)
+        }
+    }
+}
+
+struct CalloutCardModifier: ViewModifier {
+    var kind: CalloutKind = .neutral
+
+    func body(content: Content) -> some View {
+        content
+            .padding(Theme.Spacing.lg)
+            .background(kind.backgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                    .stroke(kind.borderColor, lineWidth: 1.5)
+            )
+    }
+}
+
+struct BannerSurfaceModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.md)
+            .background(Theme.Semantic.surfaceBase)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                    .stroke(Theme.Semantic.borderSubtle, lineWidth: 1)
+            )
+            .shadow(
+                color: Theme.Elevation.softShadowColor,
+                radius: Theme.Elevation.softShadowRadius,
+                x: 0,
+                y: Theme.Elevation.softShadowY
+            )
+    }
+}
+
+struct InputSurfaceModifier: ViewModifier {
+    var isFocused: Bool = false
+    var hasError: Bool = false
+
+    private var borderColor: Color {
+        if hasError { return Theme.Semantic.error.opacity(0.75) }
+        if isFocused { return Theme.Semantic.accent.opacity(0.8) }
+        return Theme.Semantic.borderStandard
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.sm)
+            .background(Theme.inputBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                    .stroke(borderColor, lineWidth: isFocused ? 1.6 : 1.2)
+            )
+    }
+}
+
+struct PaywallModuleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(Theme.Spacing.lg)
+            .background(
+                LinearGradient(
+                    colors: [Theme.warmCream, Theme.cardBackground],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Theme.Semantic.borderStandard, lineWidth: 1.5)
+            )
+            .shadow(
+                color: Theme.Elevation.cardShadowColor,
+                radius: Theme.Elevation.cardShadowRadius,
+                x: 0,
+                y: Theme.Elevation.cardShadowY
             )
     }
 }
@@ -314,5 +484,21 @@ extension View {
 
     func staggeredAppear(index: Int) -> some View {
         modifier(StaggeredAppearModifier(index: index))
+    }
+
+    func calloutCard(kind: CalloutKind = .neutral) -> some View {
+        modifier(CalloutCardModifier(kind: kind))
+    }
+
+    func bannerSurface() -> some View {
+        modifier(BannerSurfaceModifier())
+    }
+
+    func inputSurface(isFocused: Bool = false, hasError: Bool = false) -> some View {
+        modifier(InputSurfaceModifier(isFocused: isFocused, hasError: hasError))
+    }
+
+    func paywallModule() -> some View {
+        modifier(PaywallModuleModifier())
     }
 }

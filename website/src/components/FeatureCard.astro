@@ -1,0 +1,107 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  icon?: string;
+  eyebrow?: string;
+}
+
+const { title, description, icon = 'bookmark', eyebrow } = Astro.props;
+---
+
+<article class="feature-card">
+  <div class="feature-icon-wrap">
+    <span class="feature-icon" aria-hidden="true">{icon}</span>
+  </div>
+  {eyebrow && <p class="feature-eyebrow">{eyebrow}</p>}
+  <h3 class="feature-title">{title}</h3>
+  <p class="feature-desc">{description}</p>
+</article>
+
+<style>
+  .feature-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+    text-align: center;
+    transition: transform var(--duration-normal) var(--ease-out-quint), box-shadow var(--duration-normal) var(--ease-out-quint), border-color var(--duration-normal);
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(232, 131, 107, 0.2), rgba(168, 197, 160, 0.15));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity var(--duration-normal);
+    pointer-events: none;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-premium);
+    border-color: rgba(232, 131, 107, 0.2);
+  }
+
+  .feature-card:hover::before {
+    opacity: 1;
+  }
+
+  .feature-icon-wrap {
+    width: 3rem;
+    height: 3rem;
+    margin: 0 auto var(--space-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(232, 131, 107, 0.12), rgba(168, 197, 160, 0.1));
+    border-radius: var(--radius-lg);
+    transition: transform var(--duration-normal) var(--ease-out-quint), box-shadow var(--duration-fast);
+  }
+
+  .feature-card:hover .feature-icon-wrap {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(232, 131, 107, 0.15);
+  }
+
+  .feature-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--soft-coral);
+  }
+
+  .feature-title {
+    font-size: var(--text-subtitle);
+    font-weight: 600;
+    letter-spacing: var(--letter-tight);
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-sm);
+    line-height: var(--line-height-tight);
+  }
+
+  .feature-eyebrow {
+    margin: 0 0 var(--space-xs);
+    color: var(--soft-coral);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .feature-desc {
+    font-size: var(--text-small);
+    color: var(--text-muted);
+    margin: 0;
+    line-height: var(--line-height-relaxed);
+  }
+</style>

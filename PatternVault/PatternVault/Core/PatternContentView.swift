@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct PatternContentView: View {
     let pattern: Pattern
@@ -24,12 +25,20 @@ struct PatternContentView: View {
     @State private var showEmptyWarning = false
     @State private var showSaveConfirmation = false
     @State private var savedRemovalCount = 0
+    @StateObject private var imageStore = PatternImageStore()
+    @ObservedObject private var chartStore = ChartHighlightStore.shared
+    @ObservedObject private var rowCounterStore = RowCounterStore.shared
+    @State private var configuringImage: PatternImage?
 
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                     metadataSection
+
+                    if !imageStore.images.isEmpty {
+                        photosFromPatternSection
+                    }
 
                     if isEditMode {
                         editModeContent
@@ -96,6 +105,142 @@ struct PatternContentView: View {
                 saveConfirmationToast
             }
         }
+        .sheet(item: $configuringImage) { image in
+            ChartHighlighterSetupSheet(
+                patternId: pattern.id,
+                image: image,
+                existing: chartStore.highlight(patternId: pattern.id, makeId: nil, imageId: image.id),
+                secondaryCounters: rowCounterStore.state(for: pattern.id, makeId: nil).secondaryCounters,
+                onSave: { chartStore.save($0) },
+                onDelete: {
+                    chartStore.delete(patternId: pattern.id, makeId: nil, imageId: image.id)
+                }
+            )
+        }
+        .task {
+            await imageStore.load(patternId: pattern.id)
+        }
+    }
+
+    // MARK: - Photos from pattern (website images)
+
+    private var photosFromPatternSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("Photos from pattern")
+                .font(Theme.Typography.headline)
+                .foregroundStyle(Theme.deepPlum)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    ForEach(imageStore.images) { img in
+                        chartImageCard(img)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private func chartImageCard(_ img: PatternImage) -> some View {
+        let highlight = chartStore.highlight(patternId: pattern.id, makeId: nil, imageId: img.id)
+        let rowValue = rowValueFor(highlight)
+        let colValue = columnValueFor(highlight)
+
+        ZStack(alignment: .topTrailing) {
+            CachedAsyncImage(url: URL(string: img.imageUrl), userId: auth.currentUserId) { phase in
+                switch phase {
+                case .loading:
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                        .fill(Theme.cardBackground)
+                        .frame(width: 220, height: 220)
+                        .overlay { ProgressView() }
+                case .success(let image):
+                    ZStack {
+                        image.resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 220, height: 220)
+                            .clipped()
+                        if let highlight {
+                            ChartHighlighterOverlayView(
+                                highlight: highlight,
+                                rowValue: rowValue,
+                                columnValue: colValue
+                            )
+                            .frame(width: 220, height: 220)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                case .failure:
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                        .fill(Theme.cardBackground)
+                        .frame(width: 220, height: 220)
+                        .overlay {
+                            Image(systemName: "photo")
+                                .font(.title2)
+                                .foregroundStyle(Theme.Semantic.textTertiary)
+                        }
+                }
+            }
+
+            Button {
+                configuringImage = img
+            } label: {
+                Image(systemName: "highlighter")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(8)
+                    .background(Theme.dustyBlue)
+                    .clipShape(Circle())
+            }
+            .padding(8)
+        }
+        .overlay(alignment: .bottomLeading) {
+            if highlight != nil {
+                Text("Chart linked")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Theme.sageGreen.opacity(0.9))
+                    .clipShape(Capsule())
+                    .padding(8)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let data = highlight?.extractedChartPNGData, let chartImage = UIImage(data: data) {
+                Image(uiImage: chartImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Theme.Semantic.borderStrong, lineWidth: 2)
+                    )
+                    .padding(8)
+            }
+        }
+    }
+
+    private func rowValueFor(_ highlight: ChartHighlight?) -> Int {
+        guard let highlight else { return 1 }
+        return counterValue(for: highlight.rowCounterLink)
+    }
+
+    private func columnValueFor(_ highlight: ChartHighlight?) -> Int {
+        guard let highlight else { return 1 }
+        guard let link = highlight.columnCounterLink else { return rowValueFor(highlight) }
+        return counterValue(for: link)
+    }
+
+    private func counterValue(for link: ChartHighlight.CounterLink) -> Int {
+        let state = rowCounterStore.state(for: pattern.id, makeId: nil)
+        switch link {
+        case .global:
+            return state.globalRow
+        case .secondary(let id):
+            return state.secondaryCounters.first(where: { $0.id == id })?.currentCount ?? 1
+        }
     }
 
     // MARK: - Effective Content
@@ -105,7 +250,8 @@ struct PatternContentView: View {
     }
 
     private var effectiveContent: String? {
-        guard let c = pattern.sourceContent, !c.isEmpty else { return nil }
+        let c = PatternStepParser.truncateAtEndOfPattern(pattern.sourceContent) ?? pattern.sourceContent
+        guard let c = c, !c.isEmpty else { return nil }
         let isRavelry = !pattern.sourceUrl.isEmpty && pattern.sourceUrl.lowercased().contains("ravelry")
         if isRavelry, PatternStepParser.looksLikeRavelryChrome(c) { return nil }
         return c
@@ -206,7 +352,13 @@ struct PatternContentView: View {
                                     .font(.system(size: 5))
                                     .foregroundStyle(Theme.softCoral)
                                     .padding(.top, 7)
-                                Text(line)
+                                Text(
+                                    StitchAbbreviationLinkBuilder.linkedAttributedString(
+                                        from: line,
+                                        explicitCraftType: pattern.craftType,
+                                        contextText: content
+                                    )
+                                )
                                     .font(Theme.Typography.body)
                                     .foregroundStyle(Theme.deepPlum)
                             }
@@ -223,7 +375,13 @@ struct PatternContentView: View {
                         .padding(.horizontal)
 
                 case .paragraph:
-                    Text(section.text)
+                    Text(
+                        StitchAbbreviationLinkBuilder.linkedAttributedString(
+                            from: section.text,
+                            explicitCraftType: pattern.craftType,
+                            contextText: content
+                        )
+                    )
                         .font(Theme.Typography.body)
                         .foregroundStyle(Theme.deepPlum)
                         .textSelection(.enabled)
@@ -392,6 +550,7 @@ struct PatternContentView: View {
         VStack {
             Spacer()
             HStack(spacing: Theme.Spacing.sm) {
+                SpriteMascotView.idle(size: 40)
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Theme.sageGreen)
                 Text("Cleaned up \(savedRemovalCount) block\(savedRemovalCount == 1 ? "" : "s")")
@@ -414,19 +573,20 @@ struct PatternContentView: View {
     // MARK: - Empty State
 
     private var emptyContentView: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 40))
-                .foregroundStyle(Theme.deepPlum.opacity(0.3))
+        VStack(spacing: Theme.Spacing.xl) {
+            SpriteMascotView.idle(size: 100)
             Text("No extracted content available")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Theme.deepPlum)
+            Text("Try opening the original page in a browser and use Share to save it with content.")
                 .font(Theme.Typography.body)
-                .foregroundStyle(Theme.deepPlum.opacity(0.6))
-            Text("Try opening the original page in browser.")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.deepPlum.opacity(0.4))
+                .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
+        .padding(.vertical, Theme.Spacing.xxl)
+        .padding(.horizontal, Theme.Spacing.xl)
+        .borderedCard()
     }
 
     // MARK: - Edit Mode Actions
@@ -618,5 +778,385 @@ struct PatternContentView: View {
                     .filter { !$0.isEmpty }
             }
             .filter { !$0.isEmpty }
+    }
+}
+
+private struct ChartHighlighterSetupSheet: View {
+    let patternId: UUID
+    let image: PatternImage
+    let existing: ChartHighlight?
+    let secondaryCounters: [SecondaryCounter]
+    let onSave: (ChartHighlight) -> Void
+    let onDelete: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var minX: Double = 0.1
+    @State private var minY: Double = 0.1
+    @State private var maxX: Double = 0.9
+    @State private var maxY: Double = 0.9
+    @State private var rows: Int = 40
+    @State private var columns: Int = 40
+    @State private var chartType: ChartHighlight.ChartType = .workedFlat
+    @State private var isSideways = false
+    @State private var isC2C = false
+    @State private var rowLinkSelection = "global"
+    @State private var colLinkSelection = "global"
+    @State private var activeHandle: CornerHandle?
+    @State private var sourceImage: UIImage?
+    @State private var extractedChartData: Data?
+    @State private var editorZoom: Double = 1.0
+
+    private enum CornerHandle {
+        case topLeft
+        case topRight
+        case bottomLeft
+        case bottomRight
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Chart area") {
+                    Text("Drag corner handles directly on the image. Zoom and pan for precise placement.")
+                        .font(Theme.Typography.caption2)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    visualRegionEditor
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: "minus.magnifyingglass")
+                            .foregroundStyle(Color.primary.opacity(0.75))
+                        Slider(value: $editorZoom, in: 1...4, step: 0.1)
+                        Image(systemName: "plus.magnifyingglass")
+                            .foregroundStyle(Color.primary.opacity(0.75))
+                        Text("\(editorZoom, specifier: "%.1f")x")
+                            .font(Theme.Typography.caption2)
+                            .foregroundStyle(Color.primary.opacity(0.8))
+                            .frame(width: 42, alignment: .trailing)
+                    }
+                    slider("Left", value: $minX)
+                    slider("Top", value: $minY)
+                    slider("Right", value: $maxX)
+                    slider("Bottom", value: $maxY)
+                }
+
+                Section("Extract chart") {
+                    Button("Extract Chart From Selection") {
+                        extractChartFromSelection()
+                    }
+                    .disabled(sourceImage == nil)
+
+                    if let extractedChartData, let chartImage = UIImage(data: extractedChartData) {
+                        Image(uiImage: chartImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxHeight: 220)
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                    }
+                }
+
+                Section("Grid") {
+                    Stepper("Rows: \(rows)", value: $rows, in: 1...999)
+                    Stepper("Columns: \(columns)", value: $columns, in: 1...999)
+                    Picker("Chart type", selection: $chartType) {
+                        Text("Worked flat").tag(ChartHighlight.ChartType.workedFlat)
+                        Text("Worked in the round").tag(ChartHighlight.ChartType.workedInRound)
+                    }
+                    Toggle("Displayed sideways", isOn: $isSideways)
+                    Toggle("Corner to corner (C2C)", isOn: $isC2C)
+                }
+
+                Section("Counter links") {
+                    Picker("Row link", selection: $rowLinkSelection) {
+                        Text("Global counter").tag("global")
+                        ForEach(secondaryCounters) { counter in
+                            Text(counter.title).tag(counter.id.uuidString)
+                        }
+                    }
+                    Picker("Column link", selection: $colLinkSelection) {
+                        Text("Global counter").tag("global")
+                        ForEach(secondaryCounters) { counter in
+                            Text(counter.title).tag(counter.id.uuidString)
+                        }
+                    }
+                }
+
+                if existing != nil {
+                    Section {
+                        Button("Delete chart highlighter", role: .destructive) {
+                            onDelete()
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Chart Highlighter")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        let autoExtracted = extractChartDataFromSelection()
+                        let chart = ChartHighlight(
+                            id: existing?.id ?? UUID(),
+                            patternId: patternId,
+                            makeId: nil,
+                            imageId: image.id,
+                            minX: min(minX, maxX),
+                            minY: min(minY, maxY),
+                            maxX: max(minX, maxX),
+                            maxY: max(minY, maxY),
+                            rows: rows,
+                            columns: columns,
+                            chartType: chartType,
+                            isSideways: isSideways,
+                            isC2C: isC2C,
+                            rowCounterLink: resolveLink(rowLinkSelection),
+                            columnCounterLink: resolveLink(colLinkSelection),
+                            rowColorName: "honey",
+                            columnColorName: "softCoral",
+                            extractedChartPNGData: autoExtracted ?? extractedChartData ?? existing?.extractedChartPNGData,
+                            annotationDrawingData: existing?.annotationDrawingData,
+                            currentRow: existing?.currentRow ?? 1,
+                            currentColumn: existing?.currentColumn ?? 1,
+                            annotations: existing?.annotations ?? [],
+                            gridInsetLeft: existing?.gridInsetLeft ?? 0,
+                            gridInsetTop: existing?.gridInsetTop ?? 0,
+                            gridInsetRight: existing?.gridInsetRight ?? 0,
+                            gridInsetBottom: existing?.gridInsetBottom ?? 0
+                        )
+                        onSave(chart)
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                if sourceImage == nil {
+                    Task { await loadSourceImage() }
+                }
+                guard let existing else { return }
+                minX = existing.minX
+                minY = existing.minY
+                maxX = existing.maxX
+                maxY = existing.maxY
+                rows = existing.rows
+                columns = existing.columns
+                chartType = existing.chartType
+                isSideways = existing.isSideways
+                isC2C = existing.isC2C
+                rowLinkSelection = selection(from: existing.rowCounterLink)
+                colLinkSelection = selection(from: existing.columnCounterLink ?? .global)
+                extractedChartData = existing.extractedChartPNGData
+            }
+        }
+    }
+
+    private func slider(_ title: String, value: Binding<Double>) -> some View {
+        HStack {
+            Text(title)
+            Slider(value: value, in: 0...1)
+            Text("\(Int(value.wrappedValue * 100))%")
+                .font(Theme.Typography.caption2)
+                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                .frame(width: 44, alignment: .trailing)
+        }
+    }
+
+    private var visualRegionEditor: some View {
+        GeometryReader { geo in
+            let containerSize = geo.size
+            let zoom = CGFloat(editorZoom)
+            let canvasSize = CGSize(
+                width: max(1, containerSize.width * zoom),
+                height: max(1, containerSize.height * zoom)
+            )
+            let contentFrame = contentFrame(in: canvasSize)
+            ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                ZStack {
+                    if let sourceImage {
+                        Image(uiImage: sourceImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: canvasSize.width, height: canvasSize.height)
+                    } else {
+                        AsyncImage(url: URL(string: image.imageUrl)) { phase in
+                            switch phase {
+                            case .success(let img):
+                                img
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: canvasSize.width, height: canvasSize.height)
+                            case .failure:
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                    .fill(Theme.cardBackground)
+                                    .overlay {
+                                        Image(systemName: "photo")
+                                            .font(.title2)
+                                            .foregroundStyle(Theme.deepPlum.opacity(0.3))
+                                    }
+                            default:
+                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                    .fill(Theme.cardBackground)
+                                    .overlay { ProgressView() }
+                            }
+                        }
+                    }
+                    regionOverlay(in: canvasSize, contentFrame: contentFrame)
+                }
+                .frame(width: canvasSize.width, height: canvasSize.height)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+            .background(Theme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+        }
+        .frame(height: 280)
+    }
+
+    @ViewBuilder
+    private func regionOverlay(in size: CGSize, contentFrame: CGRect) -> some View {
+        let rect = CGRect(
+            x: contentFrame.minX + contentFrame.width * minX,
+            y: contentFrame.minY + contentFrame.height * minY,
+            width: contentFrame.width * max(0.001, maxX - minX),
+            height: contentFrame.height * max(0.001, maxY - minY)
+        )
+
+        ZStack {
+            Path { path in
+                path.addRect(CGRect(origin: .zero, size: size))
+                path.addRect(rect)
+            }
+            .fill(Color.black.opacity(0.18), style: FillStyle(eoFill: true))
+
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Theme.honey, lineWidth: 2)
+                .frame(width: rect.width, height: rect.height)
+                .position(x: rect.midX, y: rect.midY)
+
+            editorHandle(in: size, contentFrame: contentFrame, x: rect.minX, y: rect.minY, handle: .topLeft)
+            editorHandle(in: size, contentFrame: contentFrame, x: rect.maxX, y: rect.minY, handle: .topRight)
+            editorHandle(in: size, contentFrame: contentFrame, x: rect.minX, y: rect.maxY, handle: .bottomLeft)
+            editorHandle(in: size, contentFrame: contentFrame, x: rect.maxX, y: rect.maxY, handle: .bottomRight)
+        }
+    }
+
+    @ViewBuilder
+    private func editorHandle(in size: CGSize, contentFrame: CGRect, x: CGFloat, y: CGFloat, handle: CornerHandle) -> some View {
+        Circle()
+            .fill(Theme.softCoral)
+            .frame(width: 18, height: 18)
+            .overlay(Circle().stroke(Theme.Semantic.textPrimary, lineWidth: 2))
+            .position(x: x, y: y)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        activeHandle = handle
+                        updateHandle(handle, location: value.location, in: contentFrame)
+                    }
+                    .onEnded { _ in
+                        activeHandle = nil
+                    }
+            )
+    }
+
+    private func updateHandle(_ handle: CornerHandle, location: CGPoint, in contentFrame: CGRect) {
+        guard contentFrame.width > 0, contentFrame.height > 0 else { return }
+        let nx = min(max(Double((location.x - contentFrame.minX) / contentFrame.width), 0), 1)
+        let ny = min(max(Double((location.y - contentFrame.minY) / contentFrame.height), 0), 1)
+        let minGap = 0.03
+
+        switch handle {
+        case .topLeft:
+            minX = min(nx, maxX - minGap)
+            minY = min(ny, maxY - minGap)
+        case .topRight:
+            maxX = max(nx, minX + minGap)
+            minY = min(ny, maxY - minGap)
+        case .bottomLeft:
+            minX = min(nx, maxX - minGap)
+            maxY = max(ny, minY + minGap)
+        case .bottomRight:
+            maxX = max(nx, minX + minGap)
+            maxY = max(ny, minY + minGap)
+        }
+    }
+
+    private func resolveLink(_ selection: String) -> ChartHighlight.CounterLink {
+        if selection == "global" { return .global }
+        if let id = UUID(uuidString: selection) { return .secondary(id) }
+        return .global
+    }
+
+    private func selection(from link: ChartHighlight.CounterLink) -> String {
+        switch link {
+        case .global: return "global"
+        case .secondary(let id): return id.uuidString
+        }
+    }
+
+    private func loadSourceImage() async {
+        guard let url = URL(string: image.imageUrl) else { return }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) { return }
+            sourceImage = UIImage(data: data)
+        } catch {
+            return
+        }
+    }
+
+    private func extractChartFromSelection() {
+        extractedChartData = extractChartDataFromSelection()
+    }
+
+    private func extractChartDataFromSelection() -> Data? {
+        guard let sourceImage else { return nil }
+        guard let cropped = cropImage(
+            sourceImage,
+            minX: min(minX, maxX),
+            minY: min(minY, maxY),
+            maxX: max(minX, maxX),
+            maxY: max(minY, maxY)
+        ) else { return nil }
+        return cropped.pngData()
+    }
+
+    private func contentFrame(in containerSize: CGSize) -> CGRect {
+        guard containerSize.width > 0, containerSize.height > 0 else { return .zero }
+        guard let sourceImage else {
+            return CGRect(origin: .zero, size: containerSize)
+        }
+        return aspectFitRect(contentSize: sourceImage.size, in: containerSize)
+    }
+
+    private func aspectFitRect(contentSize: CGSize, in containerSize: CGSize) -> CGRect {
+        guard contentSize.width > 0, contentSize.height > 0,
+              containerSize.width > 0, containerSize.height > 0 else {
+            return CGRect(origin: .zero, size: containerSize)
+        }
+        let scale = min(containerSize.width / contentSize.width, containerSize.height / contentSize.height)
+        let width = contentSize.width * scale
+        let height = contentSize.height * scale
+        let origin = CGPoint(
+            x: (containerSize.width - width) / 2,
+            y: (containerSize.height - height) / 2
+        )
+        return CGRect(origin: origin, size: CGSize(width: width, height: height))
+    }
+
+    private func cropImage(_ image: UIImage, minX: Double, minY: Double, maxX: Double, maxY: Double) -> UIImage? {
+        guard let cg = image.cgImage else { return nil }
+        let width = CGFloat(cg.width)
+        let height = CGFloat(cg.height)
+        let rect = CGRect(
+            x: width * CGFloat(minX),
+            y: height * CGFloat(minY),
+            width: width * CGFloat(max(0.001, maxX - minX)),
+            height: height * CGFloat(max(0.001, maxY - minY))
+        ).integral
+
+        guard let cropped = cg.cropping(to: rect) else { return nil }
+        return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
     }
 }

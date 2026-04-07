@@ -10,5 +10,9 @@
 	<array>
 		<string>group.com.patternvault.app</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)group.com.patternvault.app</string>
+	</array>
 </dict>
 </plist>

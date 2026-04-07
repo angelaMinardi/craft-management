@@ -52,11 +52,11 @@ Patterns can be tagged for easy sorting. There are built-in tags for common cate
 
 You can search and filter by tags to quickly find what you're looking for. "Show me all my beginner crochet blanket patterns" becomes a one-tap filter.
 
-### Supplies and Inventory (Future)
+### Supplies and Inventory
 
-Pattern Vault will also help you track your craft supplies — your yarn stash, hooks, needles, notions. You can log what you have, how much of it, where you keep it, and which patterns you've used it for. When you're at the store trying to remember if you already own that colorway of Caron Simply Soft, you'll have the answer in your pocket.
+Pattern Vault includes craft supply tracking for your yarn stash plus needles and hooks. You can log what you have, how much, key details, and where it's stored, then use that information when deciding what to make next.
 
-You'll be able to link supplies to specific patterns so you can see exactly what materials a project needs and whether you already have them.
+The app also supports stash-and-tools-driven pattern discovery, so your inventory actively helps you find projects that match what you already own.
 
 ## Who This Is For
 
@@ -65,7 +65,7 @@ Pattern Vault is for **crafters who collect more patterns than they can make** �
 - **Knitters and crocheters** who save patterns from Ravelry, Etsy, and YouTube
 - **Craft content consumers** who screenshot TikTok tutorials and Pinterest pins
 - **Project planners** who want to track what they're making, with what yarn, and what modifications they've tried
-- **Yarn hoarders** who want to finally know what's in their stash (eventually)
+- **Yarn hoarders** who want to finally know what's in their stash
 
 It's not a social network. It's not trying to replace Ravelry or compete with Etsy. It's a personal tool — your private craft notebook that happens to be really good at collecting links.
 
@@ -85,15 +85,22 @@ The app should be fast, simple, and stay out of the way. Saving a pattern should
 
 Users create a personal account with their email. All data is private — only you can see your patterns, notes, and supplies. Your data syncs across devices so you can save a pattern on your phone and look it up on your tablet later. If you delete your account, everything goes with it.
 
-The app collects only what it needs to function: your email (for your account), the links you save, and the notes you write. Nothing is sold. Nothing is shared with advertisers. No tracking beyond basic app functionality.
+The app collects only what it needs to function: your email (for your account), the links you save, and the notes you write. Pattern Vault does not sell your personal data. Depending on your build and environment configuration, optional third-party services (such as AdMob and Firebase Analytics/Crashlytics) may process usage or diagnostics data. See the Privacy Policy for current details.
+
+## Shipped Features
+
+- **Share Extension** — Save from Safari or any app through the iOS share sheet, including URL/PDF workflows and AI-assisted extraction.
+- **Widgets** — Home screen and related widget surfaces for quick progress/context.
+- **Ravelry account connect and library import** — Connect your Ravelry account and import your library into Pattern Vault.
+- **AI-assisted step parsing** — Parse pattern steps on import and on demand inside the app.
+- **Supplies workflows** — Track yarn stash and tools, then use that data to find matching patterns.
+- **Freemium model** — Free tier with limits and premium unlock path.
 
 ## Future Possibilities
 
-- **Share Extension** — Save patterns directly from Safari, TikTok, YouTube, or any app using the iOS share sheet, without even opening Pattern Vault
 - **Pattern Collections** — Group patterns into themed collections ("Christmas Gifts 2026," "Baby Blankets," "Stash Busters")
-- **Link Previews** — Automatically pull in the pattern title, thumbnail image, and description from the original URL
-- **Offline Access** — View your saved patterns and notes even without an internet connection
-- **Widgets** — A home screen widget showing your current in-progress projects
-- **Import/Export** — Bring in Ravelry favorites or export your collection as a backup
-- **Premium Tier** — Unlimited patterns, advanced organization features, priority support (free tier works great for casual users)
+- **Richer link previews** — Improve extracted metadata and preview fidelity for edge-case sources
+- **Offline Access** — View and work with more saved pattern data without network connectivity
+- **Backup/export improvements** — Stronger user-managed backup and portability options
+- **Advanced premium organization features** — Additional power-user workflows based on validated demand
 

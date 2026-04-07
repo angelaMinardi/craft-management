@@ -19,13 +19,16 @@ final class PatternImageStore: ObservableObject {
         do {
             images = try await repo.fetchImages(patternId: patternId)
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[PatternImageStore] load failed: \(error)")
+            #endif
+            errorMessage = "Could not load images. Please try again."
         }
     }
 
     func addFromData(patternId: UUID, userId: UUID, imageData: Data, displayOrder: Int) async -> Bool {
         do {
-            let url = try await repo.uploadImage(imageData: imageData, patternId: patternId)
+            let url = try await repo.uploadImage(imageData: imageData, patternId: patternId, userId: userId)
             let image = try await repo.addImage(
                 patternId: patternId,
                 userId: userId,
@@ -36,17 +39,23 @@ final class PatternImageStore: ObservableObject {
             images.sort { $0.displayOrder < $1.displayOrder }
             return true
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[PatternImageStore] addFromData failed: \(error)")
+            #endif
+            errorMessage = "Could not upload image. Please try again."
             return false
         }
     }
 
-    func delete(imageId: UUID) async {
+    func delete(imageId: UUID, userId: UUID) async {
         do {
-            try await repo.deleteImage(id: imageId)
+            try await repo.deleteImage(id: imageId, userId: userId)
             images.removeAll { $0.id == imageId }
         } catch {
-            errorMessage = error.localizedDescription
+            #if DEBUG
+            print("[PatternImageStore] delete failed: \(error)")
+            #endif
+            errorMessage = "Could not delete image. Please try again."
         }
     }
 }

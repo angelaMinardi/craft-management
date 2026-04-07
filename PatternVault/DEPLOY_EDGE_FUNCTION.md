@@ -1,8 +1,11 @@
 # Deploy the extract-pattern-from-video Edge Function
 
+> **Status:** Legacy/optional path. Core in-app AI flow is Gemini-based. Keep this only if you still use the Supabase Edge Function YouTube transcript pipeline.
+> **Canonical guidance:** For normal development and production setup, follow `docs/SETUP.md` and `docs/ROADMAP.md`. Do not treat this file as the primary AI architecture document.
+
 This function lets the Pattern Vault share extension turn a **YouTube URL** into pattern metadata (title, summary, tags, materials, etc.) by fetching the video’s captions and running Claude on the transcript.
 
-> **Follow-up (on hold):** When Anthropic credits refresh, come back and verify the full flow: share a YouTube URL from the app and confirm the Edge Function returns pattern JSON and the share sheet saves the pattern. Until then, use the options in **“What you can do without the API”** below.
+> If this function is disabled, the app should continue to support non-function fallback behavior for shared URLs.
 
 ---
 
@@ -13,7 +16,7 @@ While the Edge Function is unavailable (e.g. Anthropic credits exhausted) or not
 - **Create and edit patterns manually** in the app — add title, summary, tags, materials, video URL, PDF, yarn links, etc. All CRUD and filters work.
 - **Share a YouTube link from the share extension** — when the Edge Function fails, the extension falls back to fetching the video **page** (not the transcript). You get the page title and description (and the video URL) pre-filled; you can edit and save. No transcript or AI extraction, but the link is saved.
 - **Share PDFs** — save PDF patterns and attach them to patterns as usual.
-- **Share other web links** — the extension fetches the page and, if an in-app Anthropic key is set, runs AI analysis; otherwise it uses the page title/description as a fallback.
+- **Share other web links** — the extension fetches the page and uses the main in-app Gemini flow (or fallback extraction behavior if unavailable).
 - **Use project notes, tags, and yarn & supplies** — everything that doesn’t depend on the Edge Function works as normal.
 
 ---
@@ -34,7 +37,7 @@ While the Edge Function is unavailable (e.g. Anthropic credits exhausted) or not
    From https://console.anthropic.com/ — used by the function to call Claude.
 
 4. **Your Supabase project**  
-   You need the **Project ID** (e.g. from SUPABASE_SETUP.md: `fbzbnztvanuiijzymckn`).
+   You need the **Project ID** (see setup guidance in `docs/SETUP.md`).
 
 ---
 

@@ -1,0 +1,5 @@
+asset_name,intent_state,target_surface,priority,source_file,export_files,dimensions,variant,text_safe_zone,owner,status,usage_notes
+mascot_expression_happy,first_win,app,P0,mascot_core_kit_v1.ai,mascot_expression_happy_v1.png,1024x1024,full_body,top_20_bottom_20,artist,draft,Used after first successful save/import
+onboarding_scene_a_bond,bond_moment,app+web,P1,onboarding_scenes_v1.ai,onboarding_scene_a_ios_v1.png|onboarding_scene_a_web_v1.png,ios:web variants,scene_crop,top_25_bottom_25,artist,draft,Used in onboarding step 1
+share_frame_completion,completion_share,app,P2,growth_web_pack_v1.ai,share_frame_completion_v1.png,1200x1200,frame,center_60_safe,artist,draft,Used in completion share card
+web_hero_primary,acquisition_hero,web,P2,web_hero_v1.ai,web_hero_primary_v1.png,desktop+mobile crops,hero,headline_safe_left,artist,draft,Homepage hero illustration

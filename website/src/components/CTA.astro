@@ -1,0 +1,93 @@
+---
+interface Props {
+  href?: string;
+  label: string;
+  primary?: boolean;
+  ariaLabel?: string;
+  target?: '_self' | '_blank';
+  rel?: string;
+  dataCta?: string;
+  dataClickEvent?: string;
+  dataDestination?: string;
+  dataMode?: string;
+  dataPageSection?: string;
+  dataFallbackUsed?: 'true' | 'false';
+}
+
+const {
+  href = '#',
+  label,
+  primary = true,
+  ariaLabel,
+  target = '_self',
+  rel,
+  dataCta,
+  dataClickEvent = 'cta_click',
+  dataDestination,
+  dataMode,
+  dataPageSection,
+  dataFallbackUsed,
+} = Astro.props;
+---
+
+<a
+  href={href}
+  class={`cta ${primary ? 'cta-primary' : 'cta-secondary'}`}
+  aria-label={ariaLabel}
+  target={target}
+  rel={rel}
+  data-cta={dataCta}
+  data-click-event={dataClickEvent}
+  data-destination={dataDestination}
+  data-mode={dataMode}
+  data-page-section={dataPageSection}
+  data-fallback-used={dataFallbackUsed}
+>
+  {label}
+</a>
+
+<style>
+  .cta {
+    display: inline-block;
+    padding: 0.875rem 1.75rem;
+    font-size: var(--text-body);
+    font-weight: 600;
+    letter-spacing: var(--letter-tight);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    transition: transform var(--duration-normal) var(--ease-out-quint), box-shadow var(--duration-normal), background-color var(--duration-normal), border-color var(--duration-normal), color var(--duration-normal);
+    text-decoration: none;
+  }
+
+  .cta:hover {
+    text-decoration: none;
+  }
+
+  .cta:active {
+    transform: scale(0.98);
+  }
+
+  .cta-primary {
+    background: linear-gradient(135deg, var(--sage-green), #96b88e);
+    color: var(--deep-plum);
+    box-shadow: var(--shadow-soft), 0 0 0 1px rgba(74, 32, 64, 0.06);
+  }
+
+  .cta-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow-sage), 0 4px 20px rgba(168, 197, 160, 0.35);
+    background: linear-gradient(135deg, #96b88e, var(--sage-green));
+  }
+
+  .cta-secondary {
+    background: transparent;
+    color: var(--deep-plum);
+    border: 2px solid rgba(74, 32, 64, 0.2);
+  }
+
+  .cta-secondary:hover {
+    border-color: var(--soft-coral);
+    color: var(--soft-coral);
+    transform: translateY(-2px);
+  }
+</style>

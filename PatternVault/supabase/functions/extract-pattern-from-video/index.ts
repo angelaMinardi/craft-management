@@ -1,10 +1,10 @@
 // Supabase Edge Function: extract-pattern-from-video
-// POST body: { url: string } (YouTube URL)
-// Fetches transcript via optional third-party API (ScrapeCreators or YouTubeTranscript.dev) or built-in fetcher,
-// then runs Claude to extract pattern metadata. Returns JSON for pattern save.
+// POST body: { url: string } (YouTube URL). Requires Authorization: Bearer <user JWT>.
+// Checks freemium YouTube import limit, then fetches transcript and runs Claude.
 // Requires: ANTHROPIC_API_KEY. Optional: SCRAPECREATORS_API_KEY or YOUTUBE_TRANSCRIPT_DEV_API_KEY for reliable transcripts.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const YOUTUBE_REGEX = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 
@@ -26,6 +26,7 @@ interface PatternPayload {
   yarn_weight_yardage: string | null;
   techniques: string | null;
   yarn_links: Array<{ brand_name: string; official_url: string | null; store_url: string | null }>;
+  steps?: Array<{ title: string; body: string }>;
 }
 
 type CaptionTrack = { baseUrl: string; kind?: string };
@@ -256,14 +257,16 @@ Analyze this video transcript and extract the following as JSON:
   "difficulty": "beginner/intermediate/advanced or null",
   "materials": "brief materials summary or null",
   "cleaned_content": "relevant pattern instructions or notes from the transcript, or null",
-  "video_url": "${videoUrl}",
+  "video_url": ${JSON.stringify(videoUrl)},
   "gauge": "or null",
   "needle_hook_sizes": "or null",
   "yarn_weight_yardage": "or null",
   "techniques": "comma-separated or null",
-  "yarn_links": [{"brand_name":"","official_url":null,"store_url":null}]
+  "yarn_links": [{"brand_name":"","official_url":null,"store_url":null}],
+  "steps": [{"title": "short step name (2-5 words)", "body": "instructions for this phase"}]
 }
 Max 6 tags. yarn_links: only real yarn brand names with URLs if known. Max 8.
+steps: 3-15 construction phases (e.g. "Materials & setup", "Body", "Finishing"). title: 2-5 words. body: full instructions for that phase. Omit steps if transcript has no real pattern structure.
 
 Transcript:
 ${transcript.slice(0, 15000)}
@@ -338,6 +341,34 @@ serve(async (req) => {
     });
   }
 
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Missing or invalid Authorization header" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return new Response(JSON.stringify({ error: "Server configuration error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: youtubeCount, error: rpcError } = await supabase.rpc("increment_youtube_imports_for_current_user");
+  if (rpcError || youtubeCount === -1) {
+    return new Response(
+      JSON.stringify({
+        error: "YouTube import limit reached this month. Upgrade to Premium for unlimited imports.",
+      }),
+      { status: 402, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   const transcript = await getYoutubeTranscript(videoId, url);
   if (!transcript || transcript.length < 50) {
     return new Response(
@@ -354,7 +385,12 @@ serve(async (req) => {
     );
   }
 
-  return new Response(JSON.stringify(result.payload), {
+  const payload = result.payload;
+  const responseBody = {
+    ...payload,
+    parsed_steps: JSON.stringify(payload.steps ?? []),
+  };
+  return new Response(JSON.stringify(responseBody), {
     status: 200,
     headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
   });

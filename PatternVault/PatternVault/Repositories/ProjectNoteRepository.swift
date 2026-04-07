@@ -28,9 +28,17 @@ final class ProjectNoteRepository: ObservableObject {
         let note_type: String
         let content: String
         let photo_url: String?
+        let duration_minutes: Int?
     }
 
-    func addNote(patternId: UUID, userId: UUID, noteType: ProjectNoteType, content: String, photoUrl: String?) async throws -> ProjectNote {
+    func addNote(
+        patternId: UUID,
+        userId: UUID,
+        noteType: ProjectNoteType,
+        content: String,
+        photoUrl: String?,
+        durationMinutes: Int?
+    ) async throws -> ProjectNote {
         let id = UUID()
         let payload = InsertPayload(
             id: id.uuidString,
@@ -38,7 +46,8 @@ final class ProjectNoteRepository: ObservableObject {
             user_id: userId.uuidString,
             note_type: noteType.rawValue,
             content: content,
-            photo_url: photoUrl
+            photo_url: photoUrl,
+            duration_minutes: durationMinutes
         )
         let response: ProjectNote = try await client
             .from("project_notes")
@@ -70,7 +79,7 @@ final class ProjectNoteRepository: ObservableObject {
         }
     }
 
-    func updateNote(id: UUID, content: String?, noteType: ProjectNoteType?, photoUrl: String?) async throws -> ProjectNote {
+    func updateNote(id: UUID, userId: UUID, content: String?, noteType: ProjectNoteType?, photoUrl: String?) async throws -> ProjectNote {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let payload = UpdatePayload(
@@ -83,6 +92,7 @@ final class ProjectNoteRepository: ObservableObject {
             .from("project_notes")
             .update(payload)
             .eq("id", value: id.uuidString)
+            .eq("user_id", value: userId.uuidString)
             .select()
             .single()
             .execute()
@@ -90,12 +100,25 @@ final class ProjectNoteRepository: ObservableObject {
         return response
     }
 
-    func deleteNote(id: UUID) async throws {
+    func deleteNote(id: UUID, userId: UUID) async throws {
         try await client
             .from("project_notes")
             .delete()
             .eq("id", value: id.uuidString)
+            .eq("user_id", value: userId.uuidString)
             .execute()
+    }
+
+    /// Returns the number of project notes that have a photo (for freemium limit).
+    func countNotesWithPhoto(userId: UUID) async throws -> Int {
+        struct Params: Encodable {
+            let p_user_id: String
+        }
+        let count: Int = try await client
+            .rpc("count_notes_with_photo", params: Params(p_user_id: userId.uuidString))
+            .execute()
+            .value
+        return count
     }
 
     func uploadPhoto(imageData: Data, noteId: UUID) async throws -> String {

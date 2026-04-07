@@ -1,0 +1,250 @@
+---
+import CTA from './CTA.astro';
+import { getCtaConfig } from '../config/cta';
+
+const ctaConfig = getCtaConfig(import.meta.env);
+const navLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/terms', label: 'Terms' },
+  { href: '/contact', label: 'Contact' },
+];
+---
+
+<header class="header" role="banner">
+  <a href="/" class="logo" aria-label="Pattern Vault home">
+    <img src="/images/app-icon.png" alt="" class="logo-icon" width="32" height="32" />
+    <span class="logo-text">Pattern Vault</span>
+  </a>
+  <button type="button" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="main-nav" id="nav-toggle-btn">
+    <span class="nav-toggle-bar"></span>
+    <span class="nav-toggle-bar"></span>
+    <span class="nav-toggle-bar"></span>
+  </button>
+  <nav id="main-nav" class="nav" aria-label="Main">
+    <ul class="nav-list">
+      {navLinks.map(({ href, label }) => (
+        <li>
+          <a href={href} class="nav-link">{label}</a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+  <div class="header-cta">
+    <CTA
+      href={ctaConfig.primary.href}
+      label={ctaConfig.mode === 'liveFirst' ? 'Download' : 'Join Waitlist'}
+      primary={true}
+      dataCta="cta_impression"
+      dataDestination={ctaConfig.primary.destination}
+      dataMode={ctaConfig.mode}
+      dataPageSection="header"
+      dataFallbackUsed="false"
+      ariaLabel={ctaConfig.mode === 'liveFirst' ? 'Download Pattern Vault on the App Store' : 'Join the Pattern Vault waitlist'}
+    />
+  </div>
+</header>
+
+<style>
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--header-height);
+    padding: 0 var(--space-xl);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(74, 32, 64, 0.06);
+    transition: box-shadow var(--duration-normal) var(--ease-out-quint);
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 -1px 0;
+    background: linear-gradient(180deg, rgba(74, 32, 64, 0.03) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: var(--text-subtitle);
+    letter-spacing: var(--letter-tight);
+    color: var(--deep-plum);
+    transition: color var(--duration-fast);
+  }
+
+  .logo:hover {
+    text-decoration: none;
+    color: var(--soft-coral);
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    object-fit: contain;
+  }
+
+  .logo-text {
+    display: inline-block;
+  }
+
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--deep-plum);
+    transition: color var(--duration-fast);
+  }
+
+  .nav-toggle:hover {
+    color: var(--soft-coral);
+  }
+
+  .nav-toggle-bar {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    border-radius: var(--radius-full);
+    transition: transform var(--duration-normal) var(--ease-out-quint), opacity var(--duration-fast);
+  }
+
+  .nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+
+  .nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(2) {
+    opacity: 0;
+  }
+
+  .nav-toggle[aria-expanded="true"] .nav-toggle-bar:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
+  .nav-list {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .nav-link {
+    font-size: var(--text-small);
+    font-weight: 500;
+    color: var(--deep-plum);
+    position: relative;
+    transition: color var(--duration-fast);
+  }
+
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 0;
+    height: 2px;
+    background: var(--soft-coral);
+    border-radius: var(--radius-full);
+    transition: width var(--duration-normal) var(--ease-out-quint);
+  }
+
+  .nav-link:hover {
+    color: var(--soft-coral);
+    text-decoration: none;
+  }
+
+  .nav-link:hover::after {
+    width: 100%;
+  }
+
+  .header-cta {
+    margin-left: var(--space-md);
+  }
+
+  .header-cta :global(.cta) {
+    font-size: 0.8125rem;
+    padding: 0.6rem 0.95rem;
+    border-radius: var(--radius-md);
+  }
+
+  @media (max-width: 640px) {
+    .nav-toggle {
+      display: flex;
+    }
+
+    .nav {
+      position: absolute;
+      top: var(--header-height);
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s var(--ease-out-quint);
+    }
+
+    .header-cta {
+      display: none;
+    }
+
+    .nav.is-open {
+      max-height: 16rem;
+    }
+
+    .nav-list {
+      flex-direction: column;
+      padding: var(--space-md) var(--space-xl);
+      gap: 0;
+    }
+
+    .nav-list li {
+      width: 100%;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-list li:last-child {
+      border-bottom: none;
+    }
+
+    .nav-link {
+      display: block;
+      padding: var(--space-md);
+    }
+
+    .nav-link::after {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  document.getElementById('nav-toggle-btn')?.addEventListener('click', () => {
+    const btn = document.getElementById('nav-toggle-btn');
+    const nav = document.getElementById('main-nav');
+    if (!btn || !nav) return;
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    btn.setAttribute('aria-label', expanded ? 'Open menu' : 'Close menu');
+    nav.classList.toggle('is-open');
+  });
+</script>

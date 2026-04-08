@@ -211,14 +211,14 @@ struct ChartGridDetector {
                 return nil
             }
 
-            // Convert from coordinates to insets, then expand outward slightly.
-            // The AI consistently returns boundaries slightly too tight (inside the grid),
-            // cutting off edge rows/columns. A small expansion compensates for this bias.
-            let expansion = 0.025 // 2.5% outward on each side
-            let leftInset = max(0, bbox.xMin - expansion)
-            let topInset = max(0, bbox.yMin - expansion)
-            let rightInset = max(0, 1.0 - bbox.xMax - expansion)
-            let bottomInset = max(0, 1.0 - bbox.yMax - expansion)
+            // Convert from coordinates to insets with asymmetric corrections.
+            // AI bias: left/top edges slightly too tight (expand outward),
+            // right edge too loose (includes row numbers — contract inward),
+            // bottom edge slightly too tight (expand outward).
+            let leftInset = max(0, bbox.xMin - 0.02)    // expand left outward
+            let topInset = max(0, bbox.yMin - 0.02)     // expand top outward
+            let rightInset = 1.0 - bbox.xMax + 0.03     // contract right inward (exclude row numbers)
+            let bottomInset = max(0, 1.0 - bbox.yMax - 0.02) // expand bottom outward
 
             #if DEBUG
             print("""

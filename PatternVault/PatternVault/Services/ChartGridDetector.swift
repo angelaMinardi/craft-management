@@ -101,7 +101,8 @@ struct ChartGridDetector {
             ]],
             "generationConfig": [
                 "responseMimeType": "application/json",
-                "maxOutputTokens": 1024
+                "maxOutputTokens": 2048,
+                "thinkingConfig": ["thinkingBudget": 0]
             ]
         ]
 

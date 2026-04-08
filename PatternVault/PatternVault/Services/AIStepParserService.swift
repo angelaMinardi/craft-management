@@ -506,7 +506,7 @@ enum AIStepParserService {
         let top = max(0, (gb.y - chartCrop.y) / chartCrop.h)
         let right = max(0, 1.0 - (gb.x + gb.w - chartCrop.x) / chartCrop.w)
         let bottom = max(0, 1.0 - (gb.y + gb.h - chartCrop.y) / chartCrop.h)
-        return (min(left, 0.45), min(top, 0.45), min(right, 0.45), min(bottom, 0.45))
+        return (min(left, 0.85), min(top, 0.85), min(right, 0.85), min(bottom, 0.85))
     }
 
     /// Validates that grid_boundary is (a) inside chart_crop and (b) meaningfully smaller.

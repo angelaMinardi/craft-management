@@ -185,10 +185,10 @@ struct GridAlignmentEditor: View {
                             let roughTop = Double(minY / displaySize.height)
                             let roughBottom = max(0, 1.0 - Double(maxY / displaySize.height))
                             // Apply raw lasso immediately for instant feedback
-                            highlight.gridInsetLeft = min(0.45, roughLeft)
-                            highlight.gridInsetRight = min(0.45, roughRight)
-                            highlight.gridInsetTop = min(0.45, roughTop)
-                            highlight.gridInsetBottom = min(0.45, roughBottom)
+                            highlight.gridInsetLeft = min(0.85, roughLeft)
+                            highlight.gridInsetRight = min(0.85, roughRight)
+                            highlight.gridInsetTop = min(0.85, roughTop)
+                            highlight.gridInsetBottom = min(0.85, roughBottom)
                             // Then refine with AI in the background
                             let img = chartUIImage
                             let rows = highlight.rows
@@ -205,10 +205,10 @@ struct GridAlignmentEditor: View {
                                     expectedCols: cols
                                 ) {
                                     await MainActor.run {
-                                        highlight.gridInsetLeft = min(0.45, refined.left)
-                                        highlight.gridInsetRight = min(0.45, refined.right)
-                                        highlight.gridInsetTop = min(0.45, refined.top)
-                                        highlight.gridInsetBottom = min(0.45, refined.bottom)
+                                        highlight.gridInsetLeft = min(0.85, refined.left)
+                                        highlight.gridInsetRight = min(0.85, refined.right)
+                                        highlight.gridInsetTop = min(0.85, refined.top)
+                                        highlight.gridInsetBottom = min(0.85, refined.bottom)
                                     }
                                 }
                             }
@@ -253,7 +253,7 @@ struct GridAlignmentEditor: View {
             )
             .gesture(DragGesture(minimumDistance: 1)
                 .onChanged { value in
-                    let newInset = max(0, min(0.45, Double(value.location.x / displaySize.width)))
+                    let newInset = max(0, min(0.85, Double(value.location.x / displaySize.width)))
                     if newInset + highlight.gridInsetRight < 0.9 {
                         highlight.gridInsetLeft = newInset
                     }
@@ -268,7 +268,7 @@ struct GridAlignmentEditor: View {
             )
             .gesture(DragGesture(minimumDistance: 1)
                 .onChanged { value in
-                    let newInset = max(0, min(0.45, 1.0 - Double(value.location.x / displaySize.width)))
+                    let newInset = max(0, min(0.85, 1.0 - Double(value.location.x / displaySize.width)))
                     if highlight.gridInsetLeft + newInset < 0.9 {
                         highlight.gridInsetRight = newInset
                     }
@@ -283,7 +283,7 @@ struct GridAlignmentEditor: View {
             )
             .gesture(DragGesture(minimumDistance: 1)
                 .onChanged { value in
-                    let newInset = max(0, min(0.45, Double(value.location.y / displaySize.height)))
+                    let newInset = max(0, min(0.85, Double(value.location.y / displaySize.height)))
                     if newInset + highlight.gridInsetBottom < 0.9 {
                         highlight.gridInsetTop = newInset
                     }
@@ -298,7 +298,7 @@ struct GridAlignmentEditor: View {
             )
             .gesture(DragGesture(minimumDistance: 1)
                 .onChanged { value in
-                    let newInset = max(0, min(0.45, 1.0 - Double(value.location.y / displaySize.height)))
+                    let newInset = max(0, min(0.85, 1.0 - Double(value.location.y / displaySize.height)))
                     if highlight.gridInsetTop + newInset < 0.9 {
                         highlight.gridInsetBottom = newInset
                     }
@@ -308,8 +308,8 @@ struct GridAlignmentEditor: View {
             cornerHandle(x: gridLeft, y: gridTop)
                 .gesture(DragGesture(minimumDistance: 1)
                     .onChanged { value in
-                        let newLeft = max(0, min(0.45, Double(value.location.x / displaySize.width)))
-                        let newTop = max(0, min(0.45, Double(value.location.y / displaySize.height)))
+                        let newLeft = max(0, min(0.85, Double(value.location.x / displaySize.width)))
+                        let newTop = max(0, min(0.85, Double(value.location.y / displaySize.height)))
                         if newLeft + highlight.gridInsetRight < 0.9 { highlight.gridInsetLeft = newLeft }
                         if newTop + highlight.gridInsetBottom < 0.9 { highlight.gridInsetTop = newTop }
                     })
@@ -317,8 +317,8 @@ struct GridAlignmentEditor: View {
             cornerHandle(x: gridRight, y: gridTop)
                 .gesture(DragGesture(minimumDistance: 1)
                     .onChanged { value in
-                        let newRight = max(0, min(0.45, 1.0 - Double(value.location.x / displaySize.width)))
-                        let newTop = max(0, min(0.45, Double(value.location.y / displaySize.height)))
+                        let newRight = max(0, min(0.85, 1.0 - Double(value.location.x / displaySize.width)))
+                        let newTop = max(0, min(0.85, Double(value.location.y / displaySize.height)))
                         if highlight.gridInsetLeft + newRight < 0.9 { highlight.gridInsetRight = newRight }
                         if newTop + highlight.gridInsetBottom < 0.9 { highlight.gridInsetTop = newTop }
                     })
@@ -326,8 +326,8 @@ struct GridAlignmentEditor: View {
             cornerHandle(x: gridLeft, y: gridBottom)
                 .gesture(DragGesture(minimumDistance: 1)
                     .onChanged { value in
-                        let newLeft = max(0, min(0.45, Double(value.location.x / displaySize.width)))
-                        let newBottom = max(0, min(0.45, 1.0 - Double(value.location.y / displaySize.height)))
+                        let newLeft = max(0, min(0.85, Double(value.location.x / displaySize.width)))
+                        let newBottom = max(0, min(0.85, 1.0 - Double(value.location.y / displaySize.height)))
                         if newLeft + highlight.gridInsetRight < 0.9 { highlight.gridInsetLeft = newLeft }
                         if highlight.gridInsetTop + newBottom < 0.9 { highlight.gridInsetBottom = newBottom }
                     })
@@ -335,8 +335,8 @@ struct GridAlignmentEditor: View {
             cornerHandle(x: gridRight, y: gridBottom)
                 .gesture(DragGesture(minimumDistance: 1)
                     .onChanged { value in
-                        let newRight = max(0, min(0.45, 1.0 - Double(value.location.x / displaySize.width)))
-                        let newBottom = max(0, min(0.45, 1.0 - Double(value.location.y / displaySize.height)))
+                        let newRight = max(0, min(0.85, 1.0 - Double(value.location.x / displaySize.width)))
+                        let newBottom = max(0, min(0.85, 1.0 - Double(value.location.y / displaySize.height)))
                         if highlight.gridInsetLeft + newRight < 0.9 { highlight.gridInsetRight = newRight }
                         if highlight.gridInsetTop + newBottom < 0.9 { highlight.gridInsetBottom = newBottom }
                     })
@@ -540,7 +540,7 @@ private struct PreciseGridFitSheet: View {
                     .font(Theme.Typography.caption2)
                     .foregroundStyle(Theme.deepPlum.opacity(0.65))
             }
-            Slider(value: value, in: 0...0.45, step: 0.005)
+            Slider(value: value, in: 0...0.85, step: 0.005)
         }
     }
 }

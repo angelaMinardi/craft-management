@@ -181,10 +181,10 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
         self.currentRow = currentRow
         self.currentColumn = currentColumn
         self.annotations = annotations
-        self.gridInsetLeft = min(max(gridInsetLeft, 0), 0.45)
-        self.gridInsetTop = min(max(gridInsetTop, 0), 0.45)
-        self.gridInsetRight = min(max(gridInsetRight, 0), 0.45)
-        self.gridInsetBottom = min(max(gridInsetBottom, 0), 0.45)
+        self.gridInsetLeft = min(max(gridInsetLeft, 0), 0.85)
+        self.gridInsetTop = min(max(gridInsetTop, 0), 0.85)
+        self.gridInsetRight = min(max(gridInsetRight, 0), 0.85)
+        self.gridInsetBottom = min(max(gridInsetBottom, 0), 0.85)
         self.chartLabel = chartLabel
         self.isAIExtracted = isAIExtracted
     }
@@ -242,10 +242,10 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
         self.currentRow = currentRow
         self.currentColumn = currentColumn
         self.annotations = annotations
-        self.gridInsetLeft = min(max(gridInsetLeft, 0), 0.45)
-        self.gridInsetTop = min(max(gridInsetTop, 0), 0.45)
-        self.gridInsetRight = min(max(gridInsetRight, 0), 0.45)
-        self.gridInsetBottom = min(max(gridInsetBottom, 0), 0.45)
+        self.gridInsetLeft = min(max(gridInsetLeft, 0), 0.85)
+        self.gridInsetTop = min(max(gridInsetTop, 0), 0.85)
+        self.gridInsetRight = min(max(gridInsetRight, 0), 0.85)
+        self.gridInsetBottom = min(max(gridInsetBottom, 0), 0.85)
         self.chartLabel = chartLabel
         self.isAIExtracted = isAIExtracted
     }

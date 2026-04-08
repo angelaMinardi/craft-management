@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import UIKit
 import UserNotifications
 
 @MainActor
@@ -46,7 +47,9 @@ final class PatternStore: ObservableObject {
     @Published var errorMessage: String?
 
     private let repo = PatternRepository()
-    private var chartExtractionInFlight: Set<UUID> = []
+    @Published private(set) var chartExtractionInFlight: Set<UUID> = []
+    /// Pattern IDs where automatic chart extraction failed (for UI feedback).
+    @Published private(set) var chartExtractionFailed: Set<UUID> = []
 
     var wantToMakeCount: Int { patterns.filter { $0.status == .wantToMake }.count }
     var inProgressCount: Int { patterns.filter { $0.status == .inProgress }.count }
@@ -170,15 +173,22 @@ final class PatternStore: ObservableObject {
             print("[ChartExtraction] Starting automatic chart detection for: \(pattern.title)")
             #endif
 
-            guard let pdfURL = URL(string: pdfUrlString) else { return }
+            guard let pdfURL = URL(string: pdfUrlString) else {
+                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                return
+            }
             guard let (pdfData, response) = try? await URLSession.shared.data(from: pdfURL),
                   let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
                 return
             }
 
             let pages = PDFPageRenderer.renderPages(from: pdfData, maxPages: 10, scale: 2.0, jpegQuality: 0.7)
             let images = pages.map(\.imageData)
-            guard !images.isEmpty else { return }
+            guard !images.isEmpty else {
+                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                return
+            }
 
             do {
                 let detected = try await AIStepParserService.detectCharts(
@@ -190,23 +200,87 @@ final class PatternStore: ObservableObject {
                 #endif
                 guard !detected.isEmpty else { return }
 
-                await MainActor.run {
-                    Self.createChartHighlights(
-                        from: detected,
-                        images: images,
-                        patternId: patternId
-                    )
-                }
+                await Self.createChartHighlights(
+                    from: detected,
+                    images: images,
+                    pdfData: pdfData,
+                    patternId: patternId
+                )
             } catch {
                 #if DEBUG
                 print("[ChartExtraction] Error: \(error.localizedDescription)")
                 #endif
+                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+            }
+        }
+    }
+
+    /// Standalone chart extraction: downloads PDF, detects charts via AI, creates ChartHighlight objects.
+    /// Does NOT require parsed instructions — works with any pattern that has a PDF URL.
+    func extractChartsFromPDF(patternId: UUID) {
+        guard let pattern = patterns.first(where: { $0.id == patternId }),
+              let pdfUrlString = pattern.pdfUrl, !pdfUrlString.isEmpty,
+              let pdfURL = URL(string: pdfUrlString) else { return }
+        guard AIStepParserService.isAIStepAnalysisAvailable else { return }
+        guard !chartExtractionInFlight.contains(patternId) else { return }
+        chartExtractionInFlight.insert(patternId)
+        chartExtractionFailed.remove(patternId)
+
+        let sectionNames: [String]
+        if let instructions = pattern.decodedParsedInstructions, !instructions.isEmpty {
+            sectionNames = Array(Set(instructions.map(\.section))).sorted()
+        } else {
+            sectionNames = []
+        }
+
+        Task.detached(priority: .utility) { [weak self] in
+            defer { Task { @MainActor in self?.chartExtractionInFlight.remove(patternId) } }
+            #if DEBUG
+            print("[ChartExtraction] Standalone chart detection for: \(pattern.title)")
+            #endif
+
+            guard let (pdfData, response) = try? await URLSession.shared.data(from: pdfURL),
+                  let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                return
+            }
+
+            let pages = PDFPageRenderer.renderPages(from: pdfData, maxPages: 10, scale: 2.0, jpegQuality: 0.7)
+            let images = pages.map(\.imageData)
+            guard !images.isEmpty else {
+                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                return
+            }
+
+            do {
+                let detected = try await AIStepParserService.detectCharts(
+                    sectionNames: sectionNames,
+                    images: images
+                )
+                #if DEBUG
+                print("[ChartExtraction] Standalone detected \(detected.count) chart(s)")
+                #endif
+                guard !detected.isEmpty else { return }
+
+                await Self.createChartHighlights(
+                    from: detected,
+                    images: images,
+                    pdfData: pdfData,
+                    patternId: patternId
+                )
+            } catch {
+                #if DEBUG
+                print("[ChartExtraction] Standalone error: \(error.localizedDescription)")
+                #endif
+                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
             }
         }
     }
 
     /// Creates ChartHighlight objects from AI-detected chart metadata and saves them to ChartHighlightStore.
-    /// Crops each full page image to `chart_crop` (the generous bounding box including labels/legend),
+    /// When `pdfData` is provided, re-renders chart pages at high quality (3x PNG) for crisp images.
+    /// Falls back to the AI-detection JPEG images when PDF re-rendering is unavailable.
+    /// Crops each page image to `chart_crop` (the generous bounding box including labels/legend),
     /// then derives per-side grid insets from `grid_boundary` so the overlay knows where the actual
     /// grid cells live within the image. Falls back to an asymmetric heuristic when `grid_boundary`
     /// is missing (labels are typically on the right for row numbers and bottom for column numbers).
@@ -214,15 +288,87 @@ final class PatternStore: ObservableObject {
     static func createChartHighlights(
         from detectedCharts: [AIStepParserService.DetectedChart],
         images: [Data],
+        pdfData: Data? = nil,
         patternId: UUID
-    ) {
+    ) async {
         let store = ChartHighlightStore.shared
         store.deleteAIExtracted(patternId: patternId)
+
+        // Position-aware heuristic for grid insets when AI grid_boundary is missing or invalid.
+        // Uses max(fixed minimum, proportional estimate) — fixed minimums prevent large charts
+        // from underestimating label space, while proportional estimates handle small charts
+        // where labels are proportionally larger relative to the grid.
+        func heuristicInsets(
+            rows: Int, cols: Int, chart: AIStepParserService.DetectedChart
+        ) -> (left: Double, top: Double, right: Double, bottom: Double) {
+            // Proportional estimates (scale with cell count — better for small charts)
+            let propH = min(0.18, max(0.04, 1.8 / Double(cols + 2)))
+            let propV = min(0.18, max(0.04, 1.8 / Double(rows + 2)))
+
+            // Fixed minimums (label space is physical, not proportional — better for large charts)
+            let minLabelH: Double = 0.05
+            let minLabelV: Double = 0.04
+            let minTitle: Double = 0.05
+
+            // Use the larger of fixed minimum or proportional estimate
+            let labelH = max(minLabelH, propH)
+            let labelV = max(minLabelV, propV * 0.6)
+            let titleV = max(minTitle, propV * 0.5)
+
+            let leftInset: Double
+            let rightInset: Double
+            switch chart.rowNumberPosition {
+            case "both":  leftInset = labelH * 0.5; rightInset = labelH * 0.5
+            case "left":  leftInset = labelH; rightInset = 0
+            case "right": leftInset = 0; rightInset = labelH
+            default:      leftInset = labelH * 0.3; rightInset = labelH * 0.3
+            }
+
+            let topInset: Double
+            let bottomInset: Double
+            switch chart.colNumberPosition {
+            case "both":  topInset = labelV + titleV; bottomInset = labelV
+            case "top":   topInset = labelV + titleV; bottomInset = 0
+            case "bottom": topInset = titleV; bottomInset = labelV
+            default:      topInset = titleV + labelV * 0.5; bottomInset = labelV * 0.5
+            }
+
+            var adjRight = rightInset
+            var adjBottom = bottomInset
+            if chart.hasLegend {
+                switch chart.legendPosition {
+                case "right":  adjRight = min(0.40, rightInset + 0.20)
+                case "bottom": adjBottom = min(0.40, bottomInset + 0.15)
+                default:       adjRight = min(0.40, rightInset + 0.15)
+                }
+            }
+
+            return (left: leftInset, top: topInset, right: adjRight, bottom: adjBottom)
+        }
+
+        // Cache high-quality page renders to avoid re-rendering the same page
+        var highQualityPages: [Int: Data] = [:]
 
         var created = 0
         for chart in detectedCharts {
             guard chart.chartImageIndex >= 0, chart.chartImageIndex < images.count else { continue }
-            let pageImageData = images[chart.chartImageIndex]
+
+            // Prefer high-quality PNG rendering from PDF, fall back to AI-detection JPEG
+            let pageImageData: Data
+            if let pdfData {
+                if let cached = highQualityPages[chart.chartImageIndex] {
+                    pageImageData = cached
+                } else if let hqData = PDFPageRenderer.renderPageHighQuality(
+                    from: pdfData, pageIndex: chart.chartImageIndex, scale: 3.0
+                ) {
+                    highQualityPages[chart.chartImageIndex] = hqData
+                    pageImageData = hqData
+                } else {
+                    pageImageData = images[chart.chartImageIndex]
+                }
+            } else {
+                pageImageData = images[chart.chartImageIndex]
+            }
 
             // Always crop to chart_crop (full chart region including labels).
             // Grid insets below tell the overlay where the actual grid cells are.
@@ -239,28 +385,62 @@ final class PatternStore: ObservableObject {
             let rows = max(1, chart.chartRows)
             let cols = max(1, chart.chartColumns)
 
-            // Derive per-side insets from the AI's grid_boundary (precise),
-            // or fall back to an asymmetric heuristic when grid_boundary is absent.
+            // Derive per-side insets using a priority chain:
+            // 1. Focused AI second-pass on the cropped chart image (most accurate)
+            // 2. First-pass AI grid_boundary (if valid — approximate but available)
+            // 3. Formula heuristic (last resort)
             let rawInsets: (left: Double, top: Double, right: Double, bottom: Double)
-            if chart.gridBoundary != nil {
-                let computed = AIStepParserService.computeGridInsets(
+            if let chartImage = UIImage(data: chartImageData),
+               let detected = await ChartGridDetector.detectGridBoundary(
+                   image: chartImage, expectedRows: rows, expectedCols: cols),
+               detected.confidence > 0.3 {
+                rawInsets = (detected.left, detected.top, detected.right, detected.bottom)
+                #if DEBUG
+                print("[ChartExtraction] \(chart.chartLabel): using AI second-pass detection (confidence: \(String(format:"%.2f",detected.confidence)))")
+                #endif
+            } else if let gb = chart.gridBoundary,
+                      AIStepParserService.isGridBoundaryValid(chartCrop: chart.chartCrop, gridBoundary: gb) {
+                rawInsets = AIStepParserService.computeGridInsets(
                     chartCrop: chart.chartCrop,
-                    gridBoundary: chart.gridBoundary
+                    gridBoundary: gb
                 )
-                rawInsets = computed
+                #if DEBUG
+                print("[ChartExtraction] \(chart.chartLabel): using first-pass AI grid_boundary (second-pass failed)")
+                #endif
             } else {
-                let hInset = min(0.18, max(0.04, 1.8 / Double(cols + 2)))
-                let vInset = min(0.18, max(0.04, 1.8 / Double(rows + 2)))
-                rawInsets = (left: 0, top: 0, right: hInset, bottom: vInset)
+                rawInsets = heuristicInsets(rows: rows, cols: cols, chart: chart)
+                #if DEBUG
+                print("[ChartExtraction] \(chart.chartLabel): using formula heuristic fallback")
+                #endif
             }
 
-            // Sanity check: if insets consume >70% of either axis, zero them out.
+            // Sanity check: if insets consume >90% of either axis, use heuristic instead.
             let insets: (left: Double, top: Double, right: Double, bottom: Double)
-            if rawInsets.left + rawInsets.right > 0.7 || rawInsets.top + rawInsets.bottom > 0.7 {
-                insets = (0, 0, 0, 0)
+            if rawInsets.left + rawInsets.right > 0.9 || rawInsets.top + rawInsets.bottom > 0.9 {
+                insets = heuristicInsets(rows: rows, cols: cols, chart: chart)
             } else {
                 insets = rawInsets
             }
+
+            #if DEBUG
+            let gbDesc: String
+            if let gb = chart.gridBoundary {
+                gbDesc = "(x:\(String(format:"%.3f",gb.x)), y:\(String(format:"%.3f",gb.y)), w:\(String(format:"%.3f",gb.w)), h:\(String(format:"%.3f",gb.h)))"
+            } else {
+                gbDesc = "nil"
+            }
+            let sanityClamped = (rawInsets.left != insets.left || rawInsets.top != insets.top
+                || rawInsets.right != insets.right || rawInsets.bottom != insets.bottom)
+            print("""
+            [ChartExtraction] "\(chart.chartLabel)":
+              chart_crop = (x:\(String(format:"%.3f",chart.chartCrop.x)), y:\(String(format:"%.3f",chart.chartCrop.y)), w:\(String(format:"%.3f",chart.chartCrop.w)), h:\(String(format:"%.3f",chart.chartCrop.h)))
+              grid_boundary = \(gbDesc)
+              rows=\(rows), cols=\(cols)
+              rawInsets = (L:\(String(format:"%.3f",rawInsets.left)), T:\(String(format:"%.3f",rawInsets.top)), R:\(String(format:"%.3f",rawInsets.right)), B:\(String(format:"%.3f",rawInsets.bottom)))
+              finalInsets = (L:\(String(format:"%.3f",insets.left)), T:\(String(format:"%.3f",insets.top)), R:\(String(format:"%.3f",insets.right)), B:\(String(format:"%.3f",insets.bottom)))
+              sanityClamped = \(sanityClamped)
+            """)
+            #endif
 
             let highlight = ChartHighlight(
                 patternId: patternId,

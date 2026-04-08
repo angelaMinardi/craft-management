@@ -66,4 +66,44 @@ enum PDFPageRenderer {
         )
         return page.thumbnail(of: targetSize, for: .mediaBox)
     }
+
+    /// Renders a single PDF page at high quality using Core Graphics for crisp chart images.
+    /// Uses CGBitmapContext for precise control over rendering, producing lossless PNG data.
+    /// - Parameters:
+    ///   - data: Raw PDF file data.
+    ///   - pageIndex: 0-based page index.
+    ///   - scale: Render scale (3.0-4.0 recommended for chart detail).
+    /// - Returns: PNG image data of the rendered page, or nil on failure.
+    static func renderPageHighQuality(from data: Data, pageIndex: Int, scale: CGFloat = 3.0) -> Data? {
+        guard let provider = CGDataProvider(data: data as CFData),
+              let pdfDoc = CGPDFDocument(provider),
+              let pdfPage = pdfDoc.page(at: pageIndex + 1) else { return nil } // CGPDFDocument is 1-indexed
+
+        let mediaBox = pdfPage.getBoxRect(.mediaBox)
+        let width = Int(mediaBox.width * scale)
+        let height = Int(mediaBox.height * scale)
+        guard width > 0, height > 0 else { return nil }
+
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: width * 4,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ) else { return nil }
+
+        // White background
+        context.setFillColor(UIColor.white.cgColor)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+
+        // Scale and draw the PDF page
+        context.scaleBy(x: scale, y: scale)
+        context.drawPDFPage(pdfPage)
+
+        guard let cgImage = context.makeImage() else { return nil }
+        return UIImage(cgImage: cgImage).pngData()
+    }
 }

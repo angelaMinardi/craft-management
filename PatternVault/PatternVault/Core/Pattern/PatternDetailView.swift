@@ -24,16 +24,15 @@ struct PatternDetailView: View {
     @State private var showTagPicker = false
     @State private var showWebView = false
     @State private var showPdfViewer = false
-    @State private var junkFeedbackMessage: String?
     @State private var makes: [PatternMake] = []
     @State private var selectedMakeId: UUID?
     @State private var showAddMakeSheet = false
     @State private var showPremiumPaywall = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let makeRepo = PatternMakeRepository()
     @ObservedObject private var progressStore = PatternProgressStore.shared
-    @ObservedObject private var junkStore = JunkPhraseStore.shared
 
     var current: Pattern {
         store.patterns.first(where: { $0.id == pattern.id }) ?? pattern
@@ -69,9 +68,7 @@ struct PatternDetailView: View {
                                 store: store,
                                 noteStore: noteStore,
                                 progressStore: progressStore,
-                                junkStore: junkStore,
-                                selectedMakeId: $selectedMakeId,
-                                junkFeedbackMessage: $junkFeedbackMessage
+                                selectedMakeId: $selectedMakeId
                             )
 
                             PatternChartsSectionView(pattern: current)
@@ -145,11 +142,6 @@ struct PatternDetailView: View {
         } message: {
             Text("This will also delete all notes. This cannot be undone.")
         }
-        .alert("Content cleanup", isPresented: Binding(get: { junkFeedbackMessage != nil }, set: { if !$0 { junkFeedbackMessage = nil } })) {
-            Button("OK") { junkFeedbackMessage = nil }
-        } message: {
-            if let msg = junkFeedbackMessage { Text(msg) }
-        }
         .sheet(isPresented: $showAddNote) {
             AddNoteView(noteStore: noteStore, patternId: current.id)
         }
@@ -184,7 +176,8 @@ struct PatternDetailView: View {
                     PDFViewerView(
                         url: pdfURL,
                         patternId: current.id,
-                        makeId: selectedMakeId
+                        makeId: selectedMakeId,
+                        onDetectCharts: { store.extractChartsFromPDF(patternId: current.id) }
                     )
                         .navigationTitle("Pattern PDF")
                         .navigationBarTitleDisplayMode(.inline)
@@ -292,7 +285,7 @@ struct PatternDetailView: View {
                 Spacer()
                 if let platform = current.sourcePlatform ?? domainFromURL(current.sourceUrl) {
                     Text(platform)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(Theme.Typography.caption2)
                         .foregroundStyle(Theme.Semantic.textPrimary)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
@@ -345,7 +338,7 @@ struct PatternDetailView: View {
         ZStack(alignment: .top) {
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                 Text(current.title)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.titleBold)
                     .foregroundStyle(Theme.deepPlum)
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
@@ -445,7 +438,7 @@ struct PatternDetailView: View {
                     .foregroundStyle(color)
             }
             Text(text)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(Theme.Typography.footnoteSemibold)
                 .foregroundStyle(Theme.deepPlum.opacity(0.8))
             Spacer()
         }
@@ -548,7 +541,7 @@ struct PatternDetailView: View {
     private var editTitleCard: some View {
         VStack(spacing: Theme.Spacing.md) {
             TextField("Title", text: $editTitle)
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .font(Theme.Typography.sectionTitle)
                 .foregroundStyle(Theme.deepPlum)
 
             TextField("Description", text: $editDescription, axis: .vertical)
@@ -590,7 +583,7 @@ struct PatternDetailView: View {
                     .foregroundStyle(Theme.honey)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Start project")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(Theme.Typography.callout)
                         .foregroundStyle(Theme.deepPlum)
                     Text("Track rows, keep momentum, and unlock your next celebration.")
                         .font(Theme.Typography.caption)
@@ -622,7 +615,7 @@ struct PatternDetailView: View {
                         Image(systemName: Theme.statusIcon(for: status))
                             .font(.system(size: 11, weight: .bold))
                         Text(status.displayName)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(Theme.Typography.captionSemibold)
                     }
                     .foregroundStyle(
                         current.status == status ? .white : Theme.statusColor(for: status)
@@ -655,7 +648,7 @@ struct PatternDetailView: View {
     private var makePickerSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             Text("Make")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(Theme.Typography.footnoteSemibold)
                 .foregroundStyle(Theme.deepPlum.opacity(0.6))
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Theme.Spacing.sm) {
@@ -663,7 +656,7 @@ struct PatternDetailView: View {
                         selectedMakeId = nil
                     } label: {
                         Text("Default")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(Theme.Typography.captionSemibold)
                             .foregroundStyle(selectedMakeId == nil ? .white : Theme.dustyBlue)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
@@ -676,7 +669,7 @@ struct PatternDetailView: View {
                             selectedMakeId = make.id
                         } label: {
                             Text(make.name)
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .font(Theme.Typography.captionSemibold)
                                 .foregroundStyle(selectedMakeId == make.id ? .white : Theme.deepPlum)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
@@ -696,7 +689,7 @@ struct PatternDetailView: View {
                             Image(systemName: SubscriptionStore.shared.isPremium ? "plus.circle.fill" : "lock.fill")
                                 .font(.system(size: 12))
                             Text("Add make")
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .font(Theme.Typography.captionSemibold)
                         }
                         .foregroundStyle(SubscriptionStore.shared.isPremium ? Theme.sageGreen : Theme.deepPlum.opacity(0.45))
                         .padding(.horizontal, 12)
@@ -741,7 +734,7 @@ struct PatternDetailView: View {
                         HStack(alignment: .top, spacing: Theme.Spacing.md) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(result.pattern.title)
-                                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    .font(Theme.Typography.cardTitle)
                                     .foregroundStyle(Theme.deepPlum)
                                     .lineLimit(2)
                                 if !result.reason.isEmpty {
@@ -1014,7 +1007,7 @@ struct PatternDetailView: View {
                 FlowLayout(spacing: 6) {
                     ForEach(tagStore.patternTags) { tag in
                         Text(tag.name)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(Theme.Typography.footnoteSemibold)
                             .foregroundStyle(Theme.deepPlum)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
@@ -1081,9 +1074,9 @@ struct PatternDetailView: View {
                 Image(systemName: "trash")
                     .font(.system(size: 13))
                 Text("Delete Pattern")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(Theme.Typography.footnoteSemibold)
             }
-            .foregroundStyle(.red.opacity(0.5))
+            .foregroundStyle(Theme.Semantic.error.opacity(0.5))
             .frame(maxWidth: .infinity)
             .padding(.vertical, Theme.Spacing.md)
         }
@@ -1122,7 +1115,7 @@ struct PatternDetailView: View {
             Image(systemName: icon)
                 .font(.system(size: 10, weight: .semibold))
             Text(text)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(Theme.Typography.caption)
         }
         .foregroundStyle(Theme.deepPlum.opacity(0.6))
         .padding(.horizontal, 10)
@@ -1201,7 +1194,7 @@ private struct PatternDetailToolbar: ViewModifier {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text(pattern.title)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .font(Theme.Typography.headline)
                         .foregroundStyle(Theme.deepPlum)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
@@ -1499,14 +1492,13 @@ private struct PatternChartsSectionView: View {
 
 private struct PatternStepSectionView: View {
     @EnvironmentObject var auth: AuthService
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let pattern: Pattern
     @ObservedObject var store: PatternStore
     @ObservedObject var noteStore: ProjectNoteStore
     @ObservedObject var progressStore: PatternProgressStore
     @ObservedObject private var rowCounterStore = RowCounterStore.shared
-    @ObservedObject var junkStore: JunkPhraseStore
     @Binding var selectedMakeId: UUID?
-    @Binding var junkFeedbackMessage: String?
 
     @State private var stepTabSelection: Int = 0
     @State private var parsedStepsCache: [PatternStep] = []
@@ -1678,7 +1670,7 @@ private struct PatternStepSectionView: View {
                             if steps.count > 1 {
                                 HStack(spacing: Theme.Spacing.xs) {
                                     Button {
-                                        withAnimation { stepTabSelection = max(0, index - 1) }
+                                        withAnimation(reduceMotion ? .none : .default) { stepTabSelection = max(0, index - 1) }
                                     } label: {
                                         Image(systemName: "chevron.left.circle.fill")
                                             .font(.system(size: 22))
@@ -1689,7 +1681,7 @@ private struct PatternStepSectionView: View {
                                     .accessibilityLabel("Previous step")
                                     .accessibilityHint("Step \(index) of \(steps.count)")
                                     Button {
-                                        withAnimation { stepTabSelection = min(steps.count - 1, index + 1) }
+                                        withAnimation(reduceMotion ? .none : .default) { stepTabSelection = min(steps.count - 1, index + 1) }
                                     } label: {
                                         Image(systemName: "chevron.right.circle.fill")
                                             .font(.system(size: 22))
@@ -1726,7 +1718,7 @@ private struct PatternStepSectionView: View {
 
                         HStack(spacing: Theme.Spacing.sm) {
                             Text("\(Int(stepProgressFraction * 100))%")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .font(Theme.Typography.captionSemibold)
                                 .foregroundStyle(Theme.softCoral)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -1739,26 +1731,19 @@ private struct PatternStepSectionView: View {
                     }
                     .padding(Theme.Spacing.lg)
                     .modifier(StepCardStyle(isCurrentStep: index == currentStepIndex))
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            markStepAsNotPartOfPattern(stepIndex: index, steps: steps)
-                        } label: {
-                            Label("Not part of pattern", systemImage: "eye.slash")
-                        }
-                    }
                     .highPriorityGesture(
                         DragGesture(minimumDistance: 20)
                             .onEnded { value in
                                 guard abs(value.translation.width) > abs(value.translation.height) else { return }
                                 if value.translation.width <= -60, index < steps.count - 1 {
                                     let next = index + 1
-                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                    withAnimation(reduceMotion ? .none : .spring(response: 0.25, dampingFraction: 0.9)) {
                                         stepTabSelection = next
                                     }
                                     progressStore.setCurrentStep(patternId: pattern.id, makeId: selectedMakeId, index: next, stepCount: steps.count)
                                 } else if value.translation.width >= 60, index > 0 {
                                     let prev = index - 1
-                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.9)) {
+                                    withAnimation(reduceMotion ? .none : .spring(response: 0.25, dampingFraction: 0.9)) {
                                         stepTabSelection = prev
                                     }
                                     progressStore.setCurrentStep(patternId: pattern.id, makeId: selectedMakeId, index: prev, stepCount: steps.count)
@@ -1768,7 +1753,7 @@ private struct PatternStepSectionView: View {
 
                     if index == currentStepIndex, index < steps.count - 1 {
                         Button {
-                            withAnimation { stepTabSelection = index + 1 }
+                            withAnimation(reduceMotion ? .none : .default) { stepTabSelection = index + 1 }
                         } label: {
                             HStack(spacing: Theme.Spacing.xs) {
                                 Image(systemName: "checkmark.circle.fill")
@@ -2042,9 +2027,10 @@ private struct PatternStepSectionView: View {
                         await store.updateSourceContent(pattern: pattern, userId: userId, newContent: contentToUse)
                     }
                     if !detectedCharts.isEmpty {
-                        PatternStore.createChartHighlights(
+                        await PatternStore.createChartHighlights(
                             from: detectedCharts,
                             images: analysisImages,
+                            pdfData: pdfData,
                             patternId: pattern.id
                         )
                     }
@@ -2066,17 +2052,6 @@ private struct PatternStepSectionView: View {
             }
             isAnalyzingSteps = false
         }
-    }
-
-    private func markStepAsNotPartOfPattern(stepIndex: Int, steps: [PatternStep]) {
-        guard stepIndex >= 0, stepIndex < steps.count else { return }
-        let body = steps[stepIndex].body
-        let firstLine = body.components(separatedBy: "\n").first?.trimmingCharacters(in: .whitespacesAndNewlines)
-            ?? String(body.prefix(80))
-        let added = junkStore.addPhrase(text: firstLine, patternId: pattern.id, fullText: body)
-        junkFeedbackMessage = added
-            ? "This phrase will be hidden in future pattern steps. You can manage removed phrases in Settings."
-            : "This looks like pattern instructions; it wasn't added. Remove only nav or ads."
     }
 
     private var updateProgressSheet: some View {
@@ -2218,7 +2193,7 @@ private struct FloatingToolPaletteView: View {
                 .foregroundStyle(Theme.dustyBlue)
             if !label.isEmpty {
                 Text(label)
-                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.caption2.weight(.semibold))
                     .foregroundStyle(Theme.deepPlum.opacity(0.7))
                     .lineLimit(1)
                     .truncationMode(.tail)

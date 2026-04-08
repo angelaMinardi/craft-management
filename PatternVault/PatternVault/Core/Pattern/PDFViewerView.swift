@@ -13,6 +13,7 @@ struct PDFViewerView: View {
     let url: URL
     let patternId: UUID
     let makeId: UUID?
+    var onDetectCharts: (() -> Void)?
 
     @State private var document: PDFDocument?
     @State private var errorMessage: String?
@@ -55,7 +56,7 @@ struct PDFViewerView: View {
                     HStack {
                         if !pageHighlights.isEmpty {
                             Text(pageHighlights.count == 1 ? "1 chart linked" : "\(pageHighlights.count) charts linked")
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .font(Theme.Typography.caption2.weight(.semibold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -65,6 +66,22 @@ struct PDFViewerView: View {
                                 .padding(.top, Theme.Spacing.md)
                         }
                         Spacer()
+                        if let onDetectCharts,
+                           chartStore.aiExtractedHighlights(patternId: patternId).isEmpty {
+                            Button {
+                                onDetectCharts()
+                            } label: {
+                                Label("Detect Charts", systemImage: "wand.and.stars")
+                                    .font(Theme.Typography.captionSemibold)
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Theme.sageGreen)
+                                    .clipShape(Capsule())
+                            }
+                            .padding(.trailing, Theme.Spacing.xs)
+                            .padding(.top, Theme.Spacing.md)
+                        }
                         Button {
                             showChartSetup = true
                         } label: {
@@ -112,7 +129,7 @@ struct PDFViewerView: View {
                                             }
 
                                             Text("#\(chartOrdinal(for: highlight))")
-                                                .font(.system(size: 10, weight: .bold, design: .rounded))
+                                                .font(Theme.Typography.caption2.weight(.semibold))
                                                 .foregroundStyle(.white)
                                                 .padding(.horizontal, 6)
                                                 .padding(.vertical, 3)
@@ -841,7 +858,7 @@ struct ExtractedChartWorkspaceView: View {
                 }
             }
             .sheet(isPresented: $showGridFitSheet) {
-                GridFitSheet(highlight: $workingHighlight)
+                GridAlignmentEditor(highlight: $workingHighlight)
             }
             .sheet(item: $editingAnnotation) { annotation in
                 AnnotationEditSheet(
@@ -1017,7 +1034,7 @@ struct ExtractedChartWorkspaceView: View {
                     }
                     .buttonStyle(.bordered)
 
-                    Button("Grid Fit") {
+                    Button("Align Grid") {
                         showGridFitSheet = true
                     }
                     .buttonStyle(.borderedProminent)
@@ -1349,12 +1366,12 @@ private struct ChartAnnotationOverlay: View {
             if isSelected, let title = annotation.title ?? annotation.note {
                 VStack(spacing: 2) {
                     Text(title)
-                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .font(Theme.Typography.caption2.weight(.semibold))
                         .foregroundStyle(Theme.deepPlum)
                         .lineLimit(1)
                     if let note = annotation.note, !note.isEmpty, note != title {
                         Text(note)
-                            .font(.system(size: 9, weight: .regular, design: .rounded))
+                            .font(Theme.Typography.caption2)
                             .foregroundStyle(Theme.deepPlum.opacity(0.8))
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
@@ -1407,7 +1424,7 @@ private struct ChartEdgeLabelsOverlay: View {
             ZStack(alignment: .topLeading) {
                 ForEach(sampledLabels(total: rows, cellSize: rowHeight, minSpacing: 13), id: \.self) { row in
                     Text("\(row)")
-                        .font(.system(size: 9, weight: .regular, design: .rounded))
+                        .font(Theme.Typography.caption2)
                         .foregroundStyle(Theme.deepPlum.opacity(0.62))
                         .frame(width: 24, alignment: .leading)
                         .position(
@@ -1418,7 +1435,7 @@ private struct ChartEdgeLabelsOverlay: View {
 
                 ForEach(sampledLabels(total: cols, cellSize: colWidth, minSpacing: 16), id: \.self) { col in
                     Text("\(col)")
-                        .font(.system(size: 9, weight: .regular, design: .rounded))
+                        .font(Theme.Typography.caption2)
                         .foregroundStyle(Theme.deepPlum.opacity(0.62))
                         .frame(width: 16, alignment: .center)
                         .position(
@@ -1428,7 +1445,7 @@ private struct ChartEdgeLabelsOverlay: View {
                 }
 
                 Text("\(activeRow)")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.caption2.weight(.bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)
@@ -1440,7 +1457,7 @@ private struct ChartEdgeLabelsOverlay: View {
                     )
 
                 Text("\(activeCol)")
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.caption2.weight(.bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 5)
                     .padding(.vertical, 2)

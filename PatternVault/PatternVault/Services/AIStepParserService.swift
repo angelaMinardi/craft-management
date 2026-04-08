@@ -126,6 +126,15 @@ enum AIStepParserService {
         return mappings.compactMap { mapping in
             guard mapping.chartImageIndex >= 0, mapping.chartImageIndex < images.count else { return nil }
             let crop = mapping.chartCrop ?? ChartImageProcessor.ChartCropRect(x: 0, y: 0, w: 1, h: 1)
+            if let cc = mapping.chartCrop {
+                let gbStr: String
+                if let gb = mapping.gridBoundary {
+                    gbStr = "(x:\(String(format:"%.3f",gb.x)), y:\(String(format:"%.3f",gb.y)), w:\(String(format:"%.3f",gb.w)), h:\(String(format:"%.3f",gb.h)))"
+                } else {
+                    gbStr = "nil"
+                }
+                debugLog("[ChartDetect] \(mapping.chartLabel): crop=(x:\(String(format:"%.3f",cc.x)), y:\(String(format:"%.3f",cc.y)), w:\(String(format:"%.3f",cc.w)), h:\(String(format:"%.3f",cc.h))), grid_boundary=\(gbStr)")
+            }
             return DetectedChart(
                 chartImageIndex: mapping.chartImageIndex,
                 chartLabel: mapping.chartLabel,
@@ -133,7 +142,12 @@ enum AIStepParserService {
                 gridBoundary: mapping.gridBoundary,
                 chartRows: mapping.chartRows ?? 1,
                 chartColumns: mapping.chartColumns ?? 1,
-                matchingSection: mapping.matchingSection
+                matchingSection: mapping.matchingSection,
+                rowNumberPosition: mapping.rowNumberPosition,
+                colNumberPosition: mapping.colNumberPosition,
+                hasLegend: mapping.hasLegend ?? false,
+                legendPosition: mapping.legendPosition,
+                sizeVariants: mapping.sizeVariants
             )
         }
     }
@@ -155,7 +169,12 @@ enum AIStepParserService {
                 gridBoundary: raw.gridBoundary,
                 chartRows: raw.chartRows ?? 1,
                 chartColumns: raw.chartColumns ?? 1,
-                matchingSection: raw.section
+                matchingSection: raw.section,
+                rowNumberPosition: raw.rowNumberPosition,
+                colNumberPosition: raw.colNumberPosition,
+                hasLegend: raw.hasLegend ?? false,
+                legendPosition: raw.legendPosition,
+                sizeVariants: nil
             ))
         }
         return results
@@ -250,7 +269,11 @@ enum AIStepParserService {
             - "chart_crop": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0} — normalized bounding box (0.0 to 1.0) of the ENTIRE chart region (including row/column numbers and legend). Be generous with margins.
             - "chart_rows": number of grid rows (count actual grid cells, not row labels)
             - "chart_columns": number of grid columns (count actual grid cells, not column labels)
-            - "grid_boundary": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0} — normalized bounding box of ONLY the grid cells, excluding row/column numbers and legend/key. Must be inside chart_crop.
+            - "grid_boundary": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0} — normalized bounding box of ONLY the grid cells, excluding row/column numbers and legend/key. Must be STRICTLY INSIDE chart_crop and meaningfully smaller. COMMON MISTAKE: if grid_boundary is nearly identical to chart_crop, you have NOT excluded the numbers/legend — grid_boundary.w should be noticeably smaller when a legend or row numbers are present.
+            - "row_number_position": where row numbers appear — "left", "right", "both", or "none"
+            - "col_number_position": where column numbers appear — "top", "bottom", "both", or "none"
+            - "has_legend": true if the chart has a Key/Legend area
+            - "legend_position": "right", "bottom", "left", "top", or null
             If an instruction does not reference a chart, omit all chart fields entirely.
             Do NOT reference the same chart image for instructions that don't actually use that chart.
             """
@@ -336,6 +359,29 @@ enum AIStepParserService {
         let chartRows: Int
         let chartColumns: Int
         let matchingSection: String
+        let rowNumberPosition: String?
+        let colNumberPosition: String?
+        let hasLegend: Bool
+        let legendPosition: String?
+        let sizeVariants: [SizeVariant]?
+    }
+
+    struct SizeVariant: Codable, Sendable {
+        let sizeLabel: String
+        let borderColor: String
+        let startRow: Int
+        let endRow: Int
+        let startCol: Int
+        let endCol: Int
+
+        enum CodingKeys: String, CodingKey {
+            case sizeLabel = "size_label"
+            case borderColor = "border_color"
+            case startRow = "start_row"
+            case endRow = "end_row"
+            case startCol = "start_col"
+            case endCol = "end_col"
+        }
     }
 
     private struct ChartMapping: Codable {
@@ -346,6 +392,11 @@ enum AIStepParserService {
         let chartRows: Int?
         let chartColumns: Int?
         let matchingSection: String
+        let rowNumberPosition: String?
+        let colNumberPosition: String?
+        let hasLegend: Bool?
+        let legendPosition: String?
+        let sizeVariants: [SizeVariant]?
 
         enum CodingKeys: String, CodingKey {
             case chartImageIndex = "chart_image_index"
@@ -355,11 +406,18 @@ enum AIStepParserService {
             case chartRows = "chart_rows"
             case chartColumns = "chart_columns"
             case matchingSection = "matching_section"
+            case rowNumberPosition = "row_number_position"
+            case colNumberPosition = "col_number_position"
+            case hasLegend = "has_legend"
+            case legendPosition = "legend_position"
+            case sizeVariants = "size_variants"
         }
     }
 
     private static func buildChartDetectionPrompt(sectionNames: [String], imageCount: Int) -> String {
-        let sectionList = sectionNames.map { "- \($0)" }.joined(separator: "\n")
+        let sectionList = sectionNames.isEmpty
+            ? "(No named sections available — infer a descriptive label from chart content)"
+            : sectionNames.map { "- \($0)" }.joined(separator: "\n")
         return """
         You are analyzing page images from a craft pattern PDF. I am providing \(imageCount) page images \
         (numbered 0 to \(imageCount - 1), representing consecutive pages of the document).
@@ -375,16 +433,23 @@ enum AIStepParserService {
 
         For each chart found, return a JSON object with chart location, grid dimensions, and grid boundary.
 
+        PRECISION IS CRITICAL: Report ALL coordinate values to 3 decimal places (e.g. 0.123, not 0.1).
+
         Return a JSON array:
         [
           {
             "chart_image_index": 5,
             "chart_label": "Skull Sampler Toe Chart",
-            "chart_crop": {"x": 0.05, "y": 0.02, "w": 0.90, "h": 0.45},
+            "chart_crop": {"x": 0.050, "y": 0.020, "w": 0.900, "h": 0.450},
             "chart_rows": 11,
             "chart_columns": 8,
-            "grid_boundary": {"x": 0.15, "y": 0.08, "w": 0.60, "h": 0.38},
-            "matching_section": "Skull Sampler Toe Colourwork Section"
+            "grid_boundary": {"x": 0.150, "y": 0.080, "w": 0.600, "h": 0.380},
+            "matching_section": "Skull Sampler Toe Colourwork Section",
+            "row_number_position": "right",
+            "col_number_position": "bottom",
+            "has_legend": true,
+            "legend_position": "right",
+            "size_variants": null
           }
         ]
 
@@ -398,16 +463,32 @@ enum AIStepParserService {
         - "chart_rows": number of grid rows in the chart (count the actual grid cells, not the row labels)
         - "chart_columns": number of grid columns in the chart (count the actual grid cells, not column labels)
         - "grid_boundary": normalized bounding box (0.0–1.0) of ONLY the grid cells within the page image. \
+        Align to the OUTER EDGES of the outermost grid cells — if the grid has visible border lines, align to \
+        the outside of those border lines. \
         This MUST EXCLUDE: (1) row numbers printed on the left or right side, (2) column numbers printed on \
         the top or bottom, (3) the entire Key/Legend area (e.g. "Key", color swatches, stitch symbol definitions), \
         (4) chart title text, (5) any notes or labels outside the grid. \
         The grid_boundary MUST be STRICTLY INSIDE the chart_crop — it should tightly wrap ONLY the rectangular \
         grid of stitch cells. If the chart has a Key/Legend on the right side, grid_boundary.w must be small \
         enough that the right edge stops before the Key area begins. This is critical for overlaying an \
-        interactive grid precisely on the stitch cells.
+        interactive grid precisely on the stitch cells. \
+        COMMON MISTAKE: grid_boundary MUST be meaningfully SMALLER than chart_crop. If your \
+        grid_boundary has nearly the same x, y, w, h as chart_crop, you have NOT properly \
+        excluded the row numbers, column numbers, title, or legend. \
+        Example: if chart_crop = {"x": 0.05, "y": 0.05, "w": 0.90, "h": 0.90} and the chart \
+        has row numbers on the right (~5% width) and a Key/Legend (~25% width), \
+        then grid_boundary.w should be roughly 0.60, NOT 0.90.
         - "matching_section": the section name from the list below that references or uses this chart. \
         Pick the BEST match. If a chart is referenced by name in the instructions (e.g., "work the Toe Chart"), \
-        match it to the section that references it.
+        match it to the section that references it. If no sections are provided, use a descriptive label.
+        - "row_number_position": where row numbers appear — "left", "right", "both", or "none"
+        - "col_number_position": where column numbers appear — "top", "bottom", "both", or "none"
+        - "has_legend": true if the chart has a Key/Legend area showing color/symbol definitions
+        - "legend_position": position of the Key/Legend — "right", "bottom", "left", "top", or null if none
+        - "size_variants": For charts with colored borders or outlines indicating different garment sizes \
+        (e.g. Small in red, Medium in green, Large in blue), return an array of objects: \
+        [{"size_label": "Small", "border_color": "red", "start_row": 1, "end_row": 30, "start_col": 4, "end_col": 32}]. \
+        Row/column numbers are 1-based. Return null if no size variants exist.
 
         If NO charts are found in ANY image, return an empty array: []
 
@@ -426,6 +507,23 @@ enum AIStepParserService {
         let right = max(0, 1.0 - (gb.x + gb.w - chartCrop.x) / chartCrop.w)
         let bottom = max(0, 1.0 - (gb.y + gb.h - chartCrop.y) / chartCrop.h)
         return (min(left, 0.45), min(top, 0.45), min(right, 0.45), min(bottom, 0.45))
+    }
+
+    /// Validates that grid_boundary is (a) inside chart_crop and (b) meaningfully smaller.
+    static func isGridBoundaryValid(
+        chartCrop: ChartImageProcessor.ChartCropRect,
+        gridBoundary: ChartImageProcessor.ChartCropRect
+    ) -> Bool {
+        let contained = gridBoundary.x >= chartCrop.x - 0.01
+            && gridBoundary.y >= chartCrop.y - 0.01
+            && (gridBoundary.x + gridBoundary.w) <= (chartCrop.x + chartCrop.w) + 0.01
+            && (gridBoundary.y + gridBoundary.h) <= (chartCrop.y + chartCrop.h) + 0.01
+        let meaningfullySmaller = (gridBoundary.w / max(chartCrop.w, 0.001)) < 0.98
+            || (gridBoundary.h / max(chartCrop.h, 0.001)) < 0.98
+        if !contained || !meaningfullySmaller {
+            debugLog("[ChartDetect] grid_boundary invalid: contained=\(contained), meaningfullySmaller=\(meaningfullySmaller)")
+        }
+        return contained && meaningfullySmaller
     }
 
     // MARK: - Helpers

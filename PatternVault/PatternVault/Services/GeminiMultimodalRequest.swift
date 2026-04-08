@@ -60,17 +60,29 @@ enum GeminiMultimodalRequest {
         ]
     }
 
-    /// Prepares image inputs from raw JPEG data arrays, labeling each by index.
+    /// Prepares image inputs from raw image data arrays, labeling each by index.
+    /// Automatically detects PNG vs JPEG from magic bytes.
     static func imageInputs(from imageDataArray: [Data], prefix: String = "image") -> [ImageInput] {
         imageDataArray.enumerated().map { index, data in
-            ImageInput(data: data, mimeType: "image/jpeg", label: "\(prefix)_\(index)")
+            ImageInput(data: data, mimeType: detectMimeType(data), label: "\(prefix)_\(index)")
         }
     }
 
     /// Prepares image inputs from PDFPageRenderer output.
     static func imageInputs(from renderedPages: [PDFPageRenderer.RenderedPage]) -> [ImageInput] {
         renderedPages.map { page in
-            ImageInput(data: page.imageData, mimeType: "image/jpeg", label: "page_\(page.pageIndex)")
+            ImageInput(data: page.imageData, mimeType: detectMimeType(page.imageData), label: "page_\(page.pageIndex)")
         }
+    }
+
+    /// Detects image MIME type from magic bytes. Defaults to JPEG.
+    private static func detectMimeType(_ data: Data) -> String {
+        guard data.count >= 4 else { return "image/jpeg" }
+        let header = [UInt8](data.prefix(4))
+        // PNG magic: 0x89 0x50 0x4E 0x47
+        if header[0] == 0x89, header[1] == 0x50, header[2] == 0x4E, header[3] == 0x47 {
+            return "image/png"
+        }
+        return "image/jpeg"
     }
 }

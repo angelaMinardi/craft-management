@@ -25,6 +25,10 @@ enum ChartImageProcessor {
         let chartRows: Int?
         let chartColumns: Int?
         let gridBoundary: ChartCropRect?
+        let rowNumberPosition: String?
+        let colNumberPosition: String?
+        let hasLegend: Bool?
+        let legendPosition: String?
 
         enum CodingKeys: String, CodingKey {
             case section
@@ -39,6 +43,10 @@ enum ChartImageProcessor {
             case chartRows = "chart_rows"
             case chartColumns = "chart_columns"
             case gridBoundary = "grid_boundary"
+            case rowNumberPosition = "row_number_position"
+            case colNumberPosition = "col_number_position"
+            case hasLegend = "has_legend"
+            case legendPosition = "legend_position"
         }
     }
 
@@ -113,6 +121,6 @@ enum ChartImageProcessor {
         let cropRect = CGRect(x: x, y: y, width: max(1, w), height: max(1, h))
         guard let cropped = cgImage.cropping(to: cropRect) else { return nil }
 
-        return UIImage(cgImage: cropped).jpegData(compressionQuality: 0.85)
+        return UIImage(cgImage: cropped).pngData()
     }
 }

@@ -449,7 +449,7 @@ struct ChartGridDetector {
         // density — light grid rows maintain ~70-80% of recent values, but the
         // transition to number labels is a sharp ~30% drop at any absolute level.
         let sr = max(2, abs(limit - center) / 20)
-        let windowSize = 5  // small window reacts fast to grid→label transitions
+        let windowSize = max(5, abs(limit - center) / 8)
 
         // Scan outward from center
         var lastAbove = center

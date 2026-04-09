@@ -444,16 +444,16 @@ struct ChartGridDetector {
         let sHi = min(count - 1, center + sampleRadius)
         let gridDensity = profile[sLo...sHi].reduce(0, +) / Double(sHi - sLo + 1)
 
-        // Use relative drop detection: track a running average and trigger when
-        // density drops below 50% of the running average. This adapts to local
-        // density — light grid rows maintain ~70-80% of recent values, but the
-        // transition to number labels is a sharp ~30% drop at any absolute level.
+        // The edge is where density drops below 40% of the grid's average density.
+        // This threshold is generous enough to handle rows with mixed light/dark cells
+        // but catches the transition to text labels and whitespace.
+        let dropThreshold = gridDensity * 0.40
+
+        // Smooth the profile for stable edge detection
         let sr = max(2, abs(limit - center) / 20)
-        let windowSize = 5  // small window reacts fast to grid→label transitions
 
         // Scan outward from center
         var lastAbove = center
-        var recentValues: [Double] = []
         let range: [Int] = direction > 0
             ? Array(center...min(count - 1, limit))
             : Array(stride(from: center, through: max(0, limit), by: -1))
@@ -463,18 +463,12 @@ struct ChartGridDetector {
             let hi = min(count - 1, i + sr)
             let smoothed = profile[lo...hi].reduce(0, +) / Double(hi - lo + 1)
 
-            recentValues.append(smoothed)
-            if recentValues.count > windowSize { recentValues.removeFirst() }
-
-            // Need enough samples to establish a baseline
-            if recentValues.count >= 3 {
-                let runningAvg = recentValues.dropLast().reduce(0, +) / Double(recentValues.count - 1)
-                if runningAvg > 0.01 && smoothed < runningAvg * 0.50 {
-                    // Density dropped by >50% relative to recent running average
-                    break
-                }
+            if smoothed >= dropThreshold {
+                lastAbove = i
+            } else {
+                // Density dropped — the grid ended at lastAbove
+                break
             }
-            lastAbove = i
         }
 
         return lastAbove

@@ -454,31 +454,41 @@ struct ChartGridDetector {
         let yLo = max(0, Int((aiBBox.yMin - margin) * Double(height)))
         let yHi = min(height, Int((aiBBox.yMax + margin) * Double(height)))
 
-        // Horizontal projection: sum intensity across columns within the x-range of the grid
+        // For projections, use the INNER 60% of the AI bbox on the cross-axis.
+        // This excludes row numbers (contaminate hProj) and column numbers (contaminate vProj).
         let aiXLo = max(0, Int(aiBBox.xMin * Double(width)))
         let aiXHi = min(width, Int(aiBBox.xMax * Double(width)))
+        let aiYLo = max(0, Int(aiBBox.yMin * Double(height)))
+        let aiYHi = min(height, Int(aiBBox.yMax * Double(height)))
+
+        let xSpan = aiXHi - aiXLo
+        let ySpan = aiYHi - aiYLo
+        let hProjXLo = aiXLo + xSpan / 5    // inner 60% of x-range
+        let hProjXHi = aiXHi - xSpan / 5
+        let vProjYLo = aiYLo + ySpan / 5    // inner 60% of y-range
+        let vProjYHi = aiYHi - ySpan / 5
+
+        // Horizontal projection: sum across inner columns only (exclude row numbers at edges)
         for y in yLo..<yHi {
             var sum = 0.0
             let rowOff = y * bytesPerRow
-            for x in aiXLo..<aiXHi {
+            for x in hProjXLo..<hProjXHi {
                 let off = rowOff + x * bpp
                 let lum = 0.299 * Double(pixels[off]) + 0.587 * Double(pixels[off+1]) + 0.114 * Double(pixels[off+2])
                 sum += 1.0 - lum / 255.0
             }
-            hProj[y] = sum / max(1, Double(aiXHi - aiXLo))
+            hProj[y] = sum / max(1, Double(hProjXHi - hProjXLo))
         }
 
-        // Vertical projection: sum intensity across rows within the y-range of the grid
-        let aiYLo = max(0, Int(aiBBox.yMin * Double(height)))
-        let aiYHi = min(height, Int(aiBBox.yMax * Double(height)))
+        // Vertical projection: sum across inner rows only (exclude column number rows)
         for x in xLo..<xHi {
             var sum = 0.0
-            for y in aiYLo..<aiYHi {
+            for y in vProjYLo..<vProjYHi {
                 let off = y * bytesPerRow + x * bpp
                 let lum = 0.299 * Double(pixels[off]) + 0.587 * Double(pixels[off+1]) + 0.114 * Double(pixels[off+2])
                 sum += 1.0 - lum / 255.0
             }
-            vProj[x] = sum / max(1, Double(aiYHi - aiYLo))
+            vProj[x] = sum / max(1, Double(vProjYHi - vProjYLo))
         }
 
         // Refine each edge by scanning from the grid CENTER outward.

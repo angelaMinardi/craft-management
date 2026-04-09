@@ -211,14 +211,13 @@ struct ChartGridDetector {
                 return nil
             }
 
-            // Convert from coordinates to insets with asymmetric corrections.
-            // AI bias: left/top edges slightly too tight (expand outward),
-            // right edge too loose (includes row numbers — contract inward),
-            // bottom edge slightly too tight (expand outward).
-            let leftInset = max(0, bbox.xMin - 0.02)    // expand left outward
-            let topInset = max(0, bbox.yMin - 0.02)     // expand top outward
-            let rightInset = 1.0 - bbox.xMax + 0.03     // contract right inward (exclude row numbers)
-            let bottomInset = max(0, 1.0 - bbox.yMax - 0.02) // expand bottom outward
+            // Use raw AI coordinates — no static corrections.
+            // AI precision is ~85-90%; corrections help one chart but hurt another.
+            // The lasso tool and drag handles handle the remaining refinement.
+            let leftInset = max(0, bbox.xMin)
+            let topInset = max(0, bbox.yMin)
+            let rightInset = max(0, 1.0 - bbox.xMax)
+            let bottomInset = max(0, 1.0 - bbox.yMax)
 
             #if DEBUG
             print("""

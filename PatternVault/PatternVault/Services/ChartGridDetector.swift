@@ -211,13 +211,17 @@ struct ChartGridDetector {
                 return nil
             }
 
-            // Use raw AI coordinates — no static corrections.
-            // AI precision is ~85-90%; corrections help one chart but hurt another.
-            // The lasso tool and drag handles handle the remaining refinement.
-            let leftInset = max(0, bbox.xMin)
-            let topInset = max(0, bbox.yMin)
-            let rightInset = max(0, 1.0 - bbox.xMax)
-            let bottomInset = max(0, 1.0 - bbox.yMax)
+            // Refine AI boundary with pixel analysis.
+            // The AI gets us in the right neighborhood (~85-90%); pixel analysis
+            // finds the exact grid edge within a narrow search zone around each AI edge.
+            let refined = refineWithPixels(
+                image: image,
+                aiBBox: (xMin: bbox.xMin, yMin: bbox.yMin, xMax: bbox.xMax, yMax: bbox.yMax)
+            )
+            let leftInset = max(0, refined.xMin)
+            let topInset = max(0, refined.yMin)
+            let rightInset = max(0, 1.0 - refined.xMax)
+            let bottomInset = max(0, 1.0 - refined.yMax)
 
             #if DEBUG
             print("""
@@ -290,6 +294,175 @@ struct ChartGridDetector {
             right: fullRight, bottom: fullBottom,
             confidence: subResult.confidence
         )
+    }
+
+    // MARK: - Pixel Refinement
+
+    private struct RefinedBBox {
+        let xMin: Double, yMin: Double, xMax: Double, yMax: Double
+    }
+
+    /// Refines each edge of the AI's bounding box using pixel density analysis.
+    /// Searches a narrow zone (±10% of image dimension) around each AI edge to find
+    /// the exact transition between dense grid content and sparse labels/whitespace.
+    private static func refineWithPixels(
+        image: UIImage,
+        aiBBox: (xMin: Double, yMin: Double, xMax: Double, yMax: Double)
+    ) -> RefinedBBox {
+        guard let cgImage = image.cgImage else {
+            return RefinedBBox(xMin: aiBBox.xMin, yMin: aiBBox.yMin, xMax: aiBBox.xMax, yMax: aiBBox.yMax)
+        }
+
+        let width = cgImage.width
+        let height = cgImage.height
+        guard width > 40, height > 40 else {
+            return RefinedBBox(xMin: aiBBox.xMin, yMin: aiBBox.yMin, xMax: aiBBox.xMax, yMax: aiBBox.yMax)
+        }
+
+        // Render to pixel buffer
+        let bpp = 4
+        let bytesPerRow = width * bpp
+        var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+        guard let ctx = CGContext(
+            data: &pixels, width: width, height: height,
+            bitsPerComponent: 8, bytesPerRow: bytesPerRow,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            return RefinedBBox(xMin: aiBBox.xMin, yMin: aiBBox.yMin, xMax: aiBBox.xMax, yMax: aiBBox.yMax)
+        }
+        ctx.setFillColor(UIColor.white.cgColor)
+        ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // Compute projection profiles
+        var hProj = [Double](repeating: 0, count: height)  // per row
+        var vProj = [Double](repeating: 0, count: width)   // per column
+
+        // Only compute projections within the AI bbox ± margin to avoid legend/title influence
+        let margin = 0.10
+        let xLo = max(0, Int((aiBBox.xMin - margin) * Double(width)))
+        let xHi = min(width, Int((aiBBox.xMax + margin) * Double(width)))
+        let yLo = max(0, Int((aiBBox.yMin - margin) * Double(height)))
+        let yHi = min(height, Int((aiBBox.yMax + margin) * Double(height)))
+
+        // Horizontal projection: sum intensity across columns within the x-range of the grid
+        let aiXLo = max(0, Int(aiBBox.xMin * Double(width)))
+        let aiXHi = min(width, Int(aiBBox.xMax * Double(width)))
+        for y in yLo..<yHi {
+            var sum = 0.0
+            let rowOff = y * bytesPerRow
+            for x in aiXLo..<aiXHi {
+                let off = rowOff + x * bpp
+                let lum = 0.299 * Double(pixels[off]) + 0.587 * Double(pixels[off+1]) + 0.114 * Double(pixels[off+2])
+                sum += 1.0 - lum / 255.0
+            }
+            hProj[y] = sum / max(1, Double(aiXHi - aiXLo))
+        }
+
+        // Vertical projection: sum intensity across rows within the y-range of the grid
+        let aiYLo = max(0, Int(aiBBox.yMin * Double(height)))
+        let aiYHi = min(height, Int(aiBBox.yMax * Double(height)))
+        for x in xLo..<xHi {
+            var sum = 0.0
+            for y in aiYLo..<aiYHi {
+                let off = y * bytesPerRow + x * bpp
+                let lum = 0.299 * Double(pixels[off]) + 0.587 * Double(pixels[off+1]) + 0.114 * Double(pixels[off+2])
+                sum += 1.0 - lum / 255.0
+            }
+            vProj[x] = sum / max(1, Double(aiYHi - aiYLo))
+        }
+
+        // Refine each edge: search within ±10% zone around the AI edge
+        let searchH = max(10, Int(0.10 * Double(height)))
+        let searchW = max(10, Int(0.10 * Double(width)))
+
+        let refinedTop = refineEdge(
+            profile: hProj,
+            aiEdge: Int(aiBBox.yMin * Double(height)),
+            searchRadius: searchH,
+            entering: true  // looking for transition INTO the grid (low→high)
+        )
+        let refinedBottom = refineEdge(
+            profile: hProj,
+            aiEdge: Int(aiBBox.yMax * Double(height)),
+            searchRadius: searchH,
+            entering: false // looking for transition OUT OF the grid (high→low)
+        )
+        let refinedLeft = refineEdge(
+            profile: vProj,
+            aiEdge: Int(aiBBox.xMin * Double(width)),
+            searchRadius: searchW,
+            entering: true
+        )
+        let refinedRight = refineEdge(
+            profile: vProj,
+            aiEdge: Int(aiBBox.xMax * Double(width)),
+            searchRadius: searchW,
+            entering: false
+        )
+
+        let result = RefinedBBox(
+            xMin: Double(refinedLeft) / Double(width),
+            yMin: Double(refinedTop) / Double(height),
+            xMax: Double(refinedRight) / Double(width),
+            yMax: Double(refinedBottom) / Double(height)
+        )
+
+        #if DEBUG
+        print("""
+        [GridDetector] Pixel refinement:
+          AI bbox = (\(String(format:"%.3f",aiBBox.xMin)), \(String(format:"%.3f",aiBBox.yMin))) – (\(String(format:"%.3f",aiBBox.xMax)), \(String(format:"%.3f",aiBBox.yMax)))
+          Refined = (\(String(format:"%.3f",result.xMin)), \(String(format:"%.3f",result.yMin))) – (\(String(format:"%.3f",result.xMax)), \(String(format:"%.3f",result.yMax)))
+        """)
+        #endif
+
+        return result
+    }
+
+    /// Finds the exact edge position near the AI's estimate by looking for the
+    /// steepest density transition in the projection profile.
+    /// `entering: true` = looking for a rise (entering the grid from outside)
+    /// `entering: false` = looking for a drop (leaving the grid)
+    private static func refineEdge(
+        profile: [Double],
+        aiEdge: Int,
+        searchRadius: Int,
+        entering: Bool
+    ) -> Int {
+        let count = profile.count
+        let lo = max(0, aiEdge - searchRadius)
+        let hi = min(count - 1, aiEdge + searchRadius)
+        guard hi > lo + 2 else { return aiEdge }
+
+        // Smooth the search zone
+        var smoothed = [Double](repeating: 0, count: count)
+        let sr = max(2, searchRadius / 10)
+        for i in lo...hi {
+            let wLo = max(0, i - sr)
+            let wHi = min(count - 1, i + sr)
+            smoothed[i] = profile[wLo...wHi].reduce(0, +) / Double(wHi - wLo + 1)
+        }
+
+        // Find the position with the steepest gradient in the search zone
+        var bestPos = aiEdge
+        var bestGrad: Double = 0
+
+        for i in (lo + 1)...hi {
+            let grad = smoothed[i] - smoothed[i - 1]
+            let signedGrad = entering ? grad : -grad  // positive = the transition we want
+
+            if signedGrad > bestGrad {
+                bestGrad = signedGrad
+                bestPos = i
+            }
+        }
+
+        // Only use refined position if the gradient is meaningful
+        if bestGrad > 0.02 {
+            return bestPos
+        }
+        return aiEdge
     }
 
     // MARK: - Private

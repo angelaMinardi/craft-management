@@ -444,10 +444,12 @@ struct ChartGridDetector {
         let sHi = min(count - 1, center + sampleRadius)
         let gridDensity = profile[sLo...sHi].reduce(0, +) / Double(sHi - sLo + 1)
 
-        // The edge is where density drops below 40% of the grid's average density.
-        // This threshold is generous enough to handle rows with mixed light/dark cells
-        // but catches the transition to text labels and whitespace.
-        let dropThreshold = gridDensity * 0.40
+        // The edge is where density drops below 55% of the grid's average density.
+        // Even all-light colored cells (~0.41 density) stay above this threshold,
+        // but packed number labels (~0.20-0.25) and whitespace drop below it.
+        // The higher threshold (vs 40%) handles charts with many columns where
+        // the number labels are packed densely (e.g., "36 35 34 33 32...").
+        let dropThreshold = gridDensity * 0.55
 
         // Smooth the profile for stable edge detection
         let sr = max(2, abs(limit - center) / 20)

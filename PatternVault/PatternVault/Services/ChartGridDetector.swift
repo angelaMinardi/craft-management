@@ -296,6 +296,117 @@ struct ChartGridDetector {
         )
     }
 
+    /// Re-runs AI grid detection with user feedback about which edges are wrong.
+    /// The feedback is injected into the prompt so the AI can correct specific edges.
+    static func refineWithFeedback(
+        image: UIImage,
+        currentInsets: (left: Double, top: Double, right: Double, bottom: Double),
+        feedback: String,
+        expectedRows: Int? = nil,
+        expectedCols: Int? = nil
+    ) async -> DetectedBoundary? {
+        guard let imageData = image.pngData() ?? image.jpegData(compressionQuality: 0.9),
+              let apiKey = geminiApiKey else { return nil }
+
+        let rowHint = expectedRows.map { "The grid has \($0) rows. " } ?? ""
+        let colHint = expectedCols.map { "The grid has \($0) columns. " } ?? ""
+
+        let prompt = """
+        This image is a cropped chart from a knitting pattern. \(rowHint)\(colHint)\
+        A previous attempt to detect the grid boundary produced these normalized insets:
+        - left: \(String(format:"%.3f",currentInsets.left)) (grid starts \(String(format:"%.1f",currentInsets.left*100))% from left edge)
+        - top: \(String(format:"%.3f",currentInsets.top)) (grid starts \(String(format:"%.1f",currentInsets.top*100))% from top edge)
+        - right: \(String(format:"%.3f",currentInsets.right)) (grid ends \(String(format:"%.1f",(1-currentInsets.right)*100))% from left edge)
+        - bottom: \(String(format:"%.3f",currentInsets.bottom)) (grid ends \(String(format:"%.1f",(1-currentInsets.bottom)*100))% from top edge)
+
+        The user reports these issues with the current boundary:
+        \(feedback)
+
+        Please return CORRECTED coordinates. Return a single JSON object:
+        {"x_min": 0.05, "y_min": 0.15, "x_max": 0.65, "y_max": 0.95}
+
+        Where x_min/y_min is the top-left corner and x_max/y_max is the bottom-right corner \
+        of ONLY the stitch grid cells. Exclude all row numbers, column numbers, titles, and Key/Legend areas.
+        """
+
+        let base64Image = imageData.base64EncodedString()
+        let mimeType = imageData.count >= 4 && imageData[0] == 0x89 && imageData[1] == 0x50 ? "image/png" : "image/jpeg"
+
+        let requestBody: [String: Any] = [
+            "contents": [[
+                "parts": [
+                    ["text": prompt],
+                    ["inline_data": ["mime_type": mimeType, "data": base64Image]]
+                ]
+            ]],
+            "generationConfig": [
+                "responseMimeType": "application/json",
+                "maxOutputTokens": 2048,
+                "thinkingConfig": ["thinkingBudget": 0]
+            ]
+        ]
+
+        do {
+            guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"),
+                  let bodyData = try? JSONSerialization.data(withJSONObject: requestBody) else { return nil }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.httpBody = bodyData
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
+            request.timeoutInterval = 60
+
+            #if DEBUG
+            print("[GridDetector] Refine with feedback: \(feedback.prefix(100))...")
+            #endif
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  (200...299).contains(httpResponse.statusCode) else { return nil }
+
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let candidates = json["candidates"] as? [[String: Any]],
+                  let first = candidates.first,
+                  let contentObj = first["content"] as? [String: Any],
+                  let parts = contentObj["parts"] as? [[String: Any]] else { return nil }
+
+            let outputPart = parts.last(where: { ($0["thought"] as? Bool) != true && $0["text"] != nil })
+            guard var text = outputPart?["text"] as? String else { return nil }
+
+            if text.hasPrefix("```") {
+                text = text.replacingOccurrences(of: "```json", with: "").replacingOccurrences(of: "```", with: "")
+            }
+            text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard let jsonData = text.data(using: .utf8) else { return nil }
+            let bbox: BBoxResponse
+            if let single = try? JSONDecoder().decode(BBoxResponse.self, from: jsonData) {
+                bbox = single
+            } else if let legacy = try? JSONDecoder().decode(LegacyBBoxResponse.self, from: jsonData) {
+                bbox = BBoxResponse(xMin: legacy.left, yMin: legacy.top, xMax: legacy.right, yMax: legacy.bottom)
+            } else { return nil }
+
+            guard bbox.xMin < bbox.xMax, bbox.yMin < bbox.yMax else { return nil }
+
+            // Apply pixel refinement to the feedback-corrected boundary
+            let refined = refineWithPixels(
+                image: image,
+                aiBBox: (xMin: bbox.xMin, yMin: bbox.yMin, xMax: bbox.xMax, yMax: bbox.yMax)
+            )
+
+            #if DEBUG
+            print("[GridDetector] Feedback-refined: (\(String(format:"%.3f",refined.xMin)),\(String(format:"%.3f",refined.yMin)))–(\(String(format:"%.3f",refined.xMax)),\(String(format:"%.3f",refined.yMax)))")
+            #endif
+
+            return DetectedBoundary(
+                left: max(0, refined.xMin), top: max(0, refined.yMin),
+                right: max(0, 1.0 - refined.xMax), bottom: max(0, 1.0 - refined.yMax),
+                confidence: 0.85
+            )
+        } catch { return nil }
+    }
+
     // MARK: - Pixel Refinement
 
     private struct RefinedBBox {

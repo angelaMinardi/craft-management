@@ -757,6 +757,8 @@ struct ExtractedChartWorkspaceView: View {
     @State private var editingAnnotation: ChartSurfaceAnnotation?
     @State private var showAddNoteSheet = false
     @State private var showGridFitSheet = false
+    @State private var showRefineSheet = false
+    @State private var isRefining = false
     @State private var pendingNoteTitle = ""
     @State private var pendingNoteBody = ""
     @State private var placementKind: ChartSurfaceAnnotation.Kind?
@@ -859,6 +861,9 @@ struct ExtractedChartWorkspaceView: View {
             }
             .sheet(isPresented: $showGridFitSheet) {
                 GridAlignmentEditor(highlight: $workingHighlight)
+            }
+            .sheet(isPresented: $showRefineSheet) {
+                GridRefineSheet(highlight: $workingHighlight, isRefining: $isRefining)
             }
             .sheet(item: $editingAnnotation) { annotation in
                 AnnotationEditSheet(
@@ -1039,6 +1044,15 @@ struct ExtractedChartWorkspaceView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(Theme.softCoral)
+
+                    Button {
+                        showRefineSheet = true
+                    } label: {
+                        Label(isRefining ? "Refining..." : "Refine", systemImage: "sparkles")
+                            .font(Theme.Typography.caption)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(isRefining)
 
                     Button {
                         showAnnotations.toggle()
@@ -1480,6 +1494,129 @@ private struct ChartEdgeLabelsOverlay: View {
         var values = Set(stride(from: 1, through: total, by: step).map { $0 })
         values.insert(total)
         return values.sorted()
+    }
+}
+
+// MARK: - Grid Refine Sheet
+
+private struct GridRefineSheet: View {
+    @Binding var highlight: ChartHighlight
+    @Binding var isRefining: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    enum EdgeFeedback: String, CaseIterable {
+        case tooFar = "Extends past the chart"
+        case tooShort = "Cuts off part of the chart"
+        case correct = "Looks correct"
+    }
+
+    @State private var topFeedback: EdgeFeedback = .correct
+    @State private var bottomFeedback: EdgeFeedback = .correct
+    @State private var leftFeedback: EdgeFeedback = .correct
+    @State private var rightFeedback: EdgeFeedback = .correct
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Which edges need adjustment?") {
+                    edgePicker(title: "Top edge", selection: $topFeedback)
+                    edgePicker(title: "Bottom edge", selection: $bottomFeedback)
+                    edgePicker(title: "Left edge", selection: $leftFeedback)
+                    edgePicker(title: "Right edge", selection: $rightFeedback)
+                }
+
+                Section {
+                    Button {
+                        refineGrid()
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Label("Refine Grid", systemImage: "sparkles")
+                            Spacer()
+                        }
+                    }
+                    .disabled(isRefining || allCorrect)
+                } footer: {
+                    if allCorrect {
+                        Text("All edges are marked as correct. Change at least one to refine.")
+                    } else {
+                        Text("AI will re-analyze the chart with your feedback to improve alignment.")
+                    }
+                }
+            }
+            .navigationTitle("Refine Grid")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var allCorrect: Bool {
+        topFeedback == .correct && bottomFeedback == .correct
+            && leftFeedback == .correct && rightFeedback == .correct
+    }
+
+    @ViewBuilder
+    private func edgePicker(title: String, selection: Binding<EdgeFeedback>) -> some View {
+        Picker(title, selection: selection) {
+            ForEach(EdgeFeedback.allCases, id: \.self) { feedback in
+                Text(feedback.rawValue).tag(feedback)
+            }
+        }
+    }
+
+    private func refineGrid() {
+        guard let imageData = highlight.extractedChartPNGData,
+              let image = UIImage(data: imageData) else { return }
+
+        isRefining = true
+        let currentInsets = (
+            left: highlight.gridInsetLeft,
+            top: highlight.gridInsetTop,
+            right: highlight.gridInsetRight,
+            bottom: highlight.gridInsetBottom
+        )
+        let rows = highlight.rows
+        let cols = highlight.columns
+        let feedback = buildFeedback()
+
+        dismiss()
+
+        Task {
+            if let refined = await ChartGridDetector.refineWithFeedback(
+                image: image,
+                currentInsets: currentInsets,
+                feedback: feedback,
+                expectedRows: rows,
+                expectedCols: cols
+            ) {
+                await MainActor.run {
+                    highlight.gridInsetLeft = refined.left
+                    highlight.gridInsetTop = refined.top
+                    highlight.gridInsetRight = refined.right
+                    highlight.gridInsetBottom = refined.bottom
+                    isRefining = false
+                }
+            } else {
+                await MainActor.run { isRefining = false }
+            }
+        }
+    }
+
+    private func buildFeedback() -> String {
+        var parts: [String] = []
+        if topFeedback == .tooFar { parts.append("The TOP edge extends too far — it includes content above the grid cells (like column numbers or the title). Move it DOWN.") }
+        if topFeedback == .tooShort { parts.append("The TOP edge cuts off grid cells. Move it UP to include more rows.") }
+        if bottomFeedback == .tooFar { parts.append("The BOTTOM edge extends too far — it includes content below the grid cells (like column numbers). Move it UP.") }
+        if bottomFeedback == .tooShort { parts.append("The BOTTOM edge cuts off grid cells. Move it DOWN to include more rows.") }
+        if leftFeedback == .tooFar { parts.append("The LEFT edge extends too far — it includes content outside the grid. Move it RIGHT.") }
+        if leftFeedback == .tooShort { parts.append("The LEFT edge cuts off grid cells. Move it LEFT to include more columns.") }
+        if rightFeedback == .tooFar { parts.append("The RIGHT edge extends too far — it includes row numbers or legend content. Move it LEFT.") }
+        if rightFeedback == .tooShort { parts.append("The RIGHT edge cuts off grid cells. Move it RIGHT to include more columns.") }
+        return parts.joined(separator: " ")
     }
 }
 

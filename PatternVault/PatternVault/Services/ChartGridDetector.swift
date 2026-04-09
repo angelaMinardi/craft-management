@@ -373,33 +373,38 @@ struct ChartGridDetector {
             vProj[x] = sum / max(1, Double(aiYHi - aiYLo))
         }
 
-        // Refine each edge: search within ±10% zone around the AI edge
-        let searchH = max(10, Int(0.10 * Double(height)))
-        let searchW = max(10, Int(0.10 * Double(width)))
+        // Refine each edge by scanning from the grid CENTER outward.
+        // This starts from known-good territory (middle of grid) and finds
+        // where density drops — naturally picking the innermost boundary
+        // and avoiding confusion with title→numbers transitions.
+        let centerY = Int((aiBBox.yMin + aiBBox.yMax) / 2.0 * Double(height))
+        let centerX = Int((aiBBox.xMin + aiBBox.xMax) / 2.0 * Double(width))
+        let searchH = max(10, Int(0.12 * Double(height)))
+        let searchW = max(10, Int(0.12 * Double(width)))
 
-        let refinedTop = refineEdge(
+        let refinedTop = scanOutward(
             profile: hProj,
-            aiEdge: Int(aiBBox.yMin * Double(height)),
-            searchRadius: searchH,
-            entering: true  // looking for transition INTO the grid (low→high)
+            from: centerY,
+            toward: max(0, Int(aiBBox.yMin * Double(height)) - searchH),
+            direction: -1
         )
-        let refinedBottom = refineEdge(
+        let refinedBottom = scanOutward(
             profile: hProj,
-            aiEdge: Int(aiBBox.yMax * Double(height)),
-            searchRadius: searchH,
-            entering: false // looking for transition OUT OF the grid (high→low)
+            from: centerY,
+            toward: min(height - 1, Int(aiBBox.yMax * Double(height)) + searchH),
+            direction: 1
         )
-        let refinedLeft = refineEdge(
+        let refinedLeft = scanOutward(
             profile: vProj,
-            aiEdge: Int(aiBBox.xMin * Double(width)),
-            searchRadius: searchW,
-            entering: true
+            from: centerX,
+            toward: max(0, Int(aiBBox.xMin * Double(width)) - searchW),
+            direction: -1
         )
-        let refinedRight = refineEdge(
+        let refinedRight = scanOutward(
             profile: vProj,
-            aiEdge: Int(aiBBox.xMax * Double(width)),
-            searchRadius: searchW,
-            entering: false
+            from: centerX,
+            toward: min(width - 1, Int(aiBBox.xMax * Double(width)) + searchW),
+            direction: 1
         )
 
         let result = RefinedBBox(
@@ -420,49 +425,53 @@ struct ChartGridDetector {
         return result
     }
 
-    /// Finds the exact edge position near the AI's estimate by looking for the
-    /// steepest density transition in the projection profile.
-    /// `entering: true` = looking for a rise (entering the grid from outside)
-    /// `entering: false` = looking for a drop (leaving the grid)
-    private static func refineEdge(
+    /// Scans outward from the grid center toward an edge, finding where
+    /// density drops below a threshold. This naturally finds the grid's true
+    /// boundary because it starts from inside the dense grid and walks out.
+    /// `direction`: -1 for scanning toward top/left, +1 for scanning toward bottom/right.
+    private static func scanOutward(
         profile: [Double],
-        aiEdge: Int,
-        searchRadius: Int,
-        entering: Bool
+        from center: Int,
+        toward limit: Int,
+        direction: Int
     ) -> Int {
         let count = profile.count
-        let lo = max(0, aiEdge - searchRadius)
-        let hi = min(count - 1, aiEdge + searchRadius)
-        guard hi > lo + 2 else { return aiEdge }
+        guard center >= 0, center < count else { return max(0, min(count - 1, center)) }
 
-        // Smooth the search zone
-        var smoothed = [Double](repeating: 0, count: count)
-        let sr = max(2, searchRadius / 10)
-        for i in lo...hi {
-            let wLo = max(0, i - sr)
-            let wHi = min(count - 1, i + sr)
-            smoothed[i] = profile[wLo...wHi].reduce(0, +) / Double(wHi - wLo + 1)
-        }
+        // Compute the average density in the center region (known grid area)
+        let sampleRadius = max(5, abs(limit - center) / 8)
+        let sLo = max(0, center - sampleRadius)
+        let sHi = min(count - 1, center + sampleRadius)
+        let gridDensity = profile[sLo...sHi].reduce(0, +) / Double(sHi - sLo + 1)
 
-        // Find the position with the steepest gradient in the search zone
-        var bestPos = aiEdge
-        var bestGrad: Double = 0
+        // The edge is where density drops below 40% of the grid's average density.
+        // This threshold is generous enough to handle rows with mixed light/dark cells
+        // but catches the transition to text labels and whitespace.
+        let dropThreshold = gridDensity * 0.40
 
-        for i in (lo + 1)...hi {
-            let grad = smoothed[i] - smoothed[i - 1]
-            let signedGrad = entering ? grad : -grad  // positive = the transition we want
+        // Smooth the profile for stable edge detection
+        let sr = max(2, abs(limit - center) / 20)
 
-            if signedGrad > bestGrad {
-                bestGrad = signedGrad
-                bestPos = i
+        // Scan outward from center
+        var lastAbove = center
+        let range: [Int] = direction > 0
+            ? Array(center...min(count - 1, limit))
+            : Array(stride(from: center, through: max(0, limit), by: -1))
+
+        for i in range {
+            let lo = max(0, i - sr)
+            let hi = min(count - 1, i + sr)
+            let smoothed = profile[lo...hi].reduce(0, +) / Double(hi - lo + 1)
+
+            if smoothed >= dropThreshold {
+                lastAbove = i
+            } else {
+                // Density dropped — the grid ended at lastAbove
+                break
             }
         }
 
-        // Only use refined position if the gradient is meaningful
-        if bestGrad > 0.02 {
-            return bestPos
-        }
-        return aiEdge
+        return lastAbove
     }
 
     // MARK: - Private

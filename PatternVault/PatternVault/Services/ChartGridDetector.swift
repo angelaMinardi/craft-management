@@ -444,18 +444,16 @@ struct ChartGridDetector {
         let sHi = min(count - 1, center + sampleRadius)
         let gridDensity = profile[sLo...sHi].reduce(0, +) / Double(sHi - sLo + 1)
 
-        // The edge is where density drops below 55% of the grid's average density.
-        // Even all-light colored cells (~0.41 density) stay above this threshold,
-        // but packed number labels (~0.20-0.25) and whitespace drop below it.
-        // The higher threshold (vs 40%) handles charts with many columns where
-        // the number labels are packed densely (e.g., "36 35 34 33 32...").
-        let dropThreshold = gridDensity * 0.55
-
-        // Smooth the profile for stable edge detection
+        // Use relative drop detection: track a running average and trigger when
+        // density drops below 50% of the running average. This adapts to local
+        // density — light grid rows maintain ~70-80% of recent values, but the
+        // transition to number labels is a sharp ~30% drop at any absolute level.
         let sr = max(2, abs(limit - center) / 20)
+        let windowSize = max(5, abs(limit - center) / 8)
 
         // Scan outward from center
         var lastAbove = center
+        var recentValues: [Double] = []
         let range: [Int] = direction > 0
             ? Array(center...min(count - 1, limit))
             : Array(stride(from: center, through: max(0, limit), by: -1))
@@ -465,12 +463,18 @@ struct ChartGridDetector {
             let hi = min(count - 1, i + sr)
             let smoothed = profile[lo...hi].reduce(0, +) / Double(hi - lo + 1)
 
-            if smoothed >= dropThreshold {
-                lastAbove = i
-            } else {
-                // Density dropped — the grid ended at lastAbove
-                break
+            recentValues.append(smoothed)
+            if recentValues.count > windowSize { recentValues.removeFirst() }
+
+            // Need enough samples to establish a baseline
+            if recentValues.count >= 3 {
+                let runningAvg = recentValues.dropLast().reduce(0, +) / Double(recentValues.count - 1)
+                if runningAvg > 0.01 && smoothed < runningAvg * 0.50 {
+                    // Density dropped by >50% relative to recent running average
+                    break
+                }
             }
+            lastAbove = i
         }
 
         return lastAbove

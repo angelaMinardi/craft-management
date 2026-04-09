@@ -25,6 +25,20 @@ struct PDFViewerView: View {
     @ObservedObject private var chartStore = ChartHighlightStore.shared
     @ObservedObject private var rowCounterStore = RowCounterStore.shared
 
+    @AppStorage private var readingBarFraction: Double
+    @State private var isDraggingBar = false
+
+    init(url: URL, patternId: UUID, makeId: UUID?, onDetectCharts: (() -> Void)? = nil) {
+        self.url = url
+        self.patternId = patternId
+        self.makeId = makeId
+        self.onDetectCharts = onDetectCharts
+        self._readingBarFraction = AppStorage(
+            wrappedValue: 0.3,
+            "pdfReadingBarFraction_\(patternId.uuidString)"
+        )
+    }
+
     var body: some View {
         ZStack {
             if let document {
@@ -152,6 +166,13 @@ struct PDFViewerView: View {
                 }
             }
         }
+        .overlay {
+            if document != nil {
+                GeometryReader { geo in
+                    pdfReadingBar(in: geo)
+                }
+            }
+        }
         .task {
             if document == nil && errorMessage == nil {
                 await loadDocument()
@@ -183,6 +204,36 @@ struct PDFViewerView: View {
 
     private var pageHighlight: ChartHighlight? {
         chartStore.highlight(patternId: patternId, makeId: makeId, pdfPageIndex: currentPageIndex)
+    }
+
+    @ViewBuilder
+    private func pdfReadingBar(in geo: GeometryProxy) -> some View {
+        let barY = geo.size.height * readingBarFraction
+        ZStack {
+            Rectangle()
+                .fill(Theme.honey.opacity(isDraggingBar ? 0.45 : 0.28))
+                .frame(height: 28)
+                .frame(maxWidth: .infinity)
+            HStack {
+                Spacer()
+                Capsule()
+                    .fill(Theme.honey.opacity(0.8))
+                    .frame(width: 36, height: 5)
+                    .padding(.trailing, Theme.Spacing.lg)
+            }
+        }
+        .position(x: geo.size.width / 2, y: barY)
+        .gesture(
+            DragGesture(minimumDistance: 1)
+                .onChanged { value in
+                    isDraggingBar = true
+                    let newY = min(geo.size.height - 20, max(20, barY + value.translation.height))
+                    readingBarFraction = Double(newY / geo.size.height)
+                }
+                .onEnded { _ in isDraggingBar = false }
+        )
+        .accessibilityLabel("Reading bar")
+        .accessibilityHint("Drag to mark your place in the PDF")
     }
 
     private var pageHighlights: [ChartHighlight] {
@@ -801,6 +852,24 @@ struct ExtractedChartWorkspaceView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Theme.cardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                        .overlay {
+                            if isRefining {
+                                ZStack {
+                                    Color.black.opacity(0.3)
+                                    VStack(spacing: Theme.Spacing.sm) {
+                                        ProgressView()
+                                            .tint(.white)
+                                        Text("Refining grid...")
+                                            .font(Theme.Typography.caption)
+                                            .foregroundStyle(.white)
+                                    }
+                                    .padding(Theme.Spacing.lg)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                            }
+                        }
                     }
                     .padding(Theme.Spacing.md)
                     .background(Theme.warmCream)

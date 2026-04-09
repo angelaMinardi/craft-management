@@ -14,6 +14,7 @@ struct PatternContentView: View {
     let pattern: Pattern
     @ObservedObject var store: PatternStore
     @EnvironmentObject var auth: AuthService
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // MARK: - Edit mode state
 
@@ -25,36 +26,59 @@ struct PatternContentView: View {
     @State private var showEmptyWarning = false
     @State private var showSaveConfirmation = false
     @State private var savedRemovalCount = 0
+    @State private var checkDrawProgress: CGFloat = 0
     @StateObject private var imageStore = PatternImageStore()
     @ObservedObject private var chartStore = ChartHighlightStore.shared
     @ObservedObject private var rowCounterStore = RowCounterStore.shared
     @State private var configuringImage: PatternImage?
 
+    // MARK: - Reading bar
+    @AppStorage private var readingBarFraction: Double
+    @State private var isDraggingBar = false
+
+    init(pattern: Pattern, store: PatternStore) {
+        self.pattern = pattern
+        self.store = store
+        self._readingBarFraction = AppStorage(
+            wrappedValue: 0.3,
+            "readingBarFraction_\(pattern.id.uuidString)"
+        )
+    }
+
     var body: some View {
-        ZStack(alignment: .bottom) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                    metadataSection
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                        metadataSection
 
-                    if !imageStore.images.isEmpty {
-                        photosFromPatternSection
-                    }
+                        if !imageStore.images.isEmpty {
+                            photosFromPatternSection
+                        }
 
-                    if isEditMode {
-                        editModeContent
-                    } else {
-                        normalModeContent
+                        if isEditMode {
+                            editModeContent
+                                .transition(.opacity)
+                        } else {
+                            normalModeContent
+                                .transition(.opacity)
+                        }
                     }
+                    .padding(.vertical, Theme.Spacing.lg)
+                    // Extra bottom padding when floating bar is visible
+                    .padding(.bottom, isEditMode && !removedBlockIds.isEmpty ? 80 : 0)
                 }
-                .padding(.vertical, Theme.Spacing.lg)
-                // Extra bottom padding when floating bar is visible
-                .padding(.bottom, isEditMode && !removedBlockIds.isEmpty ? 80 : 0)
-            }
-            .background(Theme.warmCream)
+                .background(Theme.warmCream)
 
-            // Floating save bar
-            if isEditMode && !removedBlockIds.isEmpty {
-                floatingSaveBar
+                // Floating save bar
+                if isEditMode && !removedBlockIds.isEmpty {
+                    floatingSaveBar
+                }
+
+                // Reading bar — draggable horizontal highlight line
+                if !isEditMode {
+                    readingBar(in: geo)
+                }
             }
         }
         .navigationTitle("Pattern Content")
@@ -64,10 +88,12 @@ struct PatternContentView: View {
                 HStack(spacing: Theme.Spacing.md) {
                     if hasEffectiveContent {
                         Button {
-                            if isEditMode {
-                                cancelEdit()
-                            } else {
-                                enterEditMode()
+                            withAnimation(reduceMotion ? .none : Theme.Motion.spring) {
+                                if isEditMode {
+                                    cancelEdit()
+                                } else {
+                                    enterEditMode()
+                                }
                             }
                         } label: {
                             Label(isEditMode ? "Cancel" : "Edit", systemImage: isEditMode ? "xmark" : "pencil")
@@ -197,7 +223,7 @@ struct PatternContentView: View {
         .overlay(alignment: .bottomLeading) {
             if highlight != nil {
                 Text("Chart linked")
-                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.caption2.weight(.semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
@@ -466,7 +492,7 @@ struct PatternContentView: View {
                 ? Color.red.opacity(0.04)
                 : Color.clear
         )
-        .animation(.easeInOut(duration: 0.2), value: isRemoved)
+        .animation(reduceMotion ? .none : .easeInOut(duration: 0.2), value: isRemoved)
     }
 
     @ViewBuilder
@@ -505,6 +531,45 @@ struct PatternContentView: View {
 
     // MARK: - Floating Save Bar
 
+    // MARK: - Reading Bar
+
+    @ViewBuilder
+    private func readingBar(in geo: GeometryProxy) -> some View {
+        let barY = geo.size.height * readingBarFraction
+
+        ZStack {
+            // Semi-transparent highlight band
+            Rectangle()
+                .fill(Theme.honey.opacity(isDraggingBar ? 0.45 : 0.28))
+                .frame(height: 28)
+                .frame(maxWidth: .infinity)
+
+            // Drag handle
+            HStack {
+                Spacer()
+                Capsule()
+                    .fill(Theme.honey.opacity(0.8))
+                    .frame(width: 36, height: 5)
+                    .padding(.trailing, Theme.Spacing.lg)
+            }
+        }
+        .position(x: geo.size.width / 2, y: barY)
+        .gesture(
+            DragGesture(minimumDistance: 1)
+                .onChanged { value in
+                    isDraggingBar = true
+                    let newY = min(geo.size.height - 20, max(20, barY + value.translation.height))
+                    readingBarFraction = Double(newY / geo.size.height)
+                }
+                .onEnded { _ in
+                    isDraggingBar = false
+                }
+        )
+        .accessibilityLabel("Reading bar")
+        .accessibilityHint("Drag to mark your place in the pattern")
+        .accessibilityValue("Position \(Int(readingBarFraction * 100))%")
+    }
+
     private var floatingSaveBar: some View {
         HStack(spacing: Theme.Spacing.lg) {
             Button("Cancel") {
@@ -523,7 +588,7 @@ struct PatternContentView: View {
                 saveChanges()
             } label: {
                 Text("Save Changes")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.cardTitle)
                     .foregroundStyle(.white)
                     .padding(.horizontal, Theme.Spacing.lg)
                     .padding(.vertical, Theme.Spacing.sm)
@@ -541,7 +606,7 @@ struct PatternContentView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.bottom, Theme.Spacing.sm)
         .transition(.move(edge: .bottom).combined(with: .opacity))
-        .animation(.spring(response: 0.3), value: removedBlockIds.isEmpty)
+        .animation(reduceMotion ? .none : .spring(response: 0.3), value: removedBlockIds.isEmpty)
     }
 
     // MARK: - Save Confirmation Toast
@@ -552,7 +617,9 @@ struct PatternContentView: View {
             HStack(spacing: Theme.Spacing.sm) {
                 SpriteMascotView.idle(size: 40)
                 Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 18))
                     .foregroundStyle(Theme.sageGreen)
+                    .scaleEffect(checkDrawProgress)
                 Text("Cleaned up \(savedRemovalCount) block\(savedRemovalCount == 1 ? "" : "s")")
                     .font(Theme.Typography.body)
                     .foregroundStyle(Theme.deepPlum)
@@ -567,7 +634,7 @@ struct PatternContentView: View {
             .padding(.bottom, 40)
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
-        .animation(.spring(response: 0.4), value: showSaveConfirmation)
+        .animation(reduceMotion ? .none : .spring(response: 0.4), value: showSaveConfirmation)
     }
 
     // MARK: - Empty State
@@ -576,7 +643,7 @@ struct PatternContentView: View {
         VStack(spacing: Theme.Spacing.xl) {
             SpriteMascotView.idle(size: 100)
             Text("No extracted content available")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .font(Theme.Typography.headline)
                 .foregroundStyle(Theme.deepPlum)
             Text("Try opening the original page in a browser and use Share to save it with content.")
                 .font(Theme.Typography.body)
@@ -616,16 +683,6 @@ struct PatternContentView: View {
         let newContent = ContentBlockParser.reassemble(blocks: contentBlocks, excluding: removedBlockIds)
         let removedCount = removedBlockIds.count
 
-        // Learn from removed blocks
-        let removedBlocks = contentBlocks.filter { removedBlockIds.contains($0.id) }
-        for block in removedBlocks {
-            JunkPhraseStore.shared.addPhrase(
-                text: block.text,
-                patternId: pattern.id,
-                fullText: block.text
-            )
-        }
-
         // Persist to Supabase
         guard let userId = auth.currentUserId else { return }
         Task {
@@ -639,8 +696,17 @@ struct PatternContentView: View {
 
         // Show confirmation toast
         showSaveConfirmation = true
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        if reduceMotion {
+            checkDrawProgress = 1.0
+        } else {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                checkDrawProgress = 1.0
+            }
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             showSaveConfirmation = false
+            checkDrawProgress = 0
         }
     }
 

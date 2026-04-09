@@ -389,19 +389,16 @@ struct ChartGridDetector {
 
             guard bbox.xMin < bbox.xMax, bbox.yMin < bbox.yMax else { return nil }
 
-            // Apply pixel refinement to the feedback-corrected boundary
-            let refined = refineWithPixels(
-                image: image,
-                aiBBox: (xMin: bbox.xMin, yMin: bbox.yMin, xMax: bbox.xMax, yMax: bbox.yMax)
-            )
-
+            // Use AI values directly — no pixel refinement here.
+            // The user's feedback gives the AI enough context to correct specific edges.
+            // Pixel refinement would undo the corrections (its threshold doesn't adapt).
             #if DEBUG
-            print("[GridDetector] Feedback-refined: (\(String(format:"%.3f",refined.xMin)),\(String(format:"%.3f",refined.yMin)))–(\(String(format:"%.3f",refined.xMax)),\(String(format:"%.3f",refined.yMax)))")
+            print("[GridDetector] Feedback result: (\(String(format:"%.3f",bbox.xMin)),\(String(format:"%.3f",bbox.yMin)))–(\(String(format:"%.3f",bbox.xMax)),\(String(format:"%.3f",bbox.yMax)))")
             #endif
 
             return DetectedBoundary(
-                left: max(0, refined.xMin), top: max(0, refined.yMin),
-                right: max(0, 1.0 - refined.xMax), bottom: max(0, 1.0 - refined.yMax),
+                left: max(0, bbox.xMin), top: max(0, bbox.yMin),
+                right: max(0, 1.0 - bbox.xMax), bottom: max(0, 1.0 - bbox.yMax),
                 confidence: 0.85
             )
         } catch { return nil }

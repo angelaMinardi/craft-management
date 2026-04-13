@@ -79,6 +79,31 @@
   --content-wide: 56rem;
 }
 
+/* Desktop scale-up */
+@media (min-width: 1024px) {
+  :root {
+    --content-max: 52rem;
+    --content-wide: 72rem;
+    --text-subtitle: 1.3rem;
+    --text-body: 1.0625rem;
+    --space-xl: 2.5rem;
+    --space-2xl: 4rem;
+    --space-3xl: 5.5rem;
+    --space-4xl: 7rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --content-max: 56rem;
+    --content-wide: 80rem;
+    --text-hero: 4rem;
+    --text-title: 2.5rem;
+    --text-subtitle: 1.4rem;
+    --space-4xl: 8rem;
+  }
+}
+
 /* Shared component surfaces */
 .pv-card {
   background: var(--card-bg);
@@ -280,6 +305,10 @@ a {
 /* Ensure global link color in content */
 .main a {
   color: var(--soft-coral);
+}
+
+.main a.pv-button-primary {
+  color: var(--text-on-accent);
 }
 
 a:hover {

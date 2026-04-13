@@ -1,0 +1,72 @@
+---
+interface Props {
+  animation: 'waving' | 'idle' | 'knitting' | 'jumping';
+  size?: number;
+  class?: string;
+}
+
+const { animation, size = 160, class: className = '' } = Astro.props;
+
+const staticFallback: Record<string, string> = {
+  waving: '/images/pip/waving.png',
+  idle: '/images/pip/happy.png',
+  knitting: '/images/pip/focused.png',
+  jumping: '/images/pip/happy.png',
+};
+
+const poster = staticFallback[animation];
+const src = `/images/pip-animated/${animation}.webm`;
+
+// Approximate aspect ratios from source frames
+const aspects: Record<string, number> = {
+  waving: 530 / 454,
+  idle: 478 / 504,
+  knitting: 514 / 450,
+  jumping: 370 / 482,
+};
+const ratio = aspects[animation] ?? 1;
+const width = Math.round(size * ratio);
+---
+
+<video
+  class:list={['animated-pip', className]}
+  width={width}
+  height={size}
+  autoplay
+  loop
+  muted
+  playsinline
+  disablepictureinpicture
+  poster={poster}
+  aria-label={`Our mascot crow ${animation} animation`}
+>
+  <source src={src} type="video/webm" />
+  <!-- Fallback to static image for unsupported browsers -->
+  <img src={poster} alt={`Our mascot crow ${animation}`} width={width} height={size} />
+</video>
+
+<style>
+  .animated-pip {
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animated-pip {
+      /* Pause video and show poster frame instead */
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  // Pause animated pips when user prefers reduced motion
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.querySelectorAll('video.animated-pip').forEach((v) => {
+      (v as HTMLVideoElement).pause();
+    });
+  }
+</script>

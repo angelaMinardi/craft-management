@@ -104,4 +104,23 @@ const { title, description, icon = 'bookmark', eyebrow } = Astro.props;
     margin: 0;
     line-height: var(--line-height-relaxed);
   }
+
+  @media (min-width: 1024px) {
+    .feature-card {
+      padding: var(--space-2xl);
+    }
+
+    .feature-icon-wrap {
+      width: 4rem;
+      height: 4rem;
+    }
+
+    .feature-icon {
+      font-size: 1.75rem;
+    }
+
+    .feature-desc {
+      font-size: var(--text-body);
+    }
+  }
 </style>

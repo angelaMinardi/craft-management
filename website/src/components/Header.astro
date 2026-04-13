@@ -5,6 +5,7 @@ import { getCtaConfig } from '../config/cta';
 const ctaConfig = getCtaConfig(import.meta.env);
 const navLinks = [
   { href: '/', label: 'Home' },
+  { href: '/quiz', label: 'Quiz' },
   { href: '/privacy', label: 'Privacy' },
   { href: '/terms', label: 'Terms' },
   { href: '/contact', label: 'Contact' },
@@ -33,14 +34,14 @@ const navLinks = [
   <div class="header-cta">
     <CTA
       href={ctaConfig.primary.href}
-      label={ctaConfig.mode === 'liveFirst' ? 'Download' : 'Join Waitlist'}
+      label={ctaConfig.mode === 'liveFirst' ? 'Download' : 'Beta Access'}
       primary={true}
       dataCta="cta_impression"
       dataDestination={ctaConfig.primary.destination}
       dataMode={ctaConfig.mode}
       dataPageSection="header"
       dataFallbackUsed="false"
-      ariaLabel={ctaConfig.mode === 'liveFirst' ? 'Download Pattern Vault on the App Store' : 'Join the Pattern Vault waitlist'}
+      ariaLabel={ctaConfig.mode === 'liveFirst' ? 'Download Pattern Vault on the App Store' : 'Get beta access to Pattern Vault'}
     />
   </div>
 </header>
@@ -60,6 +61,13 @@ const navLinks = [
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(74, 32, 64, 0.06);
     transition: box-shadow var(--duration-normal) var(--ease-out-quint);
+  }
+
+  @media (min-width: 1024px) {
+    .header {
+      height: 4.5rem;
+      padding: 0 var(--space-2xl);
+    }
   }
 
   .header::after {

@@ -1,0 +1,22 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Quiz from '../components/Quiz.astro';
+import FeaturePreview from '../components/FeaturePreview.astro';
+import '../styles/quiz.css';
+---
+
+<BaseLayout
+  title="What's Your Crafting Archetype? | Pattern Vault"
+  description="Take the quiz and discover whether you're a Pattern Collector, Spontaneous Stitcher, or something else entirely. Share your result and claim a beta tester spot!"
+>
+  <Quiz />
+  <div style="max-width:var(--content-wide);margin:0 auto;padding:0 var(--space-lg) var(--space-3xl);">
+    <h2 style="font-size:var(--text-title);font-weight:700;color:var(--deep-plum);text-align:center;margin:0 0 var(--space-lg);letter-spacing:var(--letter-tight);">
+      Sneak peek at Pattern Vault
+    </h2>
+    <p style="text-align:center;color:var(--text-muted);margin:0 0 var(--space-xl);font-size:var(--text-subtitle);">
+      Tap a card to learn more.
+    </p>
+    <FeaturePreview />
+  </div>
+</BaseLayout>

@@ -1,0 +1,169 @@
+---
+interface Props {
+  class?: string;
+}
+const { class: className = '' } = Astro.props;
+
+const names = [
+  { id: 'pip', name: 'Pip', description: 'Quick, bright, and full of energy' },
+  { id: 'bobbin', name: 'Bobbin', description: 'A crafty nod to the thread that ties it all together' },
+  { id: 'purl', name: 'Purl', description: 'Soft, rhythmic, and unmistakably knit' },
+  { id: 'thimble', name: 'Thimble', description: 'Small but mighty — always there when you need protection' },
+  { id: 'bramble', name: 'Bramble', description: 'Wild, charming, and a little bit thorny' },
+];
+---
+
+<div class:list={['mascot-poll', className]} id="mascot-poll">
+  <div class="poll-header">
+    <img src="/images/pip/curious.png" alt="Our mascot crow looking curious" width="80" height="80" class="poll-pip" />
+    <div>
+      <h3 class="poll-title">Help name our mascot!</h3>
+      <p class="poll-subtitle">This little crow has been helping crafters, but they still need a proper name. Cast your vote!</p>
+    </div>
+  </div>
+
+  <div class="poll-options" id="poll-options">
+    {names.map((n) => (
+      <button class="poll-option-btn" type="button" data-name={n.id}>
+        <div class="poll-option-content">
+          <span class="poll-option-name">{n.name}</span>
+          <span class="poll-option-desc">{n.description}</span>
+        </div>
+        <div class="poll-option-result" data-result-for={n.id}>
+          <div class="poll-option-bar-track">
+            <div class="poll-option-bar-fill" data-bar={n.id}></div>
+          </div>
+          <div class="poll-option-stats">
+            <span class="poll-option-count" data-count={n.id}></span>
+            <span class="poll-option-pct" data-pct={n.id}></span>
+          </div>
+        </div>
+      </button>
+    ))}
+  </div>
+
+  <p class="poll-total" id="poll-total" style="display:none;"></p>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://fbzbnztvanuiijzymckn.supabase.co';
+  const POLL_VOTED_KEY = 'pv_mascot_poll_voted';
+
+  function getVoterId(): string {
+    let id = localStorage.getItem('pv_voter_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('pv_voter_id', id);
+    }
+    return id;
+  }
+
+  function showResults(results: Record<string, number>, votedId?: string) {
+    const totalVotes = Object.values(results).reduce((a, b) => a + b, 0);
+    const maxVotes = Math.max(...Object.values(results), 1);
+
+    // Show result bars inside each option
+    document.querySelectorAll('.poll-option-btn').forEach((btn) => {
+      const nameId = btn.getAttribute('data-name')!;
+      const count = results[nameId] ?? 0;
+      const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+      const barWidth = totalVotes > 0 ? (count / maxVotes) * 100 : 0;
+
+      btn.classList.add('has-results');
+      (btn as HTMLButtonElement).disabled = true;
+
+      if (votedId && nameId === votedId) {
+        btn.classList.add('user-voted');
+      }
+
+      const bar = btn.querySelector(`[data-bar="${nameId}"]`) as HTMLElement;
+      const countEl = btn.querySelector(`[data-count="${nameId}"]`) as HTMLElement;
+      const pctEl = btn.querySelector(`[data-pct="${nameId}"]`) as HTMLElement;
+
+      if (bar) {
+        // Delay for animation
+        requestAnimationFrame(() => {
+          bar.style.width = `${barWidth}%`;
+        });
+      }
+      if (countEl) {
+        countEl.textContent = `${count} vote${count !== 1 ? 's' : ''}`;
+      }
+      if (pctEl) {
+        pctEl.textContent = `${pct}%`;
+      }
+    });
+
+    // Show total
+    const totalEl = document.getElementById('poll-total');
+    if (totalEl) {
+      totalEl.textContent = `${totalVotes} total vote${totalVotes !== 1 ? 's' : ''} cast`;
+      totalEl.style.display = 'block';
+    }
+  }
+
+  // Load saved local votes (fallback when backend is unavailable)
+  const LOCAL_VOTES_KEY = 'pv_mascot_poll_local';
+
+  function getLocalVotes(): Record<string, number> {
+    try {
+      return JSON.parse(localStorage.getItem(LOCAL_VOTES_KEY) || '{}');
+    } catch { return {}; }
+  }
+
+  function saveLocalVote(nameId: string) {
+    const votes = getLocalVotes();
+    votes[nameId] = (votes[nameId] || 0) + 1;
+    localStorage.setItem(LOCAL_VOTES_KEY, JSON.stringify(votes));
+    return votes;
+  }
+
+  // Check if already voted — show results directly
+  const existingVote = localStorage.getItem(POLL_VOTED_KEY);
+  if (existingVote) {
+    fetch(`${SUPABASE_URL}/functions/v1/mascot-poll`)
+      .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+      .then((data) => showResults(data.results || {}, existingVote))
+      .catch(() => {
+        // Backend unavailable — show local votes
+        const local = getLocalVotes();
+        if (Object.keys(local).length > 0) {
+          showResults(local, existingVote);
+        }
+      });
+  }
+
+  // Vote handlers
+  document.querySelectorAll('.poll-option-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const nameId = btn.getAttribute('data-name')!;
+      const voterId = getVoterId();
+
+      // Disable all buttons immediately
+      document.querySelectorAll('.poll-option-btn').forEach((b) => {
+        (b as HTMLButtonElement).disabled = true;
+      });
+      btn.classList.add('selected');
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/mascot-poll`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name_choice: nameId, voter_id: voterId }),
+        });
+
+        if (!res.ok) throw new Error('Vote failed');
+
+        const data = await res.json();
+        localStorage.setItem(POLL_VOTED_KEY, nameId);
+        saveLocalVote(nameId);
+        showResults(data.results || {}, nameId);
+      } catch (_) {
+        // Backend unavailable — save locally and show local results
+        localStorage.setItem(POLL_VOTED_KEY, nameId);
+        const localResults = saveLocalVote(nameId);
+        showResults(localResults, nameId);
+      }
+    });
+  });
+</script>

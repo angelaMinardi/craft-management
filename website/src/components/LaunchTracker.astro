@@ -1,0 +1,75 @@
+---
+interface Props {
+  class?: string;
+}
+const { class: className = '' } = Astro.props;
+---
+
+<div class:list={['launch-tracker', className]} id="launch-tracker">
+  <div class="tracker-header">
+    <h3 class="tracker-title">Beta Launch Tracker</h3>
+    <p class="tracker-subtitle">12 spots. First testers get to break things and tell us what to fix.</p>
+  </div>
+  <div class="tracker-eggs" aria-label="12 beta tester spots">
+    {Array.from({ length: 12 }).map((_, i) => (
+      <div class="tracker-egg" data-egg-index={i} aria-label={`Spot ${i + 1}`}>
+        <svg viewBox="0 0 40 52" fill="none" class="egg-svg" aria-hidden="true">
+          <path d="M20 2C10 2 2 18 2 32C2 42.5 10 50 20 50C30 50 38 42.5 38 32C38 18 30 2 20 2Z"
+                stroke="currentColor" stroke-width="2" fill="currentColor" fill-opacity="0.15"/>
+        </svg>
+        <span class="egg-number">{i + 1}</span>
+      </div>
+    ))}
+  </div>
+  <p class="tracker-label" id="tracker-label"></p>
+  <p class="tracker-urgency" id="tracker-urgency"></p>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://fbzbnztvanuiijzymckn.supabase.co';
+
+  async function updateTracker() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/waitlist-signup`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const filled = Math.min(data.total || 0, 12);
+      const remaining = 12 - filled;
+
+      document.querySelectorAll('.tracker-egg').forEach((egg, i) => {
+        if (i < filled) {
+          egg.classList.add('filled');
+          (egg as HTMLElement).style.animationDelay = `${i * 0.1}s`;
+        }
+      });
+
+      const label = document.getElementById('tracker-label');
+      const urgency = document.getElementById('tracker-urgency');
+
+      if (label) {
+        if (remaining === 0) {
+          label.textContent = 'All 12 spots have been claimed!';
+        } else if (remaining <= 3) {
+          label.textContent = `Only ${remaining} spot${remaining !== 1 ? 's' : ''} left!`;
+          label.classList.add('tracker-urgent');
+        } else {
+          label.textContent = `${filled} of 12 spots claimed`;
+        }
+      }
+
+      if (urgency) {
+        if (remaining > 0 && remaining <= 5) {
+          urgency.textContent = 'These spots are going fast — claim yours now.';
+          urgency.style.display = 'block';
+        } else if (remaining === 0) {
+          urgency.textContent = 'Sign up to be notified when more spots open.';
+          urgency.style.display = 'block';
+        }
+      }
+    } catch (_) {
+      // Tracker is enhancement — fail silently
+    }
+  }
+
+  updateTracker();
+</script>

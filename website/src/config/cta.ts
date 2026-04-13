@@ -3,7 +3,7 @@ export type CtaMode = 'liveFirst' | 'prelaunchFirst';
 export interface CtaLink {
   label: string;
   href: string;
-  destination: 'app_store' | 'waitlist' | 'referral';
+  destination: 'app_store' | 'waitlist' | 'referral' | 'quiz';
 }
 
 export interface CtaConfig {
@@ -13,11 +13,11 @@ export interface CtaConfig {
 }
 
 const DEFAULT_APP_STORE_URL = 'https://apps.apple.com';
-const DEFAULT_WAITLIST_URL = '/contact';
+const DEFAULT_WAITLIST_URL = '/waitlist';
 const DEFAULT_REFERRAL_URL = '/contact';
 
 function normalizeMode(modeRaw: string | undefined): CtaMode {
-  return modeRaw === 'prelaunchFirst' ? 'prelaunchFirst' : 'liveFirst';
+  return modeRaw === 'liveFirst' ? 'liveFirst' : 'prelaunchFirst';
 }
 
 export function getCtaConfig(env: ImportMetaEnv): CtaConfig {
@@ -29,7 +29,7 @@ export function getCtaConfig(env: ImportMetaEnv): CtaConfig {
 
   const fallback: CtaLink = fallbackPrefersReferral
     ? { label: 'Invite a Crafty Friend', href: referralUrl, destination: 'referral' }
-    : { label: 'Join the Waitlist', href: waitlistUrl, destination: 'waitlist' };
+    : { label: 'Become a Beta Tester', href: waitlistUrl, destination: 'waitlist' };
 
   const primaryLive: CtaLink = {
     label: 'Download on the App Store',
@@ -40,8 +40,8 @@ export function getCtaConfig(env: ImportMetaEnv): CtaConfig {
   if (mode === 'prelaunchFirst') {
     return {
       mode,
-      primary: { label: 'Join the Waitlist', href: waitlistUrl, destination: 'waitlist' },
-      fallback: primaryLive,
+      primary: { label: 'Become a Beta Tester', href: waitlistUrl, destination: 'waitlist' },
+      fallback: { label: 'Take the Quiz', href: '/quiz', destination: 'quiz' },
     };
   }
 

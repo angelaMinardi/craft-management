@@ -2,7 +2,11 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import FeatureCard from '../components/FeatureCard.astro';
 import CTA from '../components/CTA.astro';
+import AnimatedPip from '../components/AnimatedPip.astro';
+import LaunchTracker from '../components/LaunchTracker.astro';
+import MascotPoll from '../components/MascotPoll.astro';
 import { getCtaConfig } from '../config/cta';
+import '../styles/quiz.css';
 
 const ctaConfig = getCtaConfig(import.meta.env);
 
@@ -10,19 +14,19 @@ const features = [
   {
     eyebrow: 'Step 1',
     title: 'Spot a pattern you love',
-    description: 'Share from Ravelry, Etsy, TikTok, YouTube, or blogs. Pattern Vault captures it before inspiration slips away.',
+    description: 'Share from Ravelry, Etsy, TikTok, YouTube, or blogs. Pattern Vault grabs it before it disappears into your bookmarks forever.',
     icon: '🔗',
   },
   {
     eyebrow: 'Step 2',
-    title: 'Keep your next project in view',
-    description: 'Move patterns from Want to Make to In Progress to Completed, so your queue feels calm and actionable.',
+    title: 'Actually keep track of it',
+    description: 'Move patterns from Want to Make to In Progress to Completed. No more losing that perfect sweater pattern in 47 open tabs.',
     icon: '✓',
   },
   {
     eyebrow: 'Step 3',
-    title: 'Finish with confidence',
-    description: 'Add notes, materials, and progress details right where you need them to create repeatable small wins.',
+    title: 'Make the thing',
+    description: 'Add notes, materials, and progress details. Row counter, voice mode, and all the tools to get from "casting on" to "finished object."',
     icon: '🧶',
   },
 ];
@@ -30,12 +34,12 @@ const features = [
 
 <BaseLayout
   title="Pattern Vault — Your craft library, in your pocket"
-  description="Save patterns from Ravelry, Etsy, TikTok, and anywhere else. Track projects, add notes, and keep everything in one place. For crafters who collect more patterns than they can make."
+  description="Save patterns from Ravelry, Etsy, TikTok, and anywhere else. Track projects, add notes, and stop losing that pattern you saved three months ago. For crafters who collect more patterns than they can make."
 >
-  <div class="home">
-    <section class="hero gradient-mesh" aria-labelledby="hero-heading">
+  <div class="home gradient-mesh">
+    <section class="hero" aria-labelledby="hero-heading">
       <div class="hero-mascot-wrap">
-        <img src="/images/mascot.png" alt="Pattern Vault mascot" class="hero-mascot" width="160" height="160" />
+        <AnimatedPip animation="idle" size={160} class="hero-mascot" />
       </div>
       <h1 id="hero-heading" class="hero-title">
         Your craft library,<br /><span class="hero-title-accent">in your pocket</span>
@@ -44,7 +48,7 @@ const features = [
         Pattern Vault is the one place where every pattern, tutorial, and project idea — no matter where you found it — gets saved, organized, and tracked from "I want to make this" to "I finished it."
       </p>
       <p class="hero-tagline">
-        Save from Ravelry, Etsy, TikTok, YouTube, blogs. Track status. Add notes. One thread that ties your crafting world together.
+        Save from Ravelry, Etsy, TikTok, YouTube, blogs. Track your projects. Add notes. Everything in one place instead of everywhere.
       </p>
       <div class="hero-cta-stack">
         <div class="hero-cta">
@@ -73,18 +77,18 @@ const features = [
         </div>
       </div>
       <p class="hero-note">
-        {ctaConfig.mode === 'liveFirst' ? 'iOS only. Designed for crafters who save patterns from everywhere.' : 'Launch is coming soon on iOS. Join the waitlist for first access.'}
+        {ctaConfig.mode === 'liveFirst' ? 'iOS only. Designed for crafters who save patterns from everywhere.' : 'Only 12 beta testing spots available. Help shape Pattern Vault before public launch.'}
       </p>
     </section>
 
     <section class="trust-row" aria-label="Trust signals">
       <p class="trust-chip reveal">Built by crafters</p>
       <p class="trust-chip reveal">Privacy-first by default</p>
-      <p class="trust-chip reveal">Clear support and legal pages</p>
+      <p class="trust-chip reveal">No tracking, ever</p>
     </section>
 
     <section class="features" aria-labelledby="features-heading">
-      <h2 id="features-heading" class="section-title reveal">How it works in 3 gentle steps</h2>
+      <h2 id="features-heading" class="section-title reveal">Here's the idea</h2>
       <div class="features-grid">
         {features.map((f, i) => (
           <div class="feature-wrap reveal" style={`--reveal-order: ${i}`}>
@@ -94,9 +98,28 @@ const features = [
       </div>
     </section>
 
-    <section class="cta-section gradient-mesh" aria-labelledby="cta-heading">
-      <h2 id="cta-heading" class="visually-hidden">Get the app</h2>
-      <p class="cta-text reveal">Your private craft notebook — made by crafters, for crafters.</p>
+    <section class="beta-tracker-section reveal" aria-label="Beta launch progress">
+      <LaunchTracker />
+    </section>
+
+    <section class="quiz-promo" aria-labelledby="quiz-promo-heading">
+      <div class="quiz-promo-inner reveal">
+        <img src="/images/pip/curious.png" alt="Our mascot crow looking curious" class="quiz-promo-pip" width="100" height="100" />
+        <div class="quiz-promo-content">
+          <h2 id="quiz-promo-heading" class="quiz-promo-title">What kind of crafter are you?</h2>
+          <p class="quiz-promo-text">Take the quiz to discover your crafting archetype. It takes 2 minutes and the results are surprisingly accurate.</p>
+          <a href="/quiz" class="pv-button-primary quiz-promo-btn">Take the Quiz</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="poll-section reveal" aria-label="Mascot naming poll">
+      <MascotPoll />
+    </section>
+
+    <section class="cta-section" aria-labelledby="cta-heading">
+      <h2 id="cta-heading" class="visually-hidden">Join the beta</h2>
+      <p class="cta-text reveal">Stop losing patterns. Start finishing projects.</p>
       <div class="cta-actions reveal">
         <CTA
           href={ctaConfig.primary.href}
@@ -162,6 +185,24 @@ const features = [
     position: relative;
   }
 
+  @media (min-width: 1024px) {
+    .hero {
+      max-width: none;
+      padding: var(--space-4xl) var(--space-2xl) var(--space-3xl);
+    }
+
+    .hero-subtitle,
+    .hero-tagline {
+      max-width: 42rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta-section {
+      padding: var(--space-4xl) var(--space-2xl);
+    }
+  }
+
   .hero-mascot-wrap {
     margin: 0 auto var(--space-xl);
     filter: drop-shadow(var(--shadow-glow-coral));
@@ -175,6 +216,13 @@ const features = [
     display: block;
     margin: 0 auto;
     animation: float 4s ease-in-out infinite;
+  }
+
+  @media (min-width: 1024px) {
+    .hero-mascot {
+      width: 220px;
+      height: 220px;
+    }
   }
 
   .hero-title {
@@ -296,6 +344,13 @@ const features = [
     gap: var(--space-xl);
   }
 
+  @media (min-width: 1024px) {
+    .features-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-2xl);
+    }
+  }
+
   .cta-section {
     text-align: center;
     padding: var(--space-4xl) var(--space-lg);
@@ -303,10 +358,10 @@ const features = [
   }
 
   .cta-text {
-    font-size: var(--text-subtitle);
+    font-size: var(--text-title);
     font-weight: 600;
     color: var(--deep-plum);
-    margin: 0 0 var(--space-lg);
+    margin: 0 0 var(--space-xl);
   }
 
   .cta-actions {
@@ -314,6 +369,69 @@ const features = [
     flex-wrap: wrap;
     gap: var(--space-sm);
     justify-content: center;
+  }
+
+  .quiz-promo {
+    padding: var(--space-3xl) var(--space-lg);
+    max-width: var(--content-wide);
+    margin: 0 auto;
+  }
+
+  .quiz-promo-inner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    padding: var(--space-xl);
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--sage-green) 8%, white);
+    border: 1.5px solid color-mix(in srgb, var(--sage-green) 25%, transparent);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .quiz-promo-pip {
+    flex-shrink: 0;
+    animation: float 4s ease-in-out infinite;
+  }
+
+  .quiz-promo-content {
+    flex: 1;
+  }
+
+  .quiz-promo-title {
+    font-size: var(--text-title);
+    font-weight: 700;
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-sm);
+  }
+
+  .quiz-promo-text {
+    font-size: var(--text-body);
+    color: var(--text-muted);
+    margin: 0 0 var(--space-md);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .quiz-promo-btn {
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+  }
+
+  @media (max-width: 640px) {
+    .quiz-promo-inner {
+      flex-direction: column;
+      text-align: center;
+    }
+  }
+
+  .beta-tracker-section {
+    padding: var(--space-xl) var(--space-lg) 0;
+  }
+
+  .poll-section {
+    padding: 0 var(--space-lg) var(--space-2xl);
+    max-width: var(--content-wide);
+    margin: 0 auto;
   }
 
   .visually-hidden {

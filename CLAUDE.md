@@ -96,6 +96,10 @@ Repo also includes a separate static marketing/legal site in `website/`.
 - **AI step parsing (done):** Two modes: (1) At import time — AIPatternAnalyzer prompt includes `steps` field, saved as `parsed_steps` JSON column in DB. (2) On-demand in main app — “Analyze Steps” wand button calls AIStepParserService (Gemini 2.5 Flash) to parse existing patterns. Step priority chain: CustomStepLayout (user-edited) > AI parsed_steps > PatternStepParser (heuristic). Migration: 009_add_parsed_steps. New file: AIStepParserService.swift (main app Services).
 - **Smart pattern search (done):** Stash & Tools → Find patterns. User enters or selects materials (yarn weight, needle/hook size, craft) from stash/tools or freeform; searches Ravelry via RavelryPatternSearchService; results can be opened in Safari or saved to vault (AddPatternView). Requires Ravelry API keys in Config.xcconfig for search; graceful message if not configured.
 - **Ravelry account connect and import (done):** Settings → Ravelry. Users can connect their Ravelry account via OAuth 2.0 authorization code flow (RavelryOAuthService, KeychainHelper). Tokens stored in Keychain per app user. After connecting, “Import my Ravelry library” fetches the user’s pattern library (RavelryUserService), dedupes by source_url, and adds patterns via PatternStore. Requires a Ravelry OAuth app configured with redirect URI `patternvault://oauth/ravelry`. Config: `RAVELRY_OAUTH2_CLIENT_ID`, `RAVELRY_OAUTH2_CLIENT_SECRET`.
+- **Interactive chart knitting mode (done):** InteractiveChartGridView; row-by-row progress, zoom/pan (UIScrollView-backed ZoomableScrollView), row notes, size selector. Entry from ExtractedChartWorkspaceView bottom toolbar or PatternDetailView chart card context menu.
+- **CV-based grid border detection (done):** ChartGridDetector.detectBorderLines scans for contiguous pixel runs to find grid borders. Knitting charts have continuous gridlines; row/column numbers are discrete characters with gaps. Preferred over luminance-based density refinement for colorwork charts.
+- **Intelligent repeat tracking (done):** RepeatInfo model + heuristic detection from step body text (RepeatInfo.detect). RepeatStepView shows cycling UI for repeat instructions. Simple round counter for “work N rounds” steps. Size selector for multi-size patterns. ActiveRepeatState in PatternProgressData tracks cycle position. SecondaryCounter (color=dustyBlue, linkMode=unlinked) tracks cycles.
+- **Step grouping (done):** PatternStepSectionView.groupedSteps condenses consecutive single-row steps in the same section into one display step with InteractiveRowReaderView. Navigation arrows skip entire groups.
 
 ## Gotchas
 
@@ -111,6 +115,14 @@ Repo also includes a separate static marketing/legal site in `website/`.
 - Fresh Supabase projects need all migrations (001-013) run in order before app works. For existing DBs missing newer columns/tables, run the missing migration files in order from `PatternVault/supabase_migrations/`.
 - sudo commands don't work from Claude Code (no tty for password)
 - `launch.json` configs are empty — no dev server (iOS-only project, use Xcode)
+- Gemini can return JSON with duplicate keys (e.g., `"grid_boundary"` twice). `JSONDecoder` fatally crashes on this. Always sanitize through `JSONSerialization` first (last-value-wins) before decoding. Fixed in `AIStepParserService.callGemini`.
+- `Dictionary<Int, Codable>` causes "Duplicate values for key" crash during encoding. Use `Dictionary<String, Codable>` instead.
+- `PatternStore.triggerPendingChartExtractions` runs on every `load()`. Re-extracts if `aiExtractedHighlights(patternId:)` is empty. Re-importing a pattern creates a new UUID, orphaning old highlights — extraction repeats each launch.
+- `ChartHighlightStore.load()` silently skips files that fail to decode (`try?`). Add error logging when debugging chart persistence.
+- Xcode build cache frequently shows phantom errors ("cannot find type X") not present in `xcodebuild clean build`. Fix: Cmd+Shift+K or `rm -rf ~/Library/Developer/Xcode/DerivedData`.
+- SwiftUI `scaleEffect` + `MagnificationGesture` doesn't allow panning. Use UIKit `UIScrollView` wrapper for proper pinch-to-zoom + pan.
+- Use `.id()` modifier to force SwiftUI view recreation when underlying data changes (e.g., `.id("repeat_\(index)")` for per-step state isolation).
+- `objectWillChange.send()` must be called on `@ObservableObject` stores when writing to their data from external code (e.g., RowCounterStore writing to PatternProgressStore).
 
 ## Chart Extraction Pipeline
 

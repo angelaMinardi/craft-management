@@ -95,7 +95,7 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
     }
 
     let id: UUID
-    let patternId: UUID
+    var patternId: UUID
     let makeId: UUID?
     let imageId: UUID?
     let pdfPageIndex: Int?
@@ -127,6 +127,9 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
     var gridInsetBottom: Double
     var chartLabel: String?
     var isAIExtracted: Bool
+    var isColorwork: Bool
+
+    var usesBottomRightIndexing: Bool { isAIExtracted }
 
     init(
         id: UUID = UUID(),
@@ -156,7 +159,8 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
         gridInsetRight: Double = 0,
         gridInsetBottom: Double = 0,
         chartLabel: String? = nil,
-        isAIExtracted: Bool = false
+        isAIExtracted: Bool = false,
+        isColorwork: Bool = false
     ) {
         self.id = id
         self.patternId = patternId
@@ -181,12 +185,13 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
         self.currentRow = currentRow
         self.currentColumn = currentColumn
         self.annotations = annotations
-        self.gridInsetLeft = min(max(gridInsetLeft, 0), 0.45)
-        self.gridInsetTop = min(max(gridInsetTop, 0), 0.45)
-        self.gridInsetRight = min(max(gridInsetRight, 0), 0.45)
-        self.gridInsetBottom = min(max(gridInsetBottom, 0), 0.45)
+        self.gridInsetLeft = min(max(gridInsetLeft, 0), 0.85)
+        self.gridInsetTop = min(max(gridInsetTop, 0), 0.85)
+        self.gridInsetRight = min(max(gridInsetRight, 0), 0.85)
+        self.gridInsetBottom = min(max(gridInsetBottom, 0), 0.85)
         self.chartLabel = chartLabel
         self.isAIExtracted = isAIExtracted
+        self.isColorwork = isColorwork
     }
 
     init(
@@ -217,7 +222,8 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
         gridInsetRight: Double = 0,
         gridInsetBottom: Double = 0,
         chartLabel: String? = nil,
-        isAIExtracted: Bool = false
+        isAIExtracted: Bool = false,
+        isColorwork: Bool = false
     ) {
         self.id = id
         self.patternId = patternId
@@ -242,12 +248,13 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
         self.currentRow = currentRow
         self.currentColumn = currentColumn
         self.annotations = annotations
-        self.gridInsetLeft = min(max(gridInsetLeft, 0), 0.45)
-        self.gridInsetTop = min(max(gridInsetTop, 0), 0.45)
-        self.gridInsetRight = min(max(gridInsetRight, 0), 0.45)
-        self.gridInsetBottom = min(max(gridInsetBottom, 0), 0.45)
+        self.gridInsetLeft = min(max(gridInsetLeft, 0), 0.85)
+        self.gridInsetTop = min(max(gridInsetTop, 0), 0.85)
+        self.gridInsetRight = min(max(gridInsetRight, 0), 0.85)
+        self.gridInsetBottom = min(max(gridInsetBottom, 0), 0.85)
         self.chartLabel = chartLabel
         self.isAIExtracted = isAIExtracted
+        self.isColorwork = isColorwork
     }
 
     enum CodingKeys: String, CodingKey {
@@ -280,6 +287,7 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
         case gridInsetBottom
         case chartLabel
         case isAIExtracted
+        case isColorwork
     }
 
     init(from decoder: Decoder) throws {
@@ -307,11 +315,12 @@ struct ChartHighlight: Identifiable, Codable, Equatable {
         currentRow = max(1, try c.decodeIfPresent(Int.self, forKey: .currentRow) ?? 1)
         currentColumn = max(1, try c.decodeIfPresent(Int.self, forKey: .currentColumn) ?? 1)
         annotations = try c.decodeIfPresent([ChartSurfaceAnnotation].self, forKey: .annotations) ?? []
-        gridInsetLeft = min(max(try c.decodeIfPresent(Double.self, forKey: .gridInsetLeft) ?? 0, 0), 0.45)
-        gridInsetTop = min(max(try c.decodeIfPresent(Double.self, forKey: .gridInsetTop) ?? 0, 0), 0.45)
-        gridInsetRight = min(max(try c.decodeIfPresent(Double.self, forKey: .gridInsetRight) ?? 0, 0), 0.45)
-        gridInsetBottom = min(max(try c.decodeIfPresent(Double.self, forKey: .gridInsetBottom) ?? 0, 0), 0.45)
+        gridInsetLeft = min(max(try c.decodeIfPresent(Double.self, forKey: .gridInsetLeft) ?? 0, 0), 0.85)
+        gridInsetTop = min(max(try c.decodeIfPresent(Double.self, forKey: .gridInsetTop) ?? 0, 0), 0.85)
+        gridInsetRight = min(max(try c.decodeIfPresent(Double.self, forKey: .gridInsetRight) ?? 0, 0), 0.85)
+        gridInsetBottom = min(max(try c.decodeIfPresent(Double.self, forKey: .gridInsetBottom) ?? 0, 0), 0.85)
         chartLabel = try c.decodeIfPresent(String.self, forKey: .chartLabel)
         isAIExtracted = try c.decodeIfPresent(Bool.self, forKey: .isAIExtracted) ?? false
+        isColorwork = try c.decodeIfPresent(Bool.self, forKey: .isColorwork) ?? false
     }
 }

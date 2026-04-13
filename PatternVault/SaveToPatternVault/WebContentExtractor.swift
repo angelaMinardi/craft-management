@@ -191,9 +191,6 @@ enum WebContentExtractor {
         ]
         let junkRegexes = junkPatterns.compactMap { try? NSRegularExpression(pattern: $0, options: .caseInsensitive) }
 
-        // Load user-learned junk phrases from App Group UserDefaults
-        let learnedPhrases = Self.loadLearnedJunkPhrases()
-
         let filteredLines = normalizedLines.filter { line in
             if line.isEmpty { return true }  // keep blank lines for paragraph breaks
             if line == "-" { return false }   // bare dash
@@ -202,11 +199,6 @@ enum WebContentExtractor {
                 if regex.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) != nil {
                     return false
                 }
-            }
-            // Check against user-learned junk phrases
-            let lower = line.lowercased()
-            for phrase in learnedPhrases {
-                if lower.contains(phrase) { return false }
             }
             return true
         }
@@ -357,25 +349,4 @@ enum WebContentExtractor {
         return nil
     }
 
-    // MARK: - Learned Junk Phrases (from App Group UserDefaults)
-
-    /// Reads user-learned junk phrases from App Group UserDefaults.
-    /// These are stored by JunkPhraseStore in the main app; the Share Extension
-    /// reads them directly to avoid cross-target import dependencies.
-    private static func loadLearnedJunkPhrases() -> [String] {
-        guard let defaults = UserDefaults(suiteName: "group.com.patternvault.app"),
-              let data = defaults.data(forKey: "learned_junk_phrases") else {
-            return []
-        }
-
-        // Decode the same JSON format used by JunkPhraseStore
-        struct StoredPhrase: Decodable {
-            let phrase: String
-        }
-
-        guard let phrases = try? JSONDecoder().decode([StoredPhrase].self, from: data) else {
-            return []
-        }
-        return phrases.map(\.phrase)
-    }
 }

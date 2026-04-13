@@ -564,13 +564,15 @@ class ShareViewController: UIViewController {
             pdfProvider.loadItem(forTypeIdentifier: UTType.pdf.identifier, options: nil) { [weak self] data, _ in
                 DispatchQueue.main.async {
                     if let url = data as? URL {
-                        if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
-                           let fileSize = attrs[.size] as? Int,
-                           fileSize > maxPdfSize {
+                        guard let pdfData = try? Data(contentsOf: url) else {
+                            self?.showTerminalError("Could not read this PDF. Try sharing again from the source app.", retryHandler: { [weak self] in self?.extractSharedURL() })
+                            return
+                        }
+                        if pdfData.count > maxPdfSize {
                             self?.showTerminalError("PDF is too large (max 10 MB). Please share a smaller file.", retryHandler: { [weak self] in self?.extractSharedURL() })
                             return
                         }
-                        self?.sharedPdfData = try? Data(contentsOf: url)
+                        self?.sharedPdfData = pdfData
                         self?.sharedURL = url.absoluteString
                         self?.beginAnalysisForPdf()
                     } else if let pdfData = data as? Data {
@@ -897,7 +899,8 @@ class ShareViewController: UIViewController {
             yarnWeightYardage: v.yarnWeightYardage,
             techniques: v.techniques,
             yarnLinks: v.yarnLinks.map { YarnLinkEntry(brandName: $0.brandName, officialUrl: $0.officialUrl, storeUrl: $0.storeUrl) },
-            parsedStepsJSON: v.parsedSteps
+            parsedStepsJSON: v.parsedSteps,
+            isFallback: false
         )
     }
 
@@ -1017,7 +1020,7 @@ class ShareViewController: UIViewController {
         let videoUrlToSave = (platform == "tiktok" ? extractedContent?.videoUrls.first : nil)
 
         let shouldEnrich = ExtensionEntitlementCache.canUseAI && !ExtensionAIKillSwitch.isAIDisabledByKillSwitch
-        let enrichmentStatus = shouldEnrich ? "pending" : nil
+        let enrichmentStatus = shouldEnrich ? "pending" : "failed"
 
         let capturedExtractedContent = extractedContent
         let capturedPdfData = sharedPdfData
@@ -1144,7 +1147,7 @@ class ShareViewController: UIViewController {
         loadingLabel.layer.removeAnimation(forKey: "pulse")
         loadingLabel.text = enriching
             ? "Saved! Full details coming soon."
-            : "Saved to your vault!"
+            : "Saved without AI analysis."
 
         let checkmark = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
         checkmark.tintColor = .brandSageGreen

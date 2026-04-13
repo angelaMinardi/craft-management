@@ -51,6 +51,7 @@ enum Theme {
         case .wantToMake: return softCoral
         case .inProgress: return honey
         case .completed: return sageGreen
+        case .frogged: return dustyBlue
         }
     }
 
@@ -59,6 +60,7 @@ enum Theme {
         case .wantToMake: return "heart"
         case .inProgress: return "hammer"
         case .completed: return "checkmark.circle"
+        case .frogged: return "arrow.uturn.backward.circle"
         }
     }
 
@@ -87,9 +89,16 @@ enum Theme {
     enum Typography {
         static let largeTitle = Font.system(.largeTitle, design: .rounded, weight: .bold)
         static let title = Font.system(.title2, design: .rounded, weight: .semibold)
+        static let titleBold = Font.system(.title2, design: .rounded, weight: .bold)
+        static let sectionTitle = Font.system(.title3, design: .rounded, weight: .semibold)
         static let headline = Font.system(.headline, design: .rounded, weight: .semibold)
         static let body = Font.system(.body, design: .rounded)
+        static let bodySemibold = Font.system(.body, design: .rounded, weight: .semibold)
+        static let callout = Font.system(.callout, design: .rounded, weight: .semibold)
+        static let footnote = Font.system(.footnote, design: .rounded)
+        static let footnoteSemibold = Font.system(.footnote, design: .rounded, weight: .semibold)
         static let caption = Font.system(.caption, design: .rounded)
+        static let captionSemibold = Font.system(.caption, design: .rounded, weight: .semibold)
         static let caption2 = Font.system(.caption2, design: .rounded)
         static let cardTitle = Font.system(.subheadline, design: .rounded, weight: .semibold)
         static let cardSubtitle = Font.system(.caption2, design: .rounded)
@@ -121,8 +130,10 @@ enum Theme {
         static let textPrimary = deepPlum
         static let textSecondary = deepPlum.opacity(0.72)
         static let textTertiary = deepPlum.opacity(0.62)
+        static let textMuted = deepPlum.opacity(0.5)
         static let textOnAccent = Color.white
         static let iconMuted = deepPlum.opacity(0.58)
+        static let iconFaint = deepPlum.opacity(0.25)
         static let surfaceBase = cardBackground
         static let surfaceSubtle = warmCream.opacity(0.7)
         static let borderSubtle = deepPlum.opacity(0.08)
@@ -156,6 +167,11 @@ enum Theme {
         static let maxConcurrentAnimatedElements = 2
         static let staggerStep: Double = 0.06
         static let mascotLoopFramesPerSecond: Double = 15
+
+        /// Canonical spring used across the app. Single source of truth.
+        static let spring: Animation = .spring(response: 0.4, dampingFraction: 0.8)
+        /// Snappier spring for press feedback and quick interactions.
+        static let quickSpring: Animation = .spring(response: 0.25, dampingFraction: 0.7)
     }
 
     // MARK: - Premium (consistent copy across app)
@@ -204,6 +220,8 @@ struct ElevatedCardModifier: ViewModifier {
 }
 
 struct PrimaryButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .frame(maxWidth: .infinity)
@@ -213,7 +231,7 @@ struct PrimaryButtonStyle: ButtonStyle {
             .font(Theme.Typography.headline)
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.pill))
             .scaleEffect(configuration.isPressed ? Theme.Motion.pressScale : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+            .animation(reduceMotion ? .none : Theme.Motion.quickSpring, value: configuration.isPressed)
     }
 }
 
@@ -233,15 +251,17 @@ struct TagPillStyle: ViewModifier {
 
 struct StaggeredAppearModifier: ViewModifier {
     let index: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared = false
 
     func body(content: Content) -> some View {
         content
             .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 16)
+            .offset(y: appeared ? 0 : (reduceMotion ? 0 : 16))
             .animation(
-                .spring(response: 0.4, dampingFraction: 0.8)
-                .delay(Double(index) * Theme.Motion.staggerStep),
+                reduceMotion ? .none :
+                    .spring(response: 0.4, dampingFraction: 0.8)
+                    .delay(Double(index) * Theme.Motion.staggerStep),
                 value: appeared
             )
             .onAppear { appeared = true }
@@ -500,5 +520,138 @@ extension View {
 
     func paywallModule() -> some View {
         modifier(PaywallModuleModifier())
+    }
+
+    // MARK: - Animation Modifiers
+
+    /// Applies animation only when Reduce Motion is off.
+    func motionSafe<V: Equatable>(_ animation: Animation, value: V) -> some View {
+        modifier(MotionSafeModifier(animation: animation, value: value))
+    }
+
+    /// Shimmer loading effect for skeleton placeholders.
+    func shimmer() -> some View {
+        modifier(ShimmerModifier())
+    }
+
+    /// Horizontal shake for validation errors. Set trigger to true to fire.
+    func disapprovingShake(trigger: Binding<Bool>) -> some View {
+        modifier(DisapprovingShakeModifier(trigger: trigger))
+    }
+}
+
+// MARK: - MotionSafe Modifier
+
+private struct MotionSafeModifier<V: Equatable>: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let animation: Animation
+    let value: V
+
+    func body(content: Content) -> some View {
+        content.animation(reduceMotion ? .none : animation, value: value)
+    }
+}
+
+// MARK: - Shimmer Loading Modifier
+
+struct ShimmerModifier: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var phase: CGFloat = -1
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                Group {
+                    if !reduceMotion {
+                        LinearGradient(
+                            stops: [
+                                .init(color: .clear, location: 0),
+                                .init(color: Theme.softCoral.opacity(0.12), location: 0.5),
+                                .init(color: .clear, location: 1)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .rotationEffect(.degrees(15))
+                        .offset(x: phase * 300)
+                        .onAppear {
+                            withAnimation(
+                                .linear(duration: Theme.Motion.expressive * 2)
+                                .repeatForever(autoreverses: false)
+                            ) {
+                                phase = 1
+                            }
+                        }
+                    }
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+    }
+}
+
+/// Skeleton placeholder row for loading states.
+struct ShimmerPlaceholderView: View {
+    var rows: Int = 3
+    var rowHeight: CGFloat = 44
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            ForEach(0..<rows, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.small)
+                    .fill(Theme.warmCream)
+                    .frame(height: rowHeight)
+                    .shimmer()
+            }
+        }
+    }
+}
+
+// MARK: - Disapproving Shake Modifier
+
+struct DisapprovingShakeModifier: ViewModifier {
+    @Binding var trigger: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shakeOffset: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: shakeOffset)
+            .onChange(of: trigger) { _, newValue in
+                guard newValue else { return }
+                if reduceMotion {
+                    // Skip shake — the InputSurfaceModifier hasError border flash handles it.
+                    trigger = false
+                    return
+                }
+                // Damped oscillation: -8, 8, -4, 4, 0
+                let keyframes: [(CGFloat, Double)] = [
+                    (-8, 0.04), (8, 0.04), (-4, 0.04), (4, 0.04), (0, 0.04)
+                ]
+                var delay: Double = 0
+                for (offset, duration) in keyframes {
+                    delay += duration
+                    let d = delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + d) {
+                        withAnimation(.linear(duration: duration)) {
+                            shakeOffset = offset
+                        }
+                    }
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay + 0.05) {
+                    trigger = false
+                }
+            }
+    }
+}
+
+// MARK: - Card Press Style
+
+struct CardPressStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(reduceMotion ? .none : Theme.Motion.quickSpring, value: configuration.isPressed)
     }
 }

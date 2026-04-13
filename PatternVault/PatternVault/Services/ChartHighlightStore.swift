@@ -2,6 +2,10 @@
 //  ChartHighlightStore.swift
 //  PatternVault
 //
+//  File-based persistence for ChartHighlight objects.
+//  Each highlight is stored as a JSON file with chart image data
+//  kept in a separate PNG file to avoid bloating the JSON.
+//
 
 import Foundation
 
@@ -11,13 +15,20 @@ final class ChartHighlightStore: ObservableObject {
 
     @Published private(set) var highlights: [ChartHighlight] = []
 
-    private let defaultsKey = "chart_highlights_v1"
-    private let defaults: UserDefaults
+    private let storageDir: URL
+    private let legacyDefaultsKey = "chart_highlights_v1"
+    private let legacyDefaults: UserDefaults?
 
     private init() {
-        defaults = UserDefaults(suiteName: "group.com.patternvault.app") ?? .standard
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        storageDir = appSupport.appendingPathComponent("ChartHighlights", isDirectory: true)
+        legacyDefaults = UserDefaults(suiteName: "group.com.patternvault.app")
+        ensureDirectory()
+        migrateFromUserDefaultsIfNeeded()
         load()
     }
+
+    // MARK: - Queries
 
     func highlight(patternId: UUID, makeId: UUID?, imageId: UUID) -> ChartHighlight? {
         highlights.first(where: {
@@ -62,45 +73,6 @@ final class ChartHighlightStore: ObservableObject {
             }
     }
 
-    func save(_ highlight: ChartHighlight) {
-        if let idx = highlights.firstIndex(where: { $0.id == highlight.id }) {
-            highlights[idx] = highlight
-        } else if let idx = highlights.firstIndex(where: { isSameSurface($0, highlight) }) {
-            highlights[idx] = highlight
-        } else {
-            highlights.append(highlight)
-        }
-        persist()
-    }
-
-    func delete(patternId: UUID, makeId: UUID?, imageId: UUID) {
-        highlights.removeAll {
-            $0.patternId == patternId &&
-            $0.makeId == makeId &&
-            $0.imageId == imageId
-        }
-        persist()
-    }
-
-    func delete(patternId: UUID, makeId: UUID?, pdfPageIndex: Int) {
-        highlights.removeAll {
-            $0.patternId == patternId &&
-            $0.makeId == makeId &&
-            $0.pdfPageIndex == pdfPageIndex
-        }
-        persist()
-    }
-
-    func delete(highlightId: UUID) {
-        highlights.removeAll { $0.id == highlightId }
-        persist()
-    }
-
-    func deleteAIExtracted(patternId: UUID) {
-        highlights.removeAll { $0.patternId == patternId && $0.isAIExtracted }
-        persist()
-    }
-
     func aiExtractedHighlights(patternId: UUID) -> [ChartHighlight] {
         highlights
             .filter { $0.patternId == patternId && $0.isAIExtracted }
@@ -112,18 +84,245 @@ final class ChartHighlightStore: ObservableObject {
             }
     }
 
-    private func load() {
-        guard let data = defaults.data(forKey: defaultsKey),
-              let decoded = try? JSONDecoder().decode([ChartHighlight].self, from: data) else {
-            return
+    // MARK: - Mutations
+
+    func save(_ highlight: ChartHighlight) {
+        if let idx = highlights.firstIndex(where: { $0.id == highlight.id }) {
+            highlights[idx] = highlight
+        } else if let idx = highlights.firstIndex(where: { isSameSurface($0, highlight) }) {
+            let replacedId = highlights[idx].id
+            highlights[idx] = highlight
+            if replacedId != highlight.id {
+                removeFiles(for: replacedId)
+            }
+        } else {
+            highlights.append(highlight)
         }
-        highlights = decoded
+        persistHighlight(highlight)
     }
 
-    private func persist() {
-        guard let data = try? JSONEncoder().encode(highlights) else { return }
-        defaults.set(data, forKey: defaultsKey)
+    func delete(patternId: UUID, makeId: UUID?, imageId: UUID) {
+        let toRemove = highlights.filter {
+            $0.patternId == patternId &&
+            $0.makeId == makeId &&
+            $0.imageId == imageId
+        }
+        highlights.removeAll { h in toRemove.contains(where: { $0.id == h.id }) }
+        for h in toRemove { removeFiles(for: h.id) }
     }
+
+    func delete(patternId: UUID, makeId: UUID?, pdfPageIndex: Int) {
+        let toRemove = highlights.filter {
+            $0.patternId == patternId &&
+            $0.makeId == makeId &&
+            $0.pdfPageIndex == pdfPageIndex
+        }
+        highlights.removeAll { h in toRemove.contains(where: { $0.id == h.id }) }
+        for h in toRemove { removeFiles(for: h.id) }
+    }
+
+    func delete(highlightId: UUID) {
+        highlights.removeAll { $0.id == highlightId }
+        removeFiles(for: highlightId)
+    }
+
+    func deleteAIExtracted(patternId: UUID) {
+        let toRemove = highlights.filter { $0.patternId == patternId && $0.isAIExtracted }
+        highlights.removeAll { h in toRemove.contains(where: { $0.id == h.id }) }
+        for h in toRemove { removeFiles(for: h.id) }
+    }
+
+    func deleteAll(patternId: UUID) {
+        let toRemove = highlights.filter { $0.patternId == patternId }
+        highlights.removeAll { h in toRemove.contains(where: { $0.id == h.id }) }
+        for h in toRemove { removeFiles(for: h.id) }
+    }
+
+    // MARK: - File-Based Persistence
+
+    private func ensureDirectory() {
+        try? FileManager.default.createDirectory(at: storageDir, withIntermediateDirectories: true)
+    }
+
+    private func jsonURL(for id: UUID) -> URL {
+        storageDir.appendingPathComponent("\(id.uuidString).json")
+    }
+
+    private func imageURL(for id: UUID) -> URL {
+        storageDir.appendingPathComponent("\(id.uuidString).png")
+    }
+
+    private func drawingURL(for id: UUID) -> URL {
+        storageDir.appendingPathComponent("\(id.uuidString).drawing")
+    }
+
+    private func colorworkURL(for id: UUID) -> URL {
+        storageDir.appendingPathComponent("\(id.uuidString).colorwork")
+    }
+
+    private func progressURL(for id: UUID) -> URL {
+        storageDir.appendingPathComponent("\(id.uuidString).progress")
+    }
+
+    // MARK: - Colorwork Grid I/O
+
+    func loadColorworkGrid(for id: UUID) -> ColorworkGrid? {
+        guard let data = try? Data(contentsOf: colorworkURL(for: id)) else { return nil }
+        return try? JSONDecoder().decode(ColorworkGrid.self, from: data)
+    }
+
+    func saveColorworkGrid(_ grid: ColorworkGrid, for id: UUID) {
+        if let data = try? JSONEncoder().encode(grid) {
+            try? data.write(to: colorworkURL(for: id))
+        }
+    }
+
+    // MARK: - Progress State I/O
+
+    func loadProgress(for id: UUID) -> ChartProgressState? {
+        guard let data = try? Data(contentsOf: progressURL(for: id)) else { return nil }
+        return try? JSONDecoder().decode(ChartProgressState.self, from: data)
+    }
+
+    private var progressSaveTimers: [UUID: Timer] = [:]
+
+    func saveProgress(_ state: ChartProgressState, for id: UUID) {
+        // Debounce writes to avoid thrashing on rapid row advances
+        progressSaveTimers[id]?.invalidate()
+        progressSaveTimers[id] = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.progressSaveTimers.removeValue(forKey: id)
+                if let data = try? JSONEncoder().encode(state) {
+                    try? data.write(to: self.progressURL(for: id))
+                }
+            }
+        }
+    }
+
+    /// Immediately persists progress (use on view dismiss).
+    func saveProgressImmediately(_ state: ChartProgressState, for id: UUID) {
+        progressSaveTimers[id]?.invalidate()
+        progressSaveTimers.removeValue(forKey: id)
+        if let data = try? JSONEncoder().encode(state) {
+            try? data.write(to: progressURL(for: id))
+        }
+    }
+
+    private func load() {
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(at: storageDir, includingPropertiesForKeys: nil) else { return }
+        let jsonFiles = files.filter { $0.pathExtension == "json" }
+
+        var loadedBySurface: [String: (highlight: ChartHighlight, fileURL: URL)] = [:]
+        let decoder = JSONDecoder()
+        for file in jsonFiles.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            guard let data = try? Data(contentsOf: file) else { continue }
+            var highlight: ChartHighlight
+            do {
+                highlight = try decoder.decode(ChartHighlight.self, from: data)
+            } catch {
+                #if DEBUG
+                print("[ChartHighlightStore] Failed to decode \(file.lastPathComponent): \(error)")
+                #endif
+                continue
+            }
+
+            // Load image data from separate file if not inline
+            if highlight.extractedChartPNGData == nil {
+                let imgFile = imageURL(for: highlight.id)
+                if let imgData = try? Data(contentsOf: imgFile) {
+                    highlight.extractedChartPNGData = imgData
+                }
+            }
+
+            // Load drawing data from separate file if not inline
+            if highlight.annotationDrawingData == nil {
+                let drawFile = drawingURL(for: highlight.id)
+                if let drawData = try? Data(contentsOf: drawFile) {
+                    highlight.annotationDrawingData = drawData
+                }
+            }
+
+            #if DEBUG
+            if highlight.isAIExtracted {
+                print("[ChartHighlightStore] LOAD \(highlight.chartLabel ?? highlight.id.uuidString): insets L=\(String(format:"%.3f",highlight.gridInsetLeft)) T=\(String(format:"%.3f",highlight.gridInsetTop)) R=\(String(format:"%.3f",highlight.gridInsetRight)) B=\(String(format:"%.3f",highlight.gridInsetBottom))")
+            }
+            #endif
+            let surfaceKey = storageSurfaceKey(for: highlight)
+            if let existing = loadedBySurface[surfaceKey] {
+                removeFiles(for: existing.highlight.id)
+                loadedBySurface[surfaceKey] = (highlight, file)
+            } else {
+                loadedBySurface[surfaceKey] = (highlight, file)
+            }
+        }
+        highlights = loadedBySurface.values
+            .map(\.highlight)
+            .sorted { lhs, rhs in
+                let lhsPage = lhs.pdfPageIndex ?? Int.max
+                let rhsPage = rhs.pdfPageIndex ?? Int.max
+                if lhsPage != rhsPage { return lhsPage < rhsPage }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
+    }
+
+    private func persistHighlight(_ highlight: ChartHighlight) {
+        #if DEBUG
+        print("[ChartHighlightStore] PERSIST \(highlight.chartLabel ?? highlight.id.uuidString): insets L=\(String(format:"%.3f",highlight.gridInsetLeft)) T=\(String(format:"%.3f",highlight.gridInsetTop)) R=\(String(format:"%.3f",highlight.gridInsetRight)) B=\(String(format:"%.3f",highlight.gridInsetBottom))")
+        #endif
+        // Write image data to separate file, strip from JSON
+        var stripped = highlight
+        let imageData = stripped.extractedChartPNGData
+        stripped.extractedChartPNGData = nil
+        let drawingData = stripped.annotationDrawingData
+        stripped.annotationDrawingData = nil
+
+        if let json = try? JSONEncoder().encode(stripped) {
+            try? json.write(to: jsonURL(for: highlight.id))
+        }
+        if let imageData {
+            try? imageData.write(to: imageURL(for: highlight.id))
+        } else {
+            try? FileManager.default.removeItem(at: imageURL(for: highlight.id))
+        }
+        if let drawingData {
+            try? drawingData.write(to: drawingURL(for: highlight.id))
+        } else {
+            try? FileManager.default.removeItem(at: drawingURL(for: highlight.id))
+        }
+    }
+
+    private func removeFiles(for id: UUID) {
+        let fm = FileManager.default
+        try? fm.removeItem(at: jsonURL(for: id))
+        try? fm.removeItem(at: imageURL(for: id))
+        try? fm.removeItem(at: drawingURL(for: id))
+        try? fm.removeItem(at: colorworkURL(for: id))
+        try? fm.removeItem(at: progressURL(for: id))
+    }
+
+    // MARK: - Migration from UserDefaults
+
+    private func migrateFromUserDefaultsIfNeeded() {
+        guard let defaults = legacyDefaults,
+              let data = defaults.data(forKey: legacyDefaultsKey),
+              let decoded = try? JSONDecoder().decode([ChartHighlight].self, from: data),
+              !decoded.isEmpty else { return }
+
+        #if DEBUG
+        print("[ChartHighlightStore] Migrating \(decoded.count) highlights from UserDefaults to file storage")
+        #endif
+
+        for highlight in decoded {
+            persistHighlight(highlight)
+        }
+
+        // Remove legacy data after successful migration
+        defaults.removeObject(forKey: legacyDefaultsKey)
+    }
+
+    // MARK: - Helpers
 
     private func isSameSurface(_ lhs: ChartHighlight, _ rhs: ChartHighlight) -> Bool {
         guard lhs.patternId == rhs.patternId, lhs.makeId == rhs.makeId else { return false }
@@ -138,5 +337,16 @@ final class ChartHighlightStore: ObservableObject {
             return true
         }
         return false
+    }
+
+    private func storageSurfaceKey(for highlight: ChartHighlight) -> String {
+        if let imageId = highlight.imageId {
+            return "\(highlight.patternId.uuidString)|\(highlight.makeId?.uuidString ?? "default")|image|\(imageId.uuidString)"
+        }
+        if let pageIndex = highlight.pdfPageIndex {
+            let label = highlight.chartLabel ?? "page_\(pageIndex)"
+            return "\(highlight.patternId.uuidString)|\(highlight.makeId?.uuidString ?? "default")|pdf|\(pageIndex)|\(label)"
+        }
+        return "\(highlight.patternId.uuidString)|\(highlight.id.uuidString)"
     }
 }

@@ -12,6 +12,7 @@ struct ProjectNote: Identifiable, Codable, Sendable {
     var content: String
     var photoUrl: String?
     var durationMinutes: Int?
+    var stepIndex: Int?
     var createdAt: Date
     var updatedAt: Date
 
@@ -22,6 +23,7 @@ struct ProjectNote: Identifiable, Codable, Sendable {
         case content
         case photoUrl = "photo_url"
         case durationMinutes = "duration_minutes"
+        case stepIndex = "step_index"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -36,9 +38,9 @@ enum ProjectNoteType: String, Codable, CaseIterable, Sendable {
     var displayName: String {
         switch self {
         case .general: return "General"
-        case .yarnInfo: return "Materials / supplies"
-        case .modifications: return "Modifications"
-        case .progressUpdate: return "Progress Update"
+        case .yarnInfo: return "Materials"
+        case .modifications: return "Mods"
+        case .progressUpdate: return "Progress"
         }
     }
 }

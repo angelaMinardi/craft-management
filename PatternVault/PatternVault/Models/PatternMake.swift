@@ -13,6 +13,7 @@ struct PatternMake: Identifiable, Codable, Sendable, Hashable {
     var sizeName: String?
     var yardageUsed: Int?
     var sizeMeasurements: String?
+    var sizeIndex: Int?           // 0-based index into multi-size arrays (0=smallest)
     var createdAt: Date
     var updatedAt: Date
 
@@ -24,6 +25,7 @@ struct PatternMake: Identifiable, Codable, Sendable, Hashable {
         case sizeName = "size_name"
         case yardageUsed = "yardage_used"
         case sizeMeasurements = "size_measurements"
+        case sizeIndex = "size_index"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

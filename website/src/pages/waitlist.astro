@@ -1,0 +1,336 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AnimatedPip from '../components/AnimatedPip.astro';
+import FeaturePreview from '../components/FeaturePreview.astro';
+import LaunchTracker from '../components/LaunchTracker.astro';
+import MascotPoll from '../components/MascotPoll.astro';
+import '../styles/quiz.css';
+---
+
+<BaseLayout
+  title="Become a Beta Tester | Pattern Vault"
+  description="Only 12 beta tester spots available. Help shape Pattern Vault before public launch — the craft pattern organizer made by crafters, for crafters."
+>
+  <div class="quiz-container" style="text-align:center;">
+    <div style="margin:0 auto;width:fit-content;"><AnimatedPip animation="waving" size={160} /></div>
+    <h1 style="font-size:var(--text-hero);font-weight:800;color:var(--deep-plum);margin:var(--space-lg) 0 var(--space-md);letter-spacing:var(--letter-tight);line-height:var(--line-height-tight);">
+      Become a Beta Tester
+    </h1>
+    <p style="font-size:var(--text-subtitle);color:var(--text-muted);margin:0 0 var(--space-lg);max-width:28rem;margin-left:auto;margin-right:auto;line-height:var(--line-height-relaxed);">
+      Pattern Vault needs 12 crafters to test the app before public launch. Get early access, shape the features, and help build something special.
+    </p>
+
+    <LaunchTracker />
+
+    <div class="beta-form-card" id="beta-form-card">
+      <h2 class="beta-form-heading">Apply for Beta Access</h2>
+      <p class="beta-form-subtext">Tell us a bit about yourself so we can pick the best mix of testers.</p>
+
+      <form class="beta-form" id="beta-form">
+        <div class="beta-field">
+          <label for="beta-name">Name</label>
+          <input type="text" id="beta-name" class="pv-input-surface" placeholder="What should we call you?" />
+        </div>
+
+        <div class="beta-field">
+          <label for="beta-email">Email <span class="required">*</span></label>
+          <input type="email" id="beta-email" class="pv-input-surface" placeholder="your@email.com" required />
+        </div>
+
+        <div class="beta-field">
+          <label>What do you craft? <span class="hint">(select all that apply)</span></label>
+          <div class="craft-chips" id="craft-chips">
+            <button type="button" class="craft-chip" data-craft="knitting">Knitting</button>
+            <button type="button" class="craft-chip" data-craft="crochet">Crochet</button>
+            <button type="button" class="craft-chip" data-craft="cross-stitch">Cross Stitch</button>
+            <button type="button" class="craft-chip" data-craft="quilting">Quilting</button>
+            <button type="button" class="craft-chip" data-craft="sewing">Sewing</button>
+            <button type="button" class="craft-chip" data-craft="weaving">Weaving</button>
+            <button type="button" class="craft-chip" data-craft="other">Other</button>
+          </div>
+        </div>
+
+        <div class="beta-field">
+          <label for="beta-method">How do you organize patterns now?</label>
+          <textarea id="beta-method" class="pv-input-surface" rows="2" placeholder="Bookmarks, spreadsheets, Ravelry library, a pile of printed PDFs..."></textarea>
+        </div>
+
+        <div class="beta-field">
+          <label for="beta-device">What device will you test on?</label>
+          <select id="beta-device" class="pv-input-surface">
+            <option value="">Select your device</option>
+            <option value="iphone">iPhone</option>
+            <option value="ipad">iPad</option>
+            <option value="both">Both iPhone &amp; iPad</option>
+          </select>
+        </div>
+
+        <button type="submit" class="pv-button-primary beta-submit-btn">Apply for Beta Access</button>
+      </form>
+
+      <p class="beta-form-error" id="beta-form-error" style="display:none;"></p>
+    </div>
+
+    <div class="beta-success-card" id="beta-success-card" style="display:none;">
+      <div class="beta-success-icon" aria-hidden="true">&#127881;</div>
+      <h2 class="beta-success-heading">You're in! Welcome to the beta crew.</h2>
+      <div class="beta-success-position" id="beta-position"></div>
+      <p class="beta-success-remaining" id="beta-remaining"></p>
+      <p class="beta-success-note">We'll email you with TestFlight access soon. Get ready to find bugs and tell us what's missing.</p>
+
+      <p style="font-size:var(--text-body);color:var(--text-muted);margin-top:var(--space-xl);">
+        While you wait — find out what kind of crafter you are:
+      </p>
+      <a href="/quiz" class="pv-button-primary" style="display:inline-block;text-decoration:none;margin-top:var(--space-sm);">
+        Take the Quiz
+      </a>
+    </div>
+
+    <div style="max-width:var(--content-wide);margin:var(--space-3xl) auto 0;">
+      <MascotPoll />
+    </div>
+
+    <div style="max-width:var(--content-wide);margin:var(--space-3xl) auto 0;">
+      <h2 style="font-size:var(--text-title);font-weight:700;color:var(--deep-plum);text-align:center;margin:0 0 var(--space-lg);letter-spacing:var(--letter-tight);">
+        Sneak peek at Pattern Vault
+      </h2>
+      <p style="text-align:center;color:var(--text-muted);margin:0 0 var(--space-xl);font-size:var(--text-subtitle);">
+        Tap a card to learn more.
+      </p>
+      <FeaturePreview />
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .beta-form-card,
+  .beta-success-card {
+    max-width: 32rem;
+    margin: var(--space-xl) auto 0;
+    padding: var(--space-xl);
+    background: color-mix(in srgb, var(--sage-green) 6%, white);
+    border: 1.5px solid color-mix(in srgb, var(--sage-green) 20%, transparent);
+    border-radius: 20px;
+    box-shadow: var(--shadow-soft);
+    text-align: left;
+  }
+
+  .beta-form-heading {
+    font-size: var(--text-title);
+    font-weight: 700;
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-xs);
+    text-align: center;
+  }
+
+  .beta-form-subtext {
+    font-size: var(--text-small);
+    color: var(--text-muted);
+    margin: 0 0 var(--space-xl);
+    text-align: center;
+    line-height: var(--line-height-relaxed);
+  }
+
+  .beta-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .beta-field label {
+    display: block;
+    font-size: var(--text-small);
+    font-weight: 600;
+    color: var(--deep-plum);
+    margin-bottom: var(--space-xs);
+  }
+
+  .beta-field .required {
+    color: var(--soft-coral);
+  }
+
+  .beta-field .hint {
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+
+  .beta-field input,
+  .beta-field textarea,
+  .beta-field select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .beta-field textarea {
+    resize: vertical;
+    min-height: 3rem;
+  }
+
+  .beta-field select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234A2040' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
+  }
+
+  .craft-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .craft-chip {
+    padding: 0.4rem 0.85rem;
+    font-size: var(--text-small);
+    font-weight: 500;
+    color: var(--deep-plum);
+    background: rgba(168, 197, 160, 0.15);
+    border: 1.5px solid rgba(74, 32, 64, 0.1);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--duration-fast);
+  }
+
+  .craft-chip:hover {
+    border-color: var(--sage-green);
+    background: rgba(168, 197, 160, 0.3);
+  }
+
+  .craft-chip.selected {
+    background: var(--sage-green);
+    color: white;
+    border-color: var(--sage-green);
+  }
+
+  .beta-submit-btn {
+    width: 100%;
+    margin-top: var(--space-sm);
+  }
+
+  .beta-form-error {
+    text-align: center;
+    color: #c0392b;
+    font-size: var(--text-small);
+    margin: var(--space-md) 0 0;
+  }
+
+  /* Success state */
+  .beta-success-card {
+    text-align: center;
+  }
+
+  .beta-success-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-sm);
+  }
+
+  .beta-success-heading {
+    font-size: var(--text-title);
+    font-weight: 700;
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-md);
+  }
+
+  .beta-success-position {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--sage-green);
+    margin-bottom: var(--space-xs);
+  }
+
+  .beta-success-remaining {
+    font-size: var(--text-small);
+    color: var(--text-muted);
+    margin: 0 0 var(--space-md);
+  }
+
+  .beta-success-note {
+    font-size: var(--text-small);
+    color: var(--text-muted);
+    line-height: var(--line-height-relaxed);
+    margin: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .beta-form-card,
+    .beta-success-card {
+      max-width: 36rem;
+      padding: var(--space-2xl);
+    }
+  }
+</style>
+
+<script>
+  const SUPABASE_URL = 'https://fbzbnztvanuiijzymckn.supabase.co';
+
+  // Craft chip toggles
+  document.querySelectorAll('.craft-chip').forEach((chip) => {
+    chip.addEventListener('click', () => chip.classList.toggle('selected'));
+  });
+
+  document.getElementById('beta-form')!.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errorEl = document.getElementById('beta-form-error')!;
+    const emailInput = document.getElementById('beta-email') as HTMLInputElement;
+    const nameInput = document.getElementById('beta-name') as HTMLInputElement;
+    const methodInput = document.getElementById('beta-method') as HTMLTextAreaElement;
+    const deviceSelect = document.getElementById('beta-device') as HTMLSelectElement;
+
+    const email = emailInput.value.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errorEl.textContent = 'Please enter a valid email address.';
+      errorEl.style.display = 'block';
+      emailInput.setAttribute('aria-invalid', 'true');
+      return;
+    }
+
+    errorEl.style.display = 'none';
+    emailInput.setAttribute('aria-invalid', 'false');
+
+    const selectedCrafts = Array.from(document.querySelectorAll('.craft-chip.selected'))
+      .map((el) => (el as HTMLElement).dataset.craft!);
+
+    const submitBtn = document.querySelector('#beta-form button[type="submit"]') as HTMLButtonElement;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/waitlist-signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          name: nameInput.value.trim() || null,
+          craft_types: selectedCrafts.length > 0 ? selectedCrafts : null,
+          current_method: methodInput.value.trim() || null,
+          device: deviceSelect.value || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Something went wrong. Please try again.');
+      }
+
+      document.getElementById('beta-form-card')!.style.display = 'none';
+      const successEl = document.getElementById('beta-success-card')!;
+      successEl.style.display = 'block';
+      document.getElementById('beta-position')!.textContent = `Beta Tester #${data.position}`;
+
+      const remaining = data.remaining ?? (12 - (data.total || data.position));
+      const remainingEl = document.getElementById('beta-remaining');
+      if (remainingEl) {
+        remainingEl.textContent = remaining > 0
+          ? `${remaining} of 12 spot${remaining !== 1 ? 's' : ''} remaining`
+          : 'All 12 spots are claimed!';
+      }
+    } catch (err: any) {
+      errorEl.textContent = err.message || 'Something went wrong. Please try again.';
+      errorEl.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Apply for Beta Access';
+    }
+  });
+</script>

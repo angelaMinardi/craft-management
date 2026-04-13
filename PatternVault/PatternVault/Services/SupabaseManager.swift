@@ -46,10 +46,9 @@ private extension Bundle {
         }
         #if DEBUG
         assertionFailure("Invalid Supabase configuration. Check SUPABASE_URL and SUPABASE_ANON_KEY.")
-        return URL(string: "https://placeholder.supabase.co")!
-        #else
-        preconditionFailure("Invalid Supabase configuration in Release build. Set SUPABASE_URL and SUPABASE_ANON_KEY in Config.xcconfig.")
         #endif
+        // Return a placeholder URL so the app launches (all API calls will fail gracefully).
+        return URL(string: "https://placeholder.supabase.co")!
     }
 
     /// Decode JWT payload and return "ref" (Supabase project ref) if present.
@@ -77,12 +76,10 @@ private extension Bundle {
             ?? ProcessInfo.processInfo.environment["SUPABASE_ANON_KEY"]
             ?? "placeholder-anon-key"
         #if DEBUG
-        return value
-        #else
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        precondition(!trimmed.isEmpty && !trimmed.contains("$(") && trimmed != "placeholder-anon-key",
-                     "Invalid SUPABASE_ANON_KEY in Release build.")
-        return value
+        if value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || value.contains("$(") || value == "placeholder-anon-key" {
+            assertionFailure("Invalid SUPABASE_ANON_KEY. Check Config.xcconfig.")
+        }
         #endif
+        return value
     }
 }

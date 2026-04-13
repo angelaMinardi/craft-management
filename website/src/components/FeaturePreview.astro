@@ -1,0 +1,64 @@
+---
+const features = [
+  {
+    icon: '📎',
+    title: 'Save From Anywhere',
+    pipSays: "Ravelry, Etsy, TikTok, YouTube, blogs — I'll catch them all. Two taps and it's in the vault.",
+    description: 'Share a link from any app and Pattern Vault saves the pattern with details extracted automatically.',
+  },
+  {
+    icon: '📋',
+    title: 'Track Your Projects',
+    pipSays: "Want to Make → In Progress → Completed. I love watching that checkmark appear. *happy flap*",
+    description: 'Move patterns through stages, add notes, and see your crafting journey at a glance.',
+  },
+  {
+    icon: '🧶',
+    title: 'Manage Your Stash',
+    pipSays: "I catalogued your entire yarn stash. You have 47 skeins of DK weight. You know what that means... 48?",
+    description: 'Track yarn, needles, and hooks. Pattern Vault can even match patterns to what you already own.',
+  },
+  {
+    icon: '🔍',
+    title: 'Discover Patterns',
+    pipSays: "Tell me your yarn weight and hook size and I'll find patterns that match. I'm basically a crafting detective.",
+    description: 'Search for patterns based on your available materials. No more buying yarn for a pattern when you have the perfect skein at home.',
+  },
+  {
+    icon: '🎯',
+    title: 'Row Counter & Voice Mode',
+    pipSays: "Say 'Row 42' and I'll mark it. Hands stay on your needles, eyes stay on your stitches. You're welcome.",
+    description: 'Hands-free row counting with voice control. Say your row number and Pattern Vault tracks your progress.',
+  },
+];
+---
+
+<div class="feature-previews" id="feature-previews">
+  {features.map((f) => (
+    <div class="feature-flip-card" tabindex="0" role="button" aria-label={`${f.title} — tap to reveal details`}>
+      <div class="feature-flip-inner">
+        <div class="feature-flip-front">
+          <span class="feature-icon">{f.icon}</span>
+          <h3>{f.title}</h3>
+          <span class="tap-hint">Tap to peek</span>
+        </div>
+        <div class="feature-flip-back">
+          <p class="pip-says">"{f.pipSays}"</p>
+          <p class="feature-desc">{f.description}</p>
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
+
+<script>
+  document.querySelectorAll('.feature-flip-card').forEach((card) => {
+    card.addEventListener('click', () => card.classList.toggle('flipped'));
+    card.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') {
+        e.preventDefault();
+        card.classList.toggle('flipped');
+      }
+    });
+  });
+</script>

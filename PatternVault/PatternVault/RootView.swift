@@ -8,6 +8,7 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject var auth: AuthService
     @ObservedObject private var celebrationStore = CelebrationStore.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var sharedURL: String?
     @Binding var savedPatternId: UUID?
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
@@ -27,8 +28,8 @@ struct RootView: View {
                 )
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: auth.isSignedIn)
-        .animation(.easeInOut(duration: 0.3), value: hasSeenOnboarding)
+        .animation(reduceMotion ? .none : .easeInOut(duration: 0.2), value: auth.isSignedIn)
+        .animation(reduceMotion ? .none : .easeInOut(duration: 0.3), value: hasSeenOnboarding)
         .fullScreenCover(item: Binding(
             get: { celebrationStore.pendingMilestone },
             set: { celebrationStore.pendingMilestone = $0 }

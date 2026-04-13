@@ -1,0 +1,486 @@
+---
+import PipMascot from './PipMascot.astro';
+import AnimatedPip from './AnimatedPip.astro';
+import LaunchTracker from './LaunchTracker.astro';
+import MascotPoll from './MascotPoll.astro';
+import { QUIZ_QUESTIONS } from '../config/quiz-questions';
+import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
+---
+
+<div class="quiz-container" id="quiz">
+  <!-- Intro -->
+  <div class="quiz-intro" id="quiz-intro">
+    <div class="quiz-intro-pip-wrap">
+      <AnimatedPip animation="waving" size={160} />
+      <div class="sparkle sparkle-1" aria-hidden="true"></div>
+      <div class="sparkle sparkle-2" aria-hidden="true"></div>
+      <div class="sparkle sparkle-3" aria-hidden="true"></div>
+    </div>
+    <h1>What's Your<br /><span class="hero-title-accent">Crafting Archetype?</span></h1>
+    <p>Answer 7 quick questions and discover the kind of crafter you truly are. Share your result and claim one of just 12 beta tester spots!</p>
+    <button class="pv-button-primary quiz-start-btn" id="quiz-start" type="button">Let's find out</button>
+  </div>
+
+  <!-- Questions -->
+  <div id="quiz-questions" style="display:none;">
+    <div class="quiz-progress">
+      <div class="quiz-progress-track">
+        <div class="quiz-progress-fill" id="quiz-progress-fill" style="width:0%"></div>
+      </div>
+      <p class="quiz-progress-label" id="quiz-progress-label">1 of 7</p>
+    </div>
+
+    {QUIZ_QUESTIONS.map((q, qi) => (
+      <div class="quiz-question-panel" data-question={qi} id={`q-${qi}`}>
+        <div class="quiz-pip-bubble">
+          <PipMascot expression={qi % 2 === 0 ? 'curious' : 'thinking'} size={56} animate={false} />
+          <p>{q.pipSays}</p>
+        </div>
+        <h2 class="quiz-question-text">{q.text}</h2>
+        <div class="quiz-answers" role="radiogroup" aria-label={`Question ${qi + 1}`}>
+          {q.answers.map((a, ai) => (
+            <button
+              class="quiz-answer-btn"
+              type="button"
+              role="radio"
+              aria-checked="false"
+              data-question={qi}
+              data-answer={ai}
+              data-scores={JSON.stringify(a.scores)}
+            >
+              {a.text}
+            </button>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <!-- Result -->
+  <div class="quiz-result" id="quiz-result">
+    <div id="result-badge" class="quiz-result-badge"></div>
+    <div class="quiz-result-pip" id="result-pip"></div>
+    <h2 id="result-name"></h2>
+    <p class="quiz-result-tagline" id="result-tagline"></p>
+    <p class="quiz-result-description" id="result-description"></p>
+
+    <div class="quiz-share-actions">
+      <button class="quiz-share-btn" id="share-twitter" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        Share on X
+      </button>
+      <button class="quiz-share-btn" id="share-copy" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy link
+      </button>
+      <button class="quiz-share-btn" id="share-download" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Download card
+      </button>
+    </div>
+
+    <!-- Beta signup embedded in result -->
+    <div class="quiz-waitlist-section" id="waitlist-section">
+      <h3>Claim Your Beta Spot</h3>
+      <p style="font-size:var(--text-small);color:var(--text-muted);margin:0 0 var(--space-md);">
+        Only 12 spots available. Help shape Pattern Vault before anyone else.
+      </p>
+      <form class="waitlist-form" id="waitlist-form">
+        <input
+          type="email"
+          class="pv-input-surface"
+          placeholder="your@email.com"
+          required
+          aria-label="Email address"
+          id="waitlist-email"
+        />
+        <button type="submit" class="pv-button-primary">Claim My Spot</button>
+      </form>
+      <p class="waitlist-error" id="waitlist-error" style="display:none;"></p>
+    </div>
+
+    <!-- Post-signup success -->
+    <div class="waitlist-success" id="waitlist-success" style="display:none;">
+      <h3>You're in! Welcome to the beta crew.</h3>
+      <div class="waitlist-position" id="waitlist-position"></div>
+      <p class="nest-label" id="nest-label"></p>
+      <p class="nest-sublabel">You'll be among the first 12 crafters to shape Pattern Vault. Share with a crafty friend!</p>
+      <LaunchTracker class="quiz-inline-tracker" />
+      <MascotPoll class="quiz-inline-poll" />
+    </div>
+  </div>
+</div>
+
+<!-- Hidden Pip images for result rendering -->
+{Object.values(ARCHETYPES).map(a => (
+  <img
+    src={`/images/pip/${a.pipExpression}.png`}
+    alt=""
+    data-pip-preload={a.pipExpression}
+    style="display:none;"
+    width="1"
+    height="1"
+  />
+))}
+
+<!-- Archetype data for client-side -->
+<script define:vars={{ archetypesJson: JSON.stringify(ARCHETYPES), archetypeIds: ARCHETYPE_IDS }}>
+  window.__PV_ARCHETYPES = JSON.parse(archetypesJson);
+  window.__PV_ARCHETYPE_IDS = archetypeIds;
+</script>
+
+<script>
+  const archetypes = (window as any).__PV_ARCHETYPES;
+  const archetypeIds: string[] = (window as any).__PV_ARCHETYPE_IDS;
+
+  const scores: Record<string, number> = {};
+  archetypeIds.forEach((id) => (scores[id] = 0));
+
+  let currentQuestion = 0;
+  const totalQuestions = 7;
+
+  const introEl = document.getElementById('quiz-intro')!;
+  const questionsEl = document.getElementById('quiz-questions')!;
+  const resultEl = document.getElementById('quiz-result')!;
+  const progressFill = document.getElementById('quiz-progress-fill')!;
+  const progressLabel = document.getElementById('quiz-progress-label')!;
+
+  // Analytics helper
+  function trackQuiz(event: string, props: Record<string, string | number> = {}) {
+    try {
+      if (typeof (window as any).gtag === 'function') {
+        (window as any).gtag('event', event, props);
+      }
+      if (typeof (window as any).plausible === 'function') {
+        (window as any).plausible(event, { props });
+      }
+    } catch (_) {}
+  }
+
+  // Start quiz
+  document.getElementById('quiz-start')!.addEventListener('click', () => {
+    introEl.style.display = 'none';
+    questionsEl.style.display = 'block';
+    showQuestion(0);
+    trackQuiz('quiz_start');
+  });
+
+  function showQuestion(index: number) {
+    document.querySelectorAll('.quiz-question-panel').forEach((el) => el.classList.remove('active'));
+    const panel = document.getElementById(`q-${index}`);
+    if (panel) {
+      panel.classList.add('active');
+      // Focus the question heading for accessibility
+      const heading = panel.querySelector('.quiz-question-text') as HTMLElement;
+      if (heading) heading.focus();
+    }
+    progressFill.style.width = `${((index) / totalQuestions) * 100}%`;
+    progressLabel.textContent = `${index + 1} of ${totalQuestions}`;
+  }
+
+  // Answer click handlers
+  document.querySelectorAll('.quiz-answer-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const questionIndex = parseInt(btn.getAttribute('data-question')!);
+      const answerScores = JSON.parse(btn.getAttribute('data-scores')!);
+
+      // Mark selected
+      const siblings = btn.parentElement!.querySelectorAll('.quiz-answer-btn');
+      siblings.forEach((s) => {
+        s.classList.remove('selected');
+        s.setAttribute('aria-checked', 'false');
+      });
+      btn.classList.add('selected');
+      btn.setAttribute('aria-checked', 'true');
+
+      // Add scores
+      for (const [id, val] of Object.entries(answerScores)) {
+        scores[id] += val as number;
+      }
+
+      trackQuiz('quiz_answer', { question: questionIndex + 1 });
+
+      // Advance after brief delay
+      setTimeout(() => {
+        if (questionIndex < totalQuestions - 1) {
+          currentQuestion = questionIndex + 1;
+          showQuestion(currentQuestion);
+        } else {
+          showResult();
+        }
+      }, 300);
+    });
+  });
+
+  function showResult() {
+    questionsEl.style.display = 'none';
+    resultEl.classList.add('active');
+    progressFill.style.width = '100%';
+
+    // Calculate winner
+    let bestId = archetypeIds[0];
+    let bestScore = -1;
+    for (const id of archetypeIds) {
+      if (scores[id] > bestScore) {
+        bestScore = scores[id];
+        bestId = id;
+      }
+    }
+
+    const archetype = archetypes[bestId];
+    document.getElementById('result-name')!.textContent = archetype.name;
+    document.getElementById('result-tagline')!.textContent = archetype.tagline;
+    document.getElementById('result-description')!.textContent = archetype.description;
+
+    const badge = document.getElementById('result-badge')!;
+    badge.textContent = 'Your archetype is...';
+    badge.style.background = `color-mix(in srgb, ${archetype.color} 15%, white)`;
+    badge.style.border = `1.5px solid color-mix(in srgb, ${archetype.color} 35%, transparent)`;
+
+    // Pip celebration animation on result, then switch to archetype expression
+    const pipContainer = document.getElementById('result-pip')!;
+    pipContainer.innerHTML = `<video class="animated-pip" width="123" height="160" autoplay muted playsinline disablepictureinpicture style="margin:0 auto;" aria-label="Mascot celebrating">
+      <source src="/images/pip-animated/jumping.webm" type="video/webm" />
+    </video>`;
+    // After one loop (2.4s), switch to static archetype expression
+    setTimeout(() => {
+      pipContainer.innerHTML = `<img src="/images/pip/${archetype.pipExpression}.png" alt="Our mascot looking ${archetype.pipExpression}" width="160" height="160" class="pip-mascot pip-float" style="margin:0 auto;"/>`;
+    }, 2400);
+
+    // Store for sharing
+    resultEl.dataset.archetype = bestId;
+
+    trackQuiz('quiz_complete', { archetype: bestId });
+  }
+
+  // Sharing
+  document.getElementById('share-twitter')!.addEventListener('click', () => {
+    const id = resultEl.dataset.archetype || '';
+    const archetype = archetypes[id];
+    const url = `${window.location.origin}/quiz/result/${id}`;
+    const text = `I'm ${archetype.name}! Take the Pattern Vault crafting archetype quiz to find yours:`;
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank', 'width=550,height=420');
+    trackQuiz('quiz_share', { method: 'twitter' });
+  });
+
+  document.getElementById('share-copy')!.addEventListener('click', async () => {
+    const id = resultEl.dataset.archetype || '';
+    const url = `${window.location.origin}/quiz/result/${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      const btn = document.getElementById('share-copy')!;
+      const original = btn.innerHTML;
+      btn.textContent = 'Copied!';
+      setTimeout(() => (btn.innerHTML = original), 2000);
+    } catch (_) {}
+    trackQuiz('quiz_share', { method: 'copy' });
+  });
+
+  // Download share card via Canvas
+  document.getElementById('share-download')!.addEventListener('click', async () => {
+    const id = resultEl.dataset.archetype || '';
+    const archetype = archetypes[id];
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d')!;
+
+    // Background
+    ctx.fillStyle = '#FFF8F0';
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    // Gradient accents
+    const grad = ctx.createRadialGradient(540, 0, 0, 540, 0, 600);
+    grad.addColorStop(0, 'rgba(232,131,107,0.12)');
+    grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    // Load Pip image
+    const pipImg = document.querySelector(`img[data-pip-preload="${archetype.pipExpression}"]`) as HTMLImageElement;
+    if (pipImg && pipImg.naturalWidth) {
+      ctx.drawImage(pipImg, 390, 180, 300, 300);
+    }
+
+    // Text
+    ctx.textAlign = 'center';
+
+    ctx.fillStyle = '#4A2040';
+    ctx.font = '700 28px "DM Sans", sans-serif';
+    ctx.fillText('My Crafting Archetype is...', 540, 140);
+
+    ctx.font = '800 52px "DM Sans", sans-serif';
+    ctx.fillText(archetype.name, 540, 560);
+
+    ctx.fillStyle = '#5C3A52';
+    ctx.font = 'italic 24px "DM Sans", sans-serif';
+    ctx.fillText(`"${archetype.tagline}"`, 540, 620);
+
+    // Wrap description
+    ctx.font = '400 20px "DM Sans", sans-serif';
+    ctx.fillStyle = '#4A2040';
+    const words = archetype.description.split(' ');
+    let line = '';
+    let y = 680;
+    for (const word of words) {
+      const test = line + word + ' ';
+      if (ctx.measureText(test).width > 900) {
+        ctx.fillText(line.trim(), 540, y);
+        line = word + ' ';
+        y += 30;
+        if (y > 940) break;
+      } else {
+        line = test;
+      }
+    }
+    if (line && y <= 940) ctx.fillText(line.trim(), 540, y);
+
+    // Branding
+    ctx.fillStyle = '#5C3A52';
+    ctx.font = '600 22px "DM Sans", sans-serif';
+    ctx.fillText('patternvault.app', 540, 1040);
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pattern-vault-${id}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    trackQuiz('quiz_share', { method: 'download' });
+  });
+
+  // Waitlist form
+  const SUPABASE_URL = 'https://fbzbnztvanuiijzymckn.supabase.co';
+
+  document.getElementById('waitlist-form')!.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const emailInput = document.getElementById('waitlist-email') as HTMLInputElement;
+    const errorEl = document.getElementById('waitlist-error')!;
+    const email = emailInput.value.trim();
+
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errorEl.textContent = 'Please enter a valid email address.';
+      errorEl.style.display = 'block';
+      emailInput.setAttribute('aria-invalid', 'true');
+      return;
+    }
+
+    errorEl.style.display = 'none';
+    emailInput.setAttribute('aria-invalid', 'false');
+    const submitBtn = document.querySelector('#waitlist-form button[type="submit"]') as HTMLButtonElement;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Claiming...';
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/waitlist-signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          archetype: resultEl.dataset.archetype || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Something went wrong. Please try again.');
+      }
+
+      const data = await res.json();
+
+      // Show success
+      document.getElementById('waitlist-section')!.style.display = 'none';
+      const successEl = document.getElementById('waitlist-success')!;
+      successEl.style.display = 'block';
+      document.getElementById('waitlist-position')!.textContent = `Beta Tester #${data.position}`;
+
+      const remaining = data.remaining ?? (12 - (data.total || data.position));
+      const nestLabel = document.getElementById('nest-label');
+      if (nestLabel) {
+        nestLabel.textContent = remaining > 0
+          ? `${remaining} of 12 spot${remaining !== 1 ? 's' : ''} remaining`
+          : 'All 12 spots are claimed!';
+      }
+
+      trackQuiz('waitlist_signup', { archetype: resultEl.dataset.archetype || 'none' });
+    } catch (err: any) {
+      errorEl.textContent = err.message || 'Something went wrong. Please try again.';
+      errorEl.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Claim My Spot';
+    }
+  });
+</script>
+
+<style>
+  .hero-title-accent {
+    background: linear-gradient(135deg, var(--soft-coral), var(--sage-green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .quiz-intro-pip-wrap {
+    position: relative;
+    display: inline-block;
+  }
+
+  /* Sparkle accents around Pip */
+  .sparkle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: twinkle 2.5s ease-in-out infinite;
+  }
+
+  .sparkle::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: currentColor;
+    border-radius: 50%;
+    filter: blur(2px);
+    opacity: 0.4;
+  }
+
+  .sparkle-1 {
+    top: 8px;
+    right: -4px;
+    background: var(--soft-coral);
+    color: var(--soft-coral);
+    animation-delay: 0s;
+  }
+
+  .sparkle-2 {
+    top: 45%;
+    left: -12px;
+    width: 6px;
+    height: 6px;
+    background: var(--sage-green);
+    color: var(--sage-green);
+    animation-delay: 0.8s;
+  }
+
+  .sparkle-3 {
+    bottom: 20px;
+    right: -8px;
+    width: 5px;
+    height: 5px;
+    background: var(--honey);
+    color: var(--honey);
+    animation-delay: 1.6s;
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.3); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sparkle { animation: none; opacity: 0.6; }
+  }
+</style>

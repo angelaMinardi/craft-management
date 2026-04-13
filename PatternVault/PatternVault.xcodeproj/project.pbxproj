@@ -19,11 +19,29 @@
 		B0010009 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010009 /* DashboardView.swift */; };
 		B001000A /* PatternListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001000A /* PatternListView.swift */; };
 		B001000B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001000B /* SettingsView.swift */; };
+		B0010026 /* AIInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010026 /* AIInfoView.swift */; };
+		B00E0001 /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0001 /* Collection.swift */; };
+		B00E0002 /* CollectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0002 /* CollectionRepository.swift */; };
+				B00E0011 /* RepeatStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0011 /* RepeatStepView.swift */; };
+				B00E0012 /* ProjectGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0012 /* ProjectGoal.swift */; };
+		B00E0010 /* RepeatInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0010 /* RepeatInfo.swift */; };
+		B00E0003 /* CollectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0003 /* CollectionStore.swift */; };
+		B00E0004 /* CollectionPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0004 /* CollectionPickerView.swift */; };
+		B00E0006 /* GoalSettingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0006 /* GoalSettingView.swift */; };
+		B00E0007 /* ProgressShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0007 /* ProgressShareCardView.swift */; };
+		B00F0001 /* OfflineCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0001 /* OfflineCacheService.swift */; };
+		B00F0002 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0002 /* NetworkMonitor.swift */; };
+		B00F0003 /* PDFCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0003 /* PDFCacheService.swift */; };
+		B00F0004 /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0004 /* BarcodeScannerView.swift */; };
+		B00F0005 /* StitchGlossary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0005 /* StitchGlossary.swift */; };
+		B00F0006 /* GlossaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0006 /* GlossaryView.swift */; };
 		B001000C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = P0010001 /* Supabase */; };
 		B001000D /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F001000F /* QuickLook.framework */; };
 		B001000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F001000E /* Assets.xcassets */; };
+		BVPRIV01 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PVPRIV01 /* PrivacyInfo.xcprivacy */; };
 		B001000F /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = P0010002 /* Lottie */; };
 		B0010010 /* VoiceRowService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010010 /* VoiceRowService.swift */; };
+		B0010027 /* RowReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010027 /* RowReminderService.swift */; };
 		B0010011 /* AIStepParserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010011 /* AIStepParserService.swift */; };
 		B0010012 /* ImageCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010012 /* ImageCacheService.swift */; };
 		B0010013 /* WidgetDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010013 /* WidgetDataService.swift */; };
@@ -40,6 +58,7 @@
 		B0010023 /* MascotInteractionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010023 /* MascotInteractionStore.swift */; };
 		B0010024 /* PatternRowParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010024 /* PatternRowParser.swift */; };
 		B0010025 /* ChartHighlightStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010025 /* ChartHighlightStore.swift */; };
+		B0030025 /* ChartGridDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030025 /* ChartGridDetector.swift */; };
 		B0020001 /* Pattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020001 /* Pattern.swift */; };
 		B0020002 /* ProjectNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020002 /* ProjectNote.swift */; };
 		B0020003 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020003 /* Tag.swift */; };
@@ -76,7 +95,6 @@
 		B003000C /* PatternStepParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000C /* PatternStepParser.swift */; };
 		B003000D /* PatternProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000D /* PatternProgressStore.swift */; };
 		B003000E /* ContentBlockParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000E /* ContentBlockParser.swift */; };
-		B003000F /* JunkPhraseStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F003000F /* JunkPhraseStore.swift */; };
 		B0030010 /* StepEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030010 /* StepEditorView.swift */; };
 		B0030011 /* FormattedStepBodyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030011 /* FormattedStepBodyView.swift */; };
 		B0030012 /* CelebrationOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030012 /* CelebrationOverlayView.swift */; };
@@ -91,9 +109,14 @@
 		B0030021 /* RowCounterBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030021 /* RowCounterBarView.swift */; };
 		B0030022 /* SecondaryCounterConfigSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030022 /* SecondaryCounterConfigSheet.swift */; };
 		B0030023 /* ChartHighlighterOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030023 /* ChartHighlighterOverlayView.swift */; };
+		B0030024 /* GridAlignmentEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030024 /* GridAlignmentEditor.swift */; };
 		B0040001 /* EmptyPatterns.json in Resources */ = {isa = PBXBuildFile; fileRef = F0040001 /* EmptyPatterns.json */; };
 		B0040002 /* LottieAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040002 /* LottieAnimationView.swift */; };
 		B0040003 /* AnimatedCrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040003 /* AnimatedCrowView.swift */; };
+		B0040030 /* ColorworkGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040030 /* ColorworkGrid.swift */; };
+		B0040031 /* ChartProgressState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040031 /* ChartProgressState.swift */; };
+		B0040032 /* ColorworkGridDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040032 /* ColorworkGridDetector.swift */; };
+		B0040033 /* InteractiveChartGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040033 /* InteractiveChartGridView.swift */; };
 		B0050001 /* OnboardingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050001 /* OnboardingMascotFrames */; };
 		B0050002 /* SpriteMascotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0050002 /* SpriteMascotView.swift */; };
 		B0050003 /* IdleMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050003 /* IdleMascotFrames */; };
@@ -136,12 +159,8 @@
 		B00B0005 /* RavelryImportStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0005 /* RavelryImportStore.swift */; };
 		B00B0006 /* PDFTextExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00B0006 /* PDFTextExtractor.swift */; };
 		B00C0001 /* MascotEconomyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0001 /* MascotEconomyState.swift */; };
-		B00C0002 /* MascotStoryChapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0002 /* MascotStoryChapter.swift */; };
 		B00C0003 /* MascotStoreSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0003 /* MascotStoreSheet.swift */; };
-		B00C0004 /* MascotStoryCutsceneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0004 /* MascotStoryCutsceneView.swift */; };
-		B00C0005 /* MascotStoryLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0005 /* MascotStoryLogView.swift */; };
 		B00C0006 /* MascotHelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0006 /* MascotHelpView.swift */; };
-		B00C0007 /* MascotStoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0007 /* MascotStoryStore.swift */; };
 		B00C0008 /* NestDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0008 /* NestDecoration.swift */; };
 		B00C0009 /* DailyRewardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0009 /* DailyRewardStore.swift */; };
 		B00C000A /* AchievementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C000A /* AchievementStore.swift */; };
@@ -221,10 +240,28 @@
 		F0010009 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		F001000A /* PatternListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternListView.swift; sourceTree = "<group>"; };
 		F001000B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		F0010026 /* AIInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIInfoView.swift; sourceTree = "<group>"; };
+		F00E0001 /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
+		F00E0002 /* CollectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionRepository.swift; sourceTree = "<group>"; };
+				F00E0011 /* RepeatStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatStepView.swift; sourceTree = "<group>"; };
+				F00E0012 /* ProjectGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectGoal.swift; sourceTree = "<group>"; };
+		F00E0010 /* RepeatInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatInfo.swift; sourceTree = "<group>"; };
+		F00E0003 /* CollectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionStore.swift; sourceTree = "<group>"; };
+		F00E0004 /* CollectionPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionPickerView.swift; sourceTree = "<group>"; };
+		F00E0006 /* GoalSettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalSettingView.swift; sourceTree = "<group>"; };
+		F00E0007 /* ProgressShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressShareCardView.swift; sourceTree = "<group>"; };
 		F001000D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		PVPRIV01 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F001000E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F001000F /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
 		F0010010 /* VoiceRowService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRowService.swift; sourceTree = "<group>"; };
+		F0010027 /* RowReminderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowReminderService.swift; sourceTree = "<group>"; };
+		F00F0001 /* OfflineCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCacheService.swift; sourceTree = "<group>"; };
+		F00F0002 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		F00F0003 /* PDFCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFCacheService.swift; sourceTree = "<group>"; };
+		F00F0004 /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
+		F00F0005 /* StitchGlossary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchGlossary.swift; sourceTree = "<group>"; };
+		F00F0006 /* GlossaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlossaryView.swift; sourceTree = "<group>"; };
 		F0010011 /* AIStepParserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStepParserService.swift; sourceTree = "<group>"; };
 		F0010012 /* ImageCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheService.swift; sourceTree = "<group>"; };
 		F0010013 /* WidgetDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataService.swift; sourceTree = "<group>"; };
@@ -237,6 +274,7 @@
 		F0010023 /* MascotInteractionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotInteractionStore.swift; sourceTree = "<group>"; };
 		F0010024 /* PatternRowParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternRowParser.swift; sourceTree = "<group>"; };
 		F0010025 /* ChartHighlightStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHighlightStore.swift; sourceTree = "<group>"; };
+		F0030025 /* ChartGridDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartGridDetector.swift; sourceTree = "<group>"; };
 		F0020001 /* Pattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pattern.swift; sourceTree = "<group>"; };
 		F0020002 /* ProjectNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectNote.swift; sourceTree = "<group>"; };
 		F0020003 /* Tag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
@@ -273,7 +311,6 @@
 		F003000C /* PatternStepParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStepParser.swift; sourceTree = "<group>"; };
 		F003000D /* PatternProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternProgressStore.swift; sourceTree = "<group>"; };
 		F003000E /* ContentBlockParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlockParser.swift; sourceTree = "<group>"; };
-		F003000F /* JunkPhraseStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JunkPhraseStore.swift; sourceTree = "<group>"; };
 		F0030010 /* StepEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepEditorView.swift; sourceTree = "<group>"; };
 		F0030011 /* FormattedStepBodyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormattedStepBodyView.swift; sourceTree = "<group>"; };
 		F0030012 /* CelebrationOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationOverlayView.swift; sourceTree = "<group>"; };
@@ -288,9 +325,14 @@
 		F0030021 /* RowCounterBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowCounterBarView.swift; sourceTree = "<group>"; };
 		F0030022 /* SecondaryCounterConfigSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecondaryCounterConfigSheet.swift; sourceTree = "<group>"; };
 		F0030023 /* ChartHighlighterOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHighlighterOverlayView.swift; sourceTree = "<group>"; };
+		F0030024 /* GridAlignmentEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridAlignmentEditor.swift; sourceTree = "<group>"; };
 		F0040001 /* EmptyPatterns.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = EmptyPatterns.json; sourceTree = "<group>"; };
 		F0040002 /* LottieAnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieAnimationView.swift; sourceTree = "<group>"; };
 		F0040003 /* AnimatedCrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedCrowView.swift; sourceTree = "<group>"; };
+		F0040030 /* ColorworkGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorworkGrid.swift; sourceTree = "<group>"; };
+		F0040031 /* ChartProgressState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartProgressState.swift; sourceTree = "<group>"; };
+		F0040032 /* ColorworkGridDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorworkGridDetector.swift; sourceTree = "<group>"; };
+		F0040033 /* InteractiveChartGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveChartGridView.swift; sourceTree = "<group>"; };
 		F0050001 /* OnboardingMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OnboardingMascotFrames; sourceTree = "<group>"; };
 		F0050002 /* SpriteMascotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteMascotView.swift; sourceTree = "<group>"; };
 		F0050003 /* IdleMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = IdleMascotFrames; sourceTree = "<group>"; };
@@ -333,12 +375,8 @@
 		F00B0005 /* RavelryImportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryImportStore.swift; sourceTree = "<group>"; };
 		F00B0006 /* PDFTextExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTextExtractor.swift; sourceTree = "<group>"; };
 		F00C0001 /* MascotEconomyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotEconomyState.swift; sourceTree = "<group>"; };
-		F00C0002 /* MascotStoryChapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoryChapter.swift; sourceTree = "<group>"; };
 		F00C0003 /* MascotStoreSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoreSheet.swift; sourceTree = "<group>"; };
-		F00C0004 /* MascotStoryCutsceneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoryCutsceneView.swift; sourceTree = "<group>"; };
-		F00C0005 /* MascotStoryLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoryLogView.swift; sourceTree = "<group>"; };
 		F00C0006 /* MascotHelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotHelpView.swift; sourceTree = "<group>"; };
-		F00C0007 /* MascotStoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoryStore.swift; sourceTree = "<group>"; };
 		F00C0008 /* NestDecoration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestDecoration.swift; sourceTree = "<group>"; };
 		F00C0009 /* DailyRewardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyRewardStore.swift; sourceTree = "<group>"; };
 		F00C000A /* AchievementStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementStore.swift; sourceTree = "<group>"; };
@@ -463,6 +501,7 @@
 				F0050009 /* ThinkingMascotFrames */,
 				F0050012 /* PettingMascotFrames */,
 				F001000E /* Assets.xcassets */,
+				PVPRIV01 /* PrivacyInfo.xcprivacy */,
 				F001000D /* Info.plist */,
 			);
 			path = PatternVault;
@@ -492,70 +531,166 @@
 		G0010004 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				F0010008 /* MainTabView.swift */,
-				F0010009 /* DashboardView.swift */,
-				F001000A /* PatternListView.swift */,
-				F001000B /* SettingsView.swift */,
-				F0020006 /* PatternStore.swift */,
-				F0020007 /* AddPatternView.swift */,
+				GC_PATTERN /* Pattern */,
+				GC_DASHBOARD /* Dashboard */,
+				GC_TOOLS /* Tools */,
+				GC_NOTES /* ProjectNotes */,
+				GC_TAGS /* Tags */,
+				GC_DISCOVERY /* Discovery */,
+				GC_SETTINGS /* Settings */,
+				GC_ONBOARD /* Onboarding */,
+				GC_MASCOT /* Mascot */,
+				GC_REWARDS /* Rewards */,
+				GC_SHARED /* Shared */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		GC_PATTERN /* Pattern */ = {
+			isa = PBXGroup;
+			children = (
 				F0020008 /* PatternDetailView.swift */,
-				F0020009 /* PatternRowView.swift */,
-				F002000A /* ProjectNoteStore.swift */,
-				F002000B /* TagStore.swift */,
-				F002000C /* TagPickerView.swift */,
-				F002000D /* NoteDetailView.swift */,
-				F002000E /* NoteRowView.swift */,
-				F002000F /* AddNoteView.swift */,
-				F0020010 /* FlowLayout.swift */,
-				F0030002 /* PatternCardView.swift */,
-				F0030003 /* OnboardingView.swift */,
-				F0030006 /* PatternImageStore.swift */,
-				F0030007 /* InAppWebView.swift */,
 				F0030008 /* PatternContentView.swift */,
-				F003000A /* PatternYarnLinkStore.swift */,
-				F003000B /* PDFViewerView.swift */,
+				F0030002 /* PatternCardView.swift */,
+				F0020009 /* PatternRowView.swift */,
+				F001000A /* PatternListView.swift */,
 				F003000C /* PatternStepParser.swift */,
-				F003000D /* PatternProgressStore.swift */,
 				F003000E /* ContentBlockParser.swift */,
-				F003000F /* JunkPhraseStore.swift */,
-				F0030010 /* StepEditorView.swift */,
 				F0030011 /* FormattedStepBodyView.swift */,
-				F0030012 /* CelebrationOverlayView.swift */,
-				F0030013 /* AppTutorialStore.swift */,
-				F0030014 /* AppTutorialOverlayView.swift */,
-				F0030015 /* TutorialAnchorPreferenceKey.swift */,
-				F0030016 /* WidgetOnboardingStore.swift */,
-				F0030017 /* WidgetOnboardingSheet.swift */,
-				F0030018 /* DuplicatesListView.swift */,
-				F0030019 /* StitchAbbreviationLinkBuilder.swift */,
+				F0020006 /* PatternStore.swift */,
+				F0030006 /* PatternImageStore.swift */,
+				F003000D /* PatternProgressStore.swift */,
+				F003000A /* PatternYarnLinkStore.swift */,
+				F0020007 /* AddPatternView.swift */,
+				F0080003 /* AddPatternMakeView.swift */,
 				F0030020 /* InteractiveRowReaderView.swift */,
+				F0030010 /* StepEditorView.swift */,
 				F0030021 /* RowCounterBarView.swift */,
 				F0030022 /* SecondaryCounterConfigSheet.swift */,
 				F0030023 /* ChartHighlighterOverlayView.swift */,
-				F0040002 /* LottieAnimationView.swift */,
-				F0040003 /* AnimatedCrowView.swift */,
-				F0050002 /* SpriteMascotView.swift */,
-				F0050010 /* TappableMascotView.swift */,
-				F0050011 /* MascotDashboardPanelView.swift */,
-				F0060003 /* YarnStashStore.swift */,
-				F0060004 /* YarnStashListView.swift */,
-				F0060005 /* AddYarnStashView.swift */,
+				F0030024 /* GridAlignmentEditor.swift */,
+				F0040033 /* InteractiveChartGridView.swift */,
+				F003000B /* PDFViewerView.swift */,
+				F00E0003 /* CollectionStore.swift */,
+				F00E0004 /* CollectionPickerView.swift */,
+				F00E0006 /* GoalSettingView.swift */,
+				F00E0011 /* RepeatStepView.swift */,
+			);
+			path = Pattern;
+			sourceTree = "<group>";
+		};
+		GC_DASHBOARD /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				F0010009 /* DashboardView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		GC_TOOLS /* Tools */ = {
+			isa = PBXGroup;
+			children = (
+				F0080004 /* StashAndToolsView.swift */,
 				F0070003 /* NeedleHookStore.swift */,
 				F0070004 /* NeedleHookListView.swift */,
 				F0070005 /* AddNeedleHookView.swift */,
-				F0080003 /* AddPatternMakeView.swift */,
-				F0080004 /* StashAndToolsView.swift */,
-				F00A0003 /* FindPatternsView.swift */,
+				F0060003 /* YarnStashStore.swift */,
+				F0060004 /* YarnStashListView.swift */,
+				F0060005 /* AddYarnStashView.swift */,
 				F00A0004 /* StashMatchPatternsView.swift */,
-				F00A0005 /* FinishedProjectShareCardView.swift */,
-				F00C0003 /* MascotStoreSheet.swift */,
-				F00C0004 /* MascotStoryCutsceneView.swift */,
-				F00C0005 /* MascotStoryLogView.swift */,
-				F00C0006 /* MascotHelpView.swift */,
+				F00F0004 /* BarcodeScannerView.swift */,
+				F00F0006 /* GlossaryView.swift */,
+			);
+			path = Tools;
+			sourceTree = "<group>";
+		};
+		GC_NOTES /* ProjectNotes */ = {
+			isa = PBXGroup;
+			children = (
+				F002000A /* ProjectNoteStore.swift */,
+				F002000D /* NoteDetailView.swift */,
+				F002000F /* AddNoteView.swift */,
+				F002000E /* NoteRowView.swift */,
+			);
+			path = ProjectNotes;
+			sourceTree = "<group>";
+		};
+		GC_TAGS /* Tags */ = {
+			isa = PBXGroup;
+			children = (
+				F002000B /* TagStore.swift */,
+				F002000C /* TagPickerView.swift */,
+			);
+			path = Tags;
+			sourceTree = "<group>";
+		};
+		GC_DISCOVERY /* Discovery */ = {
+			isa = PBXGroup;
+			children = (
+				F00A0003 /* FindPatternsView.swift */,
+				F0030018 /* DuplicatesListView.swift */,
+			);
+			path = Discovery;
+			sourceTree = "<group>";
+		};
+		GC_SETTINGS /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				F001000B /* SettingsView.swift */,
 				F0090003 /* PaywallView.swift */,
+				F0010026 /* AIInfoView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		GC_ONBOARD /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				F0030003 /* OnboardingView.swift */,
+				F0030013 /* AppTutorialStore.swift */,
+				F0030014 /* AppTutorialOverlayView.swift */,
+				F0030016 /* WidgetOnboardingStore.swift */,
+				F0030017 /* WidgetOnboardingSheet.swift */,
+			);
+			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		GC_MASCOT /* Mascot */ = {
+			isa = PBXGroup;
+			children = (
+				F0050002 /* SpriteMascotView.swift */,
+				F0050010 /* TappableMascotView.swift */,
+				F0040003 /* AnimatedCrowView.swift */,
+				F0050011 /* MascotDashboardPanelView.swift */,
+				F00C0006 /* MascotHelpView.swift */,
+				F00C0003 /* MascotStoreSheet.swift */,
+				F00A0005 /* FinishedProjectShareCardView.swift */,
+				F00E0007 /* ProgressShareCardView.swift */,
+			);
+			path = Mascot;
+			sourceTree = "<group>";
+		};
+		GC_REWARDS /* Rewards */ = {
+			isa = PBXGroup;
+			children = (
+				F0030012 /* CelebrationOverlayView.swift */,
+			);
+			path = Rewards;
+			sourceTree = "<group>";
+		};
+		GC_SHARED /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				F0010008 /* MainTabView.swift */,
+				F0020010 /* FlowLayout.swift */,
+				F0030015 /* TutorialAnchorPreferenceKey.swift */,
+				F0030007 /* InAppWebView.swift */,
+				F0030019 /* StitchAbbreviationLinkBuilder.swift */,
+				F00F0005 /* StitchGlossary.swift */,
+				F0040002 /* LottieAnimationView.swift */,
 				F0090004 /* AdBannerView.swift */,
 			);
-			path = Core;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		G0010005 /* Services */ = {
@@ -564,6 +699,10 @@
 				F0010003 /* SupabaseManager.swift */,
 				F0010004 /* AuthService.swift */,
 				F0010010 /* VoiceRowService.swift */,
+				F0010027 /* RowReminderService.swift */,
+				F00F0001 /* OfflineCacheService.swift */,
+				F00F0002 /* NetworkMonitor.swift */,
+				F00F0003 /* PDFCacheService.swift */,
 				F0010011 /* AIStepParserService.swift */,
 				F0010020 /* AIKillSwitchService.swift */,
 				F0010012 /* ImageCacheService.swift */,
@@ -576,6 +715,8 @@
 				F0010023 /* MascotInteractionStore.swift */,
 				F0010024 /* PatternRowParser.swift */,
 				F0010025 /* ChartHighlightStore.swift */,
+				F0030025 /* ChartGridDetector.swift */,
+				F0040032 /* ColorworkGridDetector.swift */,
 				F0020005 /* SourcePlatformHelper.swift */,
 				F0020013 /* MetadataService.swift */,
 				F0090002 /* SubscriptionStore.swift */,
@@ -589,7 +730,6 @@
 				F00D0001 /* PDFPageRenderer.swift */,
 				F00D0002 /* GeminiMultimodalRequest.swift */,
 				F00D0003 /* ChartImageProcessor.swift */,
-				F00C0007 /* MascotStoryStore.swift */,
 				F00C0009 /* DailyRewardStore.swift */,
 				F00C000A /* AchievementStore.swift */,
 			);
@@ -604,6 +744,8 @@
 				F0020003 /* Tag.swift */,
 				F0020015 /* RowCounter.swift */,
 				F0020016 /* ChartHighlight.swift */,
+				F0040030 /* ColorworkGrid.swift */,
+				F0040031 /* ChartProgressState.swift */,
 				F0030004 /* PatternImage.swift */,
 				F0030009 /* PatternYarnLink.swift */,
 				F0060001 /* YarnStashItem.swift */,
@@ -611,9 +753,11 @@
 				F0080001 /* PatternMake.swift */,
 				F00A0001 /* PatternDiscoveryResult.swift */,
 				F00C0001 /* MascotEconomyState.swift */,
-				F00C0002 /* MascotStoryChapter.swift */,
 				F00C0008 /* NestDecoration.swift */,
 				F00C000B /* AchievementBadge.swift */,
+				F00E0001 /* Collection.swift */,
+				F00E0010 /* RepeatInfo.swift */,
+				F00E0012 /* ProjectGoal.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -630,6 +774,7 @@
 				F0070002 /* NeedleHookRepository.swift */,
 				F0080002 /* PatternMakeRepository.swift */,
 				F0090001 /* EntitlementRepository.swift */,
+				F00E0002 /* CollectionRepository.swift */,
 			);
 			path = Repositories;
 			sourceTree = "<group>";
@@ -833,6 +978,7 @@
 				B0050008 /* WavingMascotFrames in Resources */,
 				B0050009 /* ThinkingMascotFrames in Resources */,
 				B0050012 /* PettingMascotFrames in Resources */,
+				BVPRIV01 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -871,6 +1017,13 @@
 				B0010003 /* SupabaseManager.swift in Sources */,
 				B0010004 /* AuthService.swift in Sources */,
 				B0010010 /* VoiceRowService.swift in Sources */,
+				B0010027 /* RowReminderService.swift in Sources */,
+				B00F0001 /* OfflineCacheService.swift in Sources */,
+				B00F0002 /* NetworkMonitor.swift in Sources */,
+				B00F0003 /* PDFCacheService.swift in Sources */,
+				B00F0004 /* BarcodeScannerView.swift in Sources */,
+				B00F0005 /* StitchGlossary.swift in Sources */,
+				B00F0006 /* GlossaryView.swift in Sources */,
 				B0010011 /* AIStepParserService.swift in Sources */,
 				B0010020 /* AIKillSwitchService.swift in Sources */,
 				B0010012 /* ImageCacheService.swift in Sources */,
@@ -883,6 +1036,7 @@
 				B0010023 /* MascotInteractionStore.swift in Sources */,
 				B0010024 /* PatternRowParser.swift in Sources */,
 				B0010025 /* ChartHighlightStore.swift in Sources */,
+				B0030025 /* ChartGridDetector.swift in Sources */,
 				B0010005 /* AuthGateView.swift in Sources */,
 				B0010006 /* LoginView.swift in Sources */,
 				B0010007 /* SignUpView.swift in Sources */,
@@ -891,6 +1045,16 @@
 				B0010009 /* DashboardView.swift in Sources */,
 				B001000A /* PatternListView.swift in Sources */,
 				B001000B /* SettingsView.swift in Sources */,
+				B0010026 /* AIInfoView.swift in Sources */,
+				B00E0001 /* Collection.swift in Sources */,
+				B00E0010 /* RepeatInfo.swift in Sources */,
+				B00E0012 /* ProjectGoal.swift in Sources */,
+				B00E0011 /* RepeatStepView.swift in Sources */,
+				B00E0002 /* CollectionRepository.swift in Sources */,
+				B00E0003 /* CollectionStore.swift in Sources */,
+				B00E0004 /* CollectionPickerView.swift in Sources */,
+				B00E0006 /* GoalSettingView.swift in Sources */,
+				B00E0007 /* ProgressShareCardView.swift in Sources */,
 				B0020001 /* Pattern.swift in Sources */,
 				B0020002 /* ProjectNote.swift in Sources */,
 				B0020003 /* Tag.swift in Sources */,
@@ -925,7 +1089,6 @@
 				B003000C /* PatternStepParser.swift in Sources */,
 				B003000D /* PatternProgressStore.swift in Sources */,
 				B003000E /* ContentBlockParser.swift in Sources */,
-				B003000F /* JunkPhraseStore.swift in Sources */,
 				B0030010 /* StepEditorView.swift in Sources */,
 				B0030011 /* FormattedStepBodyView.swift in Sources */,
 				B0030012 /* CelebrationOverlayView.swift in Sources */,
@@ -940,6 +1103,11 @@
 				B0030021 /* RowCounterBarView.swift in Sources */,
 				B0030022 /* SecondaryCounterConfigSheet.swift in Sources */,
 				B0030023 /* ChartHighlighterOverlayView.swift in Sources */,
+				B0030024 /* GridAlignmentEditor.swift in Sources */,
+				B0040030 /* ColorworkGrid.swift in Sources */,
+				B0040031 /* ChartProgressState.swift in Sources */,
+				B0040032 /* ColorworkGridDetector.swift in Sources */,
+				B0040033 /* InteractiveChartGridView.swift in Sources */,
 				B0040002 /* LottieAnimationView.swift in Sources */,
 				B0040003 /* AnimatedCrowView.swift in Sources */,
 				B0050002 /* SpriteMascotView.swift in Sources */,
@@ -969,8 +1137,6 @@
 				B00A0004 /* StashMatchPatternsView.swift in Sources */,
 				B00A0005 /* FinishedProjectShareCardView.swift in Sources */,
 				B00C0003 /* MascotStoreSheet.swift in Sources */,
-				B00C0004 /* MascotStoryCutsceneView.swift in Sources */,
-				B00C0005 /* MascotStoryLogView.swift in Sources */,
 				B00C0006 /* MascotHelpView.swift in Sources */,
 				B00B0001 /* KeychainHelper.swift in Sources */,
 				B00B0002 /* OAuth1Signer.swift in Sources */,
@@ -982,8 +1148,6 @@
 				B00D0002 /* GeminiMultimodalRequest.swift in Sources */,
 				B00D0003 /* ChartImageProcessor.swift in Sources */,
 				B00C0001 /* MascotEconomyState.swift in Sources */,
-				B00C0002 /* MascotStoryChapter.swift in Sources */,
-				B00C0007 /* MascotStoryStore.swift in Sources */,
 				B00C0008 /* NestDecoration.swift in Sources */,
 				B00C0009 /* DailyRewardStore.swift in Sources */,
 				B00C000A /* AchievementStore.swift in Sources */,

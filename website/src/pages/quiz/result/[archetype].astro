@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import PipMascot from '../../../components/PipMascot.astro';
+import CTA from '../../../components/CTA.astro';
+import { ARCHETYPES, ARCHETYPE_IDS, type ArchetypeId } from '../../../config/archetypes';
+import '../../../styles/quiz.css';
+
+export function getStaticPaths() {
+  return ARCHETYPE_IDS.map((id) => ({
+    params: { archetype: id },
+  }));
+}
+
+const { archetype: archetypeId } = Astro.params;
+const archetype = ARCHETYPES[archetypeId as ArchetypeId];
+---
+
+<BaseLayout
+  title={`I'm ${archetype.name}! | Pattern Vault`}
+  description={`${archetype.tagline}. ${archetype.description.slice(0, 140)}...`}
+>
+  <div class="quiz-container">
+    <div class="quiz-result active" style="display:block;">
+      <div
+        class="quiz-result-badge"
+        style={`background:color-mix(in srgb, ${archetype.color} 15%, white);border:1.5px solid color-mix(in srgb, ${archetype.color} 35%, transparent);`}
+      >
+        My crafting archetype is...
+      </div>
+      <div class="quiz-result-pip">
+        <PipMascot expression={archetype.pipExpression as any} size={160} />
+      </div>
+      <h2>{archetype.name}</h2>
+      <p class="quiz-result-tagline">{archetype.tagline}</p>
+      <p class="quiz-result-description">{archetype.description}</p>
+
+      <div style="display:flex;flex-wrap:wrap;gap:var(--space-sm);justify-content:center;margin-top:var(--space-xl);">
+        <a href="/quiz" class="pv-button-primary" style="display:inline-block;text-decoration:none;text-align:center;min-width:200px;">
+          Take the Quiz Yourself
+        </a>
+        <a href="/waitlist" class="quiz-share-btn" style="display:inline-flex;align-items:center;text-decoration:none;">
+          Claim a Beta Spot
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

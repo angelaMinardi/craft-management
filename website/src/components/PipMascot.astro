@@ -1,0 +1,41 @@
+---
+interface Props {
+  expression?: 'curious' | 'happy' | 'focused' | 'sleepy' | 'thinking' | 'waving';
+  size?: number;
+  animate?: boolean;
+  class?: string;
+}
+
+const { expression = 'happy', size = 120, animate = true, class: className = '' } = Astro.props;
+
+const src = `/images/pip/${expression}.png`;
+const alt = `Our mascot crow looking ${expression}`;
+---
+
+<img
+  src={src}
+  alt={alt}
+  width={size}
+  height={size}
+  class:list={['pip-mascot', { 'pip-float': animate }, className]}
+  loading="eager"
+/>
+
+<style>
+  .pip-mascot {
+    max-width: 100%;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(74, 32, 64, 0.12));
+  }
+
+  .pip-float {
+    animation: float 4s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pip-float {
+      animation: none;
+    }
+  }
+</style>

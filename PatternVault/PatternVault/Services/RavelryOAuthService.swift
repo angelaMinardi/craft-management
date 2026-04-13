@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CommonCrypto
 
 @MainActor
 final class RavelryOAuthService: ObservableObject {
@@ -23,6 +24,7 @@ final class RavelryOAuthService: ObservableObject {
 
     private static let appGroupId = "group.com.patternvault.app"
     private static let oauth2StateKey = "ravelry_oauth2_state"
+    private static let oauth2VerifierKey = "ravelry_oauth2_code_verifier"
 
     /// OAuth 2.0 client id/secret from Config. Nil if not configured.
     private var clientCredentials: (clientId: String, clientSecret: String)? {
@@ -42,14 +44,18 @@ final class RavelryOAuthService: ObservableObject {
         KeychainHelper.loadRavelryTokens(userId: userId) != nil
     }
 
-    /// Start OAuth 2.0: build authorize URL with state and return it to open in browser.
+    /// Start OAuth 2.0: build authorize URL with PKCE and cryptographic state.
     func startOAuth() async throws -> URL {
         guard let creds = clientCredentials else {
             throw RavelryOAuthError.notConfigured
         }
-        let state = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+        let state = Self.generateCryptoRandom(byteCount: 32)
+        let codeVerifier = Self.generateCryptoRandom(byteCount: 32)
+        let codeChallenge = Self.sha256Base64URL(codeVerifier)
+
         let defaults = UserDefaults(suiteName: Self.appGroupId)
         defaults?.set(state, forKey: Self.oauth2StateKey)
+        defaults?.set(codeVerifier, forKey: Self.oauth2VerifierKey)
         defaults?.synchronize()
 
         var comp = URLComponents(url: authorizeURLBase, resolvingAgainstBaseURL: false)!
@@ -57,7 +63,9 @@ final class RavelryOAuthService: ObservableObject {
             URLQueryItem(name: "client_id", value: creds.clientId),
             URLQueryItem(name: "redirect_uri", value: redirectURI),
             URLQueryItem(name: "response_type", value: "code"),
-            URLQueryItem(name: "state", value: state)
+            URLQueryItem(name: "state", value: state),
+            URLQueryItem(name: "code_challenge", value: codeChallenge),
+            URLQueryItem(name: "code_challenge_method", value: "S256")
         ]
         guard let url = comp.url else { throw RavelryOAuthError.requestTokenFailed(statusCode: nil, serverMessage: nil) }
         return url
@@ -79,11 +87,14 @@ final class RavelryOAuthService: ObservableObject {
         let defaults = UserDefaults(suiteName: Self.appGroupId)
         let savedState = defaults?.string(forKey: Self.oauth2StateKey)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        let savedVerifier = defaults?.string(forKey: Self.oauth2VerifierKey)
         defaults?.removeObject(forKey: Self.oauth2StateKey)
+        defaults?.removeObject(forKey: Self.oauth2VerifierKey)
         defaults?.synchronize()
         let callbackState = state?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let savedState, let callbackState, !savedState.isEmpty, !callbackState.isEmpty,
-           savedState != callbackState {
+        guard let savedState, !savedState.isEmpty,
+              let callbackState, !callbackState.isEmpty,
+              savedState == callbackState else {
             throw RavelryOAuthError.stateMismatch
         }
 
@@ -91,17 +102,19 @@ final class RavelryOAuthService: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 15
-        // Ravelry: "we support basic auth (the Authorization header) for passing your client ID and secret. Submitting these as form parameters is not supported."
         let basic = "\(creds.clientId):\(creds.clientSecret)"
         let basicData = Data(basic.utf8)
         let basicEncoded = basicData.base64EncodedString()
         request.setValue("Basic \(basicEncoded)", forHTTPHeaderField: "Authorization")
-        let body = [
+        var bodyParts = [
             "grant_type=authorization_code",
             "code=\(code.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? code)",
             "redirect_uri=\(redirectURI.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? redirectURI)"
-        ].joined(separator: "&")
-        request.httpBody = body.data(using: .utf8)
+        ]
+        if let savedVerifier {
+            bodyParts.append("code_verifier=\(savedVerifier.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? savedVerifier)")
+        }
+        request.httpBody = bodyParts.joined(separator: "&").data(using: .utf8)
 
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw RavelryOAuthError.accessTokenFailed() }
@@ -124,6 +137,29 @@ final class RavelryOAuthService: ObservableObject {
     /// Tokens for API requests. OAuth 2.0: returns (accessToken, ""); use Bearer token.
     func tokens(for userId: UUID) -> (accessToken: String, accessTokenSecret: String)? {
         KeychainHelper.loadRavelryTokens(userId: userId)
+    }
+
+    // MARK: - PKCE helpers
+
+    /// Generates a cryptographically random base64url string.
+    private static func generateCryptoRandom(byteCount: Int) -> String {
+        var bytes = [UInt8](repeating: 0, count: byteCount)
+        _ = SecRandomCopyBytes(kSecRandomDefault, byteCount, &bytes)
+        return Data(bytes).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+
+    /// SHA-256 hash of the input string, returned as base64url.
+    private static func sha256Base64URL(_ input: String) -> String {
+        let data = Data(input.utf8)
+        var hash = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
+        data.withUnsafeBytes { _ = CC_SHA256($0.baseAddress, CC_LONG(data.count), &hash) }
+        return Data(hash).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 
     enum RavelryOAuthError: Error, LocalizedError {

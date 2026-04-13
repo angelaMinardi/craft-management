@@ -7,7 +7,18 @@ Repo also includes a separate static marketing/legal site in `website/`.
 
 ## Structure
 
-- `PatternVault/PatternVault/` — Main app source (Models, Core, Services, Repositories)
+- `PatternVault/PatternVault/` — Main app source (Models, Core/*, Services, Repositories)
+  - `Core/Pattern/` — Pattern CRUD, detail, list, steps, charts, PDF viewer
+  - `Core/Dashboard/` — Home dashboard
+  - `Core/Tools/` — Yarn stash, needles/hooks
+  - `Core/ProjectNotes/` — Project notes
+  - `Core/Tags/` — Tag management
+  - `Core/Discovery/` — Pattern search, duplicates
+  - `Core/Settings/` — Settings, paywall
+  - `Core/Onboarding/` — Onboarding, tutorials, widget onboarding
+  - `Core/Mascot/` — Mascot views, story, animations
+  - `Core/Rewards/` — Achievements, celebrations, daily rewards
+  - `Core/Shared/` — Tab bar, layout helpers, web view, ads
 - `PatternVault/SaveToPatternVault/` — iOS Share Extension (target: SaveToPatternVault)
 - `PatternVault/supabase_migrations/` — SQL migrations (run manually in Supabase SQL Editor)
 - `PatternVault/PatternVault.xcodeproj/` — Xcode project
@@ -51,6 +62,7 @@ Repo also includes a separate static marketing/legal site in `website/`.
 
 - **Provider:** Gemini 2.5 Flash only. Used in Share Extension (AIPatternAnalyzer) and main app (AIStepParserService). Cost-effective (~$0.10/M in, ~$0.40/M out), 1M context, `response_mime_type: application/json` for structured extraction. Free tier (rate-limited) for experimentation.
 - **Config:** Set `GEMINI_API_KEY` in Config.xcconfig (from Config.xcconfig.example); never commit secrets.
+- **Gemini API gotchas:** (1) `thinkingBudget: 0` required for small JSON responses — thinking tokens consume the output budget and truncate responses. (2) Use `x_min/y_min/x_max/y_max` coordinates, not "insets from edge" — the model returns coordinates from origin regardless of prompt wording. (3) Spatial precision ceiling is ~85-90% for bounding boxes; pixel-level analysis needed for the last mile.
 
 ## Theme System (`Theme.swift`)
 
@@ -84,16 +96,39 @@ Repo also includes a separate static marketing/legal site in `website/`.
 - **AI step parsing (done):** Two modes: (1) At import time — AIPatternAnalyzer prompt includes `steps` field, saved as `parsed_steps` JSON column in DB. (2) On-demand in main app — “Analyze Steps” wand button calls AIStepParserService (Gemini 2.5 Flash) to parse existing patterns. Step priority chain: CustomStepLayout (user-edited) > AI parsed_steps > PatternStepParser (heuristic). Migration: 009_add_parsed_steps. New file: AIStepParserService.swift (main app Services).
 - **Smart pattern search (done):** Stash & Tools → Find patterns. User enters or selects materials (yarn weight, needle/hook size, craft) from stash/tools or freeform; searches Ravelry via RavelryPatternSearchService; results can be opened in Safari or saved to vault (AddPatternView). Requires Ravelry API keys in Config.xcconfig for search; graceful message if not configured.
 - **Ravelry account connect and import (done):** Settings → Ravelry. Users can connect their Ravelry account via OAuth 2.0 authorization code flow (RavelryOAuthService, KeychainHelper). Tokens stored in Keychain per app user. After connecting, “Import my Ravelry library” fetches the user’s pattern library (RavelryUserService), dedupes by source_url, and adds patterns via PatternStore. Requires a Ravelry OAuth app configured with redirect URI `patternvault://oauth/ravelry`. Config: `RAVELRY_OAUTH2_CLIENT_ID`, `RAVELRY_OAUTH2_CLIENT_SECRET`.
+- **Interactive chart knitting mode (done):** InteractiveChartGridView; row-by-row progress, zoom/pan (UIScrollView-backed ZoomableScrollView), row notes, size selector. Entry from ExtractedChartWorkspaceView bottom toolbar or PatternDetailView chart card context menu.
+- **CV-based grid border detection (done):** ChartGridDetector.detectBorderLines scans for contiguous pixel runs to find grid borders. Knitting charts have continuous gridlines; row/column numbers are discrete characters with gaps. Preferred over luminance-based density refinement for colorwork charts.
+- **Intelligent repeat tracking (done):** RepeatInfo model + heuristic detection from step body text (RepeatInfo.detect). RepeatStepView shows cycling UI for repeat instructions. Simple round counter for “work N rounds” steps. Size selector for multi-size patterns. ActiveRepeatState in PatternProgressData tracks cycle position. SecondaryCounter (color=dustyBlue, linkMode=unlinked) tracks cycles.
+- **Step grouping (done):** PatternStepSectionView.groupedSteps condenses consecutive single-row steps in the same section into one display step with InteractiveRowReaderView. Navigation arrows skip entire groups.
 
 ## Gotchas
 
 - Create `Config/Config.xcconfig` from `Config.xcconfig.example` (set `GEMINI_API_KEY` for AI pattern analysis, and optionally Supabase keys); file is gitignored. Required for main app AI step parsing and Share Extension. For Ravelry: `RAVELRY_ACCESS_KEY`/`RAVELRY_PERSONAL_KEY` for PDF and Find patterns; `RAVELRY_OAUTH2_CLIENT_ID`/`RAVELRY_OAUTH2_CLIENT_SECRET` for “Connect Ravelry” and import library (OAuth app redirect URI: `patternvault://oauth/ravelry`).
 - Git repo: `https://github.com/angelaMinardi/craft-management` — API keys use xcconfig variables (e.g. `$(GEMINI_API_KEY)`); never hardcode secrets in pbxproj.
 - Share Extension and main app cannot share Swift files directly — types like `ExtractedContent` are defined in the extension target
-- `pbxproj` edits: new files need PBXFileReference + PBXBuildFile + PBXGroup membership + PBXSourcesBuildPhase entry
+- `pbxproj` edits: new files need PBXFileReference + PBXBuildFile + PBXGroup membership + PBXSourcesBuildPhase entry. IDs must be unique — reusing IDs from other entries causes "Cannot find type in scope" errors. Always `grep` the pbxproj for candidate IDs before adding.
+- `ChartHighlight` grid inset clamp is 0.85 (was 0.45). The sum constraint (<0.9 on opposite sides) is in PatternStore.
+- `createChartHighlights` is `async` — all call sites must use `await`. It runs AI second-pass grid detection via `ChartGridDetector`.
+- `@ViewBuilder` functions: `if/else` variable assignments (not returning Views) cause "Type '()' cannot conform to 'View'" — extract to helper methods.
 - `craft-management/` directory is dead (abandoned web app) — ignore it
 - Xcode can hang if DerivedData is corrupted: `rm -rf ~/Library/Developer/Xcode/DerivedData`
 - Fresh Supabase projects need all migrations (001-013) run in order before app works. For existing DBs missing newer columns/tables, run the missing migration files in order from `PatternVault/supabase_migrations/`.
 - sudo commands don't work from Claude Code (no tty for password)
 - `launch.json` configs are empty — no dev server (iOS-only project, use Xcode)
+- Gemini can return JSON with duplicate keys (e.g., `"grid_boundary"` twice). `JSONDecoder` fatally crashes on this. Always sanitize through `JSONSerialization` first (last-value-wins) before decoding. Fixed in `AIStepParserService.callGemini`.
+- `Dictionary<Int, Codable>` causes "Duplicate values for key" crash during encoding. Use `Dictionary<String, Codable>` instead.
+- `PatternStore.triggerPendingChartExtractions` runs on every `load()`. Re-extracts if `aiExtractedHighlights(patternId:)` is empty. Re-importing a pattern creates a new UUID, orphaning old highlights — extraction repeats each launch.
+- `ChartHighlightStore.load()` silently skips files that fail to decode (`try?`). Add error logging when debugging chart persistence.
+- Xcode build cache frequently shows phantom errors ("cannot find type X") not present in `xcodebuild clean build`. Fix: Cmd+Shift+K or `rm -rf ~/Library/Developer/Xcode/DerivedData`.
+- SwiftUI `scaleEffect` + `MagnificationGesture` doesn't allow panning. Use UIKit `UIScrollView` wrapper for proper pinch-to-zoom + pan.
+- Use `.id()` modifier to force SwiftUI view recreation when underlying data changes (e.g., `.id("repeat_\(index)")` for per-step state isolation).
+- `objectWillChange.send()` must be called on `@ObservableObject` stores when writing to their data from external code (e.g., RowCounterStore writing to PatternProgressStore).
+
+## Chart Extraction Pipeline
+
+Two-pass AI detection: (1) Full-page Gemini pass detects charts, returns chart_crop + grid_boundary + rows/cols. (2) Focused second-pass (`ChartGridDetector`) sends cropped chart image to Gemini for precise grid cell boundary (x_min/y_min/x_max/y_max). Falls back to first-pass values, then formula heuristic.
+
+Key files: `ChartGridDetector.swift` (AI second-pass), `PatternStore.swift:createChartHighlights` (async, priority chain), `GridAlignmentEditor.swift` (lasso + drag handles), `ChartHighlighterOverlayView.swift` (grid overlay rendering), `ChartHighlight.swift` (model, inset clamp 0.85).
+
+Storage: File-based in `Application Support/ChartHighlights/` — JSON metadata + PNG image + drawing data as separate files per highlight. Auto-migrates from legacy UserDefaults on first launch.
 

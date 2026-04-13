@@ -14,8 +14,8 @@ enum ChartImageProcessor {
     /// Intermediate instruction decoded from Gemini response (includes chart_image_index for post-processing).
     struct RawInstruction: Codable {
         let section: String
-        let startRow: Int
-        let endRow: Int
+        var startRow: Int
+        var endRow: Int
         let instruction: String
         let stitchCount: Int?
         let note: String?
@@ -25,6 +25,20 @@ enum ChartImageProcessor {
         let chartRows: Int?
         let chartColumns: Int?
         let gridBoundary: ChartCropRect?
+        let rowNumberPosition: String?
+        let colNumberPosition: String?
+        let hasLegend: Bool?
+        let legendPosition: String?
+
+        // Repeat metadata (flat fields matching AI JSON output)
+        let repeatType: String?
+        let referencedStartRow: Int?
+        let referencedEndRow: Int?
+        let fixedRepeatCount: Int?
+        let targetStitchCounts: [Int]?
+        let targetMeasurement: String?
+        let stitchesPerCycle: Int?
+        let asteriskBody: String?
 
         enum CodingKeys: String, CodingKey {
             case section
@@ -39,6 +53,18 @@ enum ChartImageProcessor {
             case chartRows = "chart_rows"
             case chartColumns = "chart_columns"
             case gridBoundary = "grid_boundary"
+            case rowNumberPosition = "row_number_position"
+            case colNumberPosition = "col_number_position"
+            case hasLegend = "has_legend"
+            case legendPosition = "legend_position"
+            case repeatType = "repeat_type"
+            case referencedStartRow = "referenced_start_row"
+            case referencedEndRow = "referenced_end_row"
+            case fixedRepeatCount = "fixed_repeat_count"
+            case targetStitchCounts = "target_stitch_counts"
+            case targetMeasurement = "target_measurement"
+            case stitchesPerCycle = "stitches_per_cycle"
+            case asteriskBody = "asterisk_body"
         }
     }
 
@@ -54,7 +80,23 @@ enum ChartImageProcessor {
     /// handled separately via ChartHighlight objects).
     static func rawToInstructions(_ rawInstructions: [RawInstruction]) -> [ParsedInstruction] {
         rawInstructions.map { raw in
-            ParsedInstruction(
+            // Map flat repeat fields to nested RepeatInfo
+            let repeatInfo: RepeatInfo? = {
+                guard let typeStr = raw.repeatType,
+                      let type = RepeatInfo.RepeatType(rawValue: typeStr) else { return nil }
+                return RepeatInfo(
+                    type: type,
+                    referencedStartRow: raw.referencedStartRow,
+                    referencedEndRow: raw.referencedEndRow,
+                    fixedRepeatCount: raw.fixedRepeatCount,
+                    targetStitchCounts: raw.targetStitchCounts,
+                    targetMeasurement: raw.targetMeasurement,
+                    stitchesPerCycle: raw.stitchesPerCycle,
+                    asteriskBody: raw.asteriskBody
+                )
+            }()
+
+            return ParsedInstruction(
                 section: raw.section,
                 startRow: raw.startRow,
                 endRow: raw.endRow,
@@ -62,7 +104,8 @@ enum ChartImageProcessor {
                 stitchCount: raw.stitchCount,
                 note: raw.note,
                 chartImageUrl: nil,
-                chartLabel: nil
+                chartLabel: nil,
+                repeatInfo: repeatInfo
             )
         }
     }
@@ -113,6 +156,6 @@ enum ChartImageProcessor {
         let cropRect = CGRect(x: x, y: y, width: max(1, w), height: max(1, h))
         guard let cropped = cgImage.cropping(to: cropRect) else { return nil }
 
-        return UIImage(cgImage: cropped).jpegData(compressionQuality: 0.85)
+        return UIImage(cgImage: cropped).pngData()
     }
 }

@@ -66,9 +66,10 @@ final class PatternRepository: ObservableObject {
         let techniques: String?
         let parsed_steps: String?
         let parsed_rows: String?
+        let enrichment_status: String?
     }
 
-    func addPattern(userId: UUID, title: String, description: String?, sourceUrl: String, sourcePlatform: String?, status: PatternStatus, thumbnailUrl: String? = nil, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, sourceContent: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil, parsedSteps: String? = nil, parsedRows: String? = nil) async throws -> Pattern {
+    func addPattern(userId: UUID, title: String, description: String?, sourceUrl: String, sourcePlatform: String?, status: PatternStatus, thumbnailUrl: String? = nil, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, sourceContent: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil, parsedSteps: String? = nil, parsedRows: String? = nil, enrichmentStatus: String? = nil) async throws -> Pattern {
         let id = UUID()
         let payload = InsertPayload(
             id: id.uuidString,
@@ -90,7 +91,8 @@ final class PatternRepository: ObservableObject {
             yarn_weight_yardage: yarnWeightYardage,
             techniques: techniques,
             parsed_steps: parsedSteps,
-            parsed_rows: parsedRows
+            parsed_rows: parsedRows,
+            enrichment_status: enrichmentStatus
         )
         let response: Pattern = try await client
             .from("patterns")

@@ -15,6 +15,9 @@ struct YarnStashItem: Identifiable, Codable, Sendable, Hashable {
     var skeinsOwned: Double
     var location: String?
     var notes: String?
+    var barcode: String?
+    var dyeLot: String?
+    var fiberContent: String?
     var createdAt: Date
     var updatedAt: Date
 
@@ -28,6 +31,9 @@ struct YarnStashItem: Identifiable, Codable, Sendable, Hashable {
         case skeinsOwned = "skeins_owned"
         case location
         case notes
+        case barcode
+        case dyeLot = "dye_lot"
+        case fiberContent = "fiber_content"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }

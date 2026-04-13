@@ -111,7 +111,7 @@ Analyze this craft pattern and extract the following as JSON:
 YARN_LINKS: For fiber crafts use yarn brand names. For other crafts use supplier names. Max 8.
 
 INSTRUCTIONS: Extract every individual working instruction organized by section with row/round numbers.
-Each: section (1-4 words), start_row/end_row (from text, 0 if unnumbered), instruction (complete, unmodified), stitch_count (int or null), note (or null).
+Each: section (1-4 words), start_row/end_row (from text; when instructions are clearly sequential within a section but lack explicit row labels, assign sequential numbers starting at 1; use 0 only for setup/transition instructions that are not distinct rows), instruction (complete, unmodified), stitch_count (int or null), note (or null).
 Omit materials/gauge/abbreviations from instructions. Return [] if no real instructions exist.
 
 TITLE: Create a cute, memorable name. NOT the webpage title. 2-5 words. Never include "FREE", "pattern", website names.
@@ -136,7 +136,8 @@ async function analyzeWithGemini(
     generationConfig: {
       responseMimeType: "application/json",
       maxOutputTokens: 8192,
-      thinkingConfig: { thinkingBudget: 0 },
+      temperature: 0.1,
+      thinkingConfig: { thinkingBudget: 1024 },
     },
   };
 

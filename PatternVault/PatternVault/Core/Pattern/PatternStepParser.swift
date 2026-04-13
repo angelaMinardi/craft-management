@@ -3,7 +3,6 @@
 //  PatternVault
 //
 //  Derives steps from pattern sourceContent (or description fallback) for step-by-step UI.
-//  Preprocesses content to remove junk and produce consistent, instruction-only steps.
 //
 
 import Foundation
@@ -14,12 +13,14 @@ struct PatternStep: Identifiable {
     let body: String
     let chartImageUrl: String?
     let chartLabel: String?
+    let repeatInfo: RepeatInfo?
 
-    init(title: String, body: String, chartImageUrl: String? = nil, chartLabel: String? = nil) {
+    init(title: String, body: String, chartImageUrl: String? = nil, chartLabel: String? = nil, repeatInfo: RepeatInfo? = nil) {
         self.title = title
         self.body = body
         self.chartImageUrl = chartImageUrl
         self.chartLabel = chartLabel
+        self.repeatInfo = repeatInfo
     }
 }
 
@@ -113,50 +114,14 @@ enum PatternStepParser {
             .filter { !$0.isEmpty }
     }
 
-    // MARK: - Junk detection (blocks and lines we should not keep)
+    // MARK: - Line cleanup
 
-    private static let junkFirstLinePatterns: [String] = [
-        "share", "print", "subscribe", "newsletter", "sign up", "cookie", "privacy policy",
-        "follow us", "tweet", "pin it", "buy now", "get the pdf", "add to cart", "skip to content",
-        "skip to main", "menu", "home", "search", "you may also like", "related pattern",
-        "related post", "leave a comment", "comments", "posted in", "tagged", "categories",
-        "share this", "email this", "previous", "next post", "read more", "see more",
-        "advertisement", "sponsored", "affiliate", "disclosure", "copyright ©", "all rights reserved",
-        "follow on", "like us", "watch on", "download pattern", "free pattern", "pattern by ",
-        "my notebook", "sign in", "create an account", "more from ", "see them all",
-        "visits in the last 24 hours", "visitors right now",
-        "share your progress", "tag your pics", "connect with the community",
-        "we can't wait to see what you make", "similar posts", "you might also like",
-        "to top", "buy sunshower", "similar posts you might enjoy", "leave a reply",
-        "looks like an excellent"
-    ]
-
-    /// Combined hardcoded + user-learned junk patterns.
-    /// Uses LearnedJunkPhraseReader so this can run in a synchronous nonisolated context (same data as JunkPhraseStore).
-    private static var allJunkPatterns: [String] {
-        let learned = LearnedJunkPhraseReader.phraseStrings()
-        return junkFirstLinePatterns + learned
-    }
-
-    private static func isJunkBlock(block: String, firstLine: String) -> Bool {
-        let lower = firstLine.lowercased()
-        let blockTrimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
-        if blockTrimmed.count < 3 { return true }
-        if allJunkPatterns.contains(where: { lower.contains($0) }) { return true }
-        if blockTrimmed == firstLine, lower.allSatisfy({ $0.isNumber || $0.isWhitespace || ".,;:/-".contains($0) }) { return true }
-        if firstLine.hasPrefix("http://") || firstLine.hasPrefix("https://") { return true }
-        if block.components(separatedBy: "\n").filter({ $0.trimmingCharacters(in: .whitespaces).hasPrefix("http") }).count > 2 { return true }
-        return false
-    }
-
-    /// Remove junk lines and normalize whitespace in step body.
+    /// Remove empty/trivial lines, bare URLs, and normalize whitespace in step body.
     private static func cleanStepBody(_ body: String) -> String {
         let lines = body.components(separatedBy: "\n")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { line in
                 if line.isEmpty { return false }
-                let lower = line.lowercased()
-                if allJunkPatterns.contains(where: { lower.contains($0) }) { return false }
                 if line.hasPrefix("http://") || line.hasPrefix("https://") { return false }
                 if line.count < 2 && !line.allSatisfy({ $0.isLetter || $0.isNumber }) { return false }
                 return true
@@ -275,11 +240,7 @@ enum PatternStepParser {
 
     private static func parseStepsFromContent(_ text: String) -> [PatternStep] {
         let normalized = normalizeInput(text)
-        var blocks = blocksFromNormalized(normalized)
-        blocks = blocks.filter { block in
-            let first = block.components(separatedBy: "\n").first?.trimmingCharacters(in: .whitespaces) ?? ""
-            return !isJunkBlock(block: block, firstLine: first)
-        }
+        let blocks = blocksFromNormalized(normalized)
 
         if let sectionSteps = parseStepsBySectionHeadings(blocks: blocks), !sectionSteps.isEmpty {
             return sectionSteps

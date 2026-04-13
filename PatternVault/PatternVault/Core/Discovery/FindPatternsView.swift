@@ -178,13 +178,22 @@ struct FindPatternsView: View {
             SectionHeaderView(title: "Search criteria")
             VStack(spacing: Theme.Spacing.md) {
                 TextField("Keyword (e.g. hat, sweater)", text: $keyword)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .padding(Theme.Spacing.md)
+                    .background(Theme.inputBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
                     .autocorrectionDisabled()
                 TextField("Yarn weight (e.g. DK, Worsted)", text: $yarnWeight)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .padding(Theme.Spacing.md)
+                    .background(Theme.inputBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
                     .autocorrectionDisabled()
                 TextField("Needle/hook size (e.g. 4 mm, US 7)", text: $needleSize)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
+                    .padding(Theme.Spacing.md)
+                    .background(Theme.inputBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
                     .autocorrectionDisabled()
                 Picker("Craft", selection: $craftOption) {
                     ForEach(CraftOption.allCases, id: \.self) { o in
@@ -196,9 +205,7 @@ struct FindPatternsView: View {
                     .tint(Theme.sageGreen)
             }
             .padding(Theme.Spacing.md)
-            .background(Theme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
-            .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+            .borderedCard()
         }
     }
 
@@ -237,6 +244,11 @@ struct FindPatternsView: View {
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.deepPlum.opacity(0.8))
                 .multilineTextAlignment(.center)
+            Button("Try Again") {
+                runSearch()
+            }
+            .font(Theme.Typography.captionSemibold)
+            .foregroundStyle(Theme.deepPlum)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Theme.Spacing.lg)
@@ -291,7 +303,7 @@ struct FindPatternsView: View {
             }
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text(result.title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.callout)
                     .foregroundStyle(Theme.deepPlum)
                     .lineLimit(2)
                 if let craft = result.craftType {

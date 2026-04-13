@@ -31,10 +31,16 @@ final class TagStore: ObservableObject {
 
     func loadAllTags() async {
         guard allTags.isEmpty else { return }
+        if let cached: [Tag] = OfflineCacheService.load(key: "all_tags", as: [Tag].self) {
+            allTags = cached
+        }
         do {
             allTags = try await repo.fetchAllTags()
+            OfflineCacheService.save(allTags, key: "all_tags")
         } catch {
-            errorMessage = error.localizedDescription
+            if allTags.isEmpty {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 

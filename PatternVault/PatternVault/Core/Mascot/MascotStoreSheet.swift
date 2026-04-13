@@ -46,7 +46,7 @@ struct MascotStoreSheet: View {
                 .foregroundStyle(Theme.deepPlum.opacity(0.7))
             Spacer()
             Text("\(mascotStore.threadPoints)")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .font(Theme.Typography.titleBold)
                 .foregroundStyle(Theme.deepPlum)
         }
         .padding()
@@ -72,7 +72,7 @@ struct MascotStoreSheet: View {
                                 .foregroundStyle(Theme.deepPlum)
                             if item.heartBonus > 1 {
                                 Text("+\(item.heartBonus) ❤️")
-                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .font(Theme.Typography.caption2.weight(.semibold))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -119,7 +119,7 @@ struct MascotStoreSheet: View {
                                 .foregroundStyle(Theme.deepPlum)
                             if deco.isSeasonal {
                                 Text("Limited!")
-                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .font(Theme.Typography.caption2.weight(.semibold))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)

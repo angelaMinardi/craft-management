@@ -48,7 +48,7 @@ struct WidgetOnboardingSheet: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             TappableMascotView(size: 56)
             Text("Track rows without unlocking your phone")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(Theme.Typography.title)
                 .foregroundStyle(Theme.deepPlum)
             Text("Add the Row Tracker widget to your Home Screen or Lock Screen to tap +/− without opening the app.")
                 .font(Theme.Typography.body)
@@ -91,12 +91,12 @@ struct WidgetOnboardingSheet: View {
     private var stepsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             Text("How to add it")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .font(Theme.Typography.headline)
                 .foregroundStyle(Theme.deepPlum)
             ForEach(steps, id: \.number) { step in
                 HStack(alignment: .top, spacing: Theme.Spacing.md) {
                     Text("\(step.number)")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.callout)
                         .foregroundStyle(.white)
                         .frame(width: 28, height: 28)
                         .background(Theme.softCoral)

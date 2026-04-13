@@ -15,18 +15,20 @@ struct TappableMascotView: View {
 
     @State private var isCheering = false
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Group {
             if isCheering {
-                // Keep one-shot reaction slightly larger than idle so the tap feels responsive.
-                SpriteMascotView.petting(size: size * 1.12) {
+                SpriteMascotView.petting(size: size) {
                     isCheering = false
                 }
-                .frame(width: size, height: size)
             } else {
                 SpriteMascotView.idle(size: size)
             }
         }
+        .frame(width: size, height: size)
+        .animation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.8), value: isCheering)
         .contentShape(Rectangle())
         .onTapGesture {
             guard isInteractive else { return }

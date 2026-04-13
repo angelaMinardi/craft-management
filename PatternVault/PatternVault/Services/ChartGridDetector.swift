@@ -48,43 +48,45 @@ struct ChartGridDetector {
             return nil
         }
 
-        let rowHint = expectedRows.map { "The grid has \($0) rows. " } ?? ""
-        let colHint = expectedCols.map { "The grid has \($0) columns. " } ?? ""
+        let rowHint = expectedRows.map { "The grid is expected to have approximately \($0) rows. " } ?? ""
+        let colHint = expectedCols.map { "The grid is expected to have approximately \($0) columns. " } ?? ""
 
         let prompt = """
-        This image is a cropped region from a knitting/crochet pattern PDF containing a stitch chart. \
-        \(rowHint)\(colHint)\
-        The image includes the chart grid (the rectangular block of colored cells/squares representing stitches) \
-        and may also include: a chart title above, column numbers along the top and/or bottom, \
-        row numbers along the left and/or right, and a Key/Legend area showing color or symbol definitions.
+        You are analyzing a cropped image from a knitting/crochet pattern PDF that contains a stitch chart.
 
-        YOUR TASK: Return the PRECISE bounding box of ONLY the rectangular grid of stitch cells. \
-        This must EXCLUDE all labels, numbers, titles, legends, and whitespace.
+        STRUCTURE OF A KNITTING CHART:
+        A knitting chart has these distinct regions:
+        1. THE GRID: A rectangular block of colored/filled squares (cells) arranged in rows and columns. \
+        Each cell represents one stitch. In colorwork charts, cells are filled with solid colors. \
+        In stitch charts, cells contain symbols. The grid has visible borders/gridlines.
+        2. ROW NUMBERS: Small text numbers (1, 2, 3...) printed OUTSIDE the grid, running vertically \
+        along the LEFT and/or RIGHT edge. These label which row is which. They are NOT part of the grid.
+        3. COLUMN NUMBERS: Small text numbers (1, 2, 3...) printed OUTSIDE the grid, running horizontally \
+        along the TOP and/or BOTTOM edge. These label which column is which. They are NOT part of the grid.
+        4. TITLE: Text above the chart naming it (e.g. "Skull Sampler Leg").
+        5. KEY/LEGEND: Color swatches with labels (e.g. "K with MC", "K with C1") usually to the right.
+
+        \(rowHint)\(colHint)
+
+        YOUR TASK: Return the bounding box of ONLY region #1 (the grid of colored cells). \
+        The boundary must be at the OUTERMOST EDGE of the outermost grid cells — where the \
+        grid cell borders are, NOT where the numbers begin.
+
+        Look carefully at each edge:
+        - TOP EDGE: Find the top border of the topmost row of cells. Numbers above this line are EXCLUDED.
+        - BOTTOM EDGE: Find the bottom border of the bottommost row of cells. Numbers below this line are EXCLUDED.
+        - LEFT EDGE: Find the left border of the leftmost column of cells. Numbers to the left are EXCLUDED.
+        - RIGHT EDGE: Find the right border of the rightmost column of cells. Numbers to the right are EXCLUDED.
 
         Return a single JSON object with normalized coordinates (0.0 to 1.0):
         {"x_min": 0.05, "y_min": 0.15, "x_max": 0.65, "y_max": 0.95}
 
-        Where:
-        - "x_min": left edge of the grid as a fraction of image width (0.0 = left edge of image)
-        - "y_min": top edge of the grid as a fraction of image height (0.0 = top edge of image)
-        - "x_max": right edge of the grid as a fraction of image width (1.0 = right edge of image)
-        - "y_max": bottom edge of the grid as a fraction of image height (1.0 = bottom edge of image)
+        Where x_min is the left edge, y_min is the top edge, x_max is the right edge, y_max is the bottom edge, \
+        all as fractions of image width/height.
 
-        x_min < x_max and y_min < y_max. The grid area is the rectangle from (x_min, y_min) to (x_max, y_max).
-
-        Example: a chart where the grid cells start at 5% from the left, 15% from the top, \
-        end at 65% from the left, and 95% from the top: \
-        {"x_min": 0.05, "y_min": 0.15, "x_max": 0.65, "y_max": 0.95}
-
-        CRITICAL RULES:
-        - The bounding box must tightly wrap ONLY the colored stitch cells/squares
-        - EXCLUDE row numbers printed to the left or right of the grid
-        - EXCLUDE column numbers printed above or below the grid
-        - EXCLUDE the chart title text
-        - EXCLUDE any Key/Legend area (color swatches, symbol definitions)
-        - EXCLUDE whitespace margins
-        - Values should be precise to 3 decimal places
-        - All four values must be > 0 (there is always SOME non-grid content around the edges)
+        CRITICAL: Row/column numbers are often printed DIRECTLY adjacent to the grid with very little gap. \
+        You must still exclude them. The grid boundary is where the actual colored/filled stitch cells end, \
+        not where the numbers begin. Look for the gridline or cell border, not the gap.
         """
 
         // Build request body directly — don't use shared helper which sets thinkingBudget:0
@@ -491,56 +493,132 @@ struct ChartGridDetector {
             vProj[x] = sum / max(1, Double(vProjYHi - vProjYLo))
         }
 
+        // Also compute color-coverage profiles: fraction of pixels that are NOT white/near-white.
+        // Grid cells (both colored and dark) have high coverage; row/column numbers are sparse text.
+        // This helps distinguish grid edges from numbered labels on colorwork charts.
+        var hCoverage = [Double](repeating: 0, count: height)
+        var vCoverage = [Double](repeating: 0, count: width)
+        let whiteThreshold = 230.0  // pixels brighter than this are "background"
+
+        for y in yLo..<yHi {
+            var nonWhite = 0
+            let rowOff = y * bytesPerRow
+            for x in hProjXLo..<hProjXHi {
+                let off = rowOff + x * bpp
+                let r = Double(pixels[off])
+                let g = Double(pixels[off+1])
+                let b = Double(pixels[off+2])
+                if r < whiteThreshold || g < whiteThreshold || b < whiteThreshold {
+                    nonWhite += 1
+                }
+            }
+            hCoverage[y] = Double(nonWhite) / max(1, Double(hProjXHi - hProjXLo))
+        }
+
+        for x in xLo..<xHi {
+            var nonWhite = 0
+            for y in vProjYLo..<vProjYHi {
+                let off = y * bytesPerRow + x * bpp
+                let r = Double(pixels[off])
+                let g = Double(pixels[off+1])
+                let b = Double(pixels[off+2])
+                if r < whiteThreshold || g < whiteThreshold || b < whiteThreshold {
+                    nonWhite += 1
+                }
+            }
+            vCoverage[x] = Double(nonWhite) / max(1, Double(vProjYHi - vProjYLo))
+        }
+
         // Refine each edge by scanning from the grid CENTER outward.
-        // This starts from known-good territory (middle of grid) and finds
-        // where density drops — naturally picking the innermost boundary
-        // and avoiding confusion with title→numbers transitions.
+        // Use coverage profiles — grid cells have high, continuous coverage (>0.6),
+        // while text labels have low, sparse coverage (<0.3).
         let centerY = Int((aiBBox.yMin + aiBBox.yMax) / 2.0 * Double(height))
         let centerX = Int((aiBBox.xMin + aiBBox.xMax) / 2.0 * Double(width))
         let searchH = max(10, Int(0.12 * Double(height)))
         let searchW = max(10, Int(0.12 * Double(width)))
 
-        let refinedTop = scanOutward(
-            profile: hProj,
-            from: centerY,
-            toward: max(0, Int(aiBBox.yMin * Double(height)) - searchH),
-            direction: -1
+        // Use both luminance density and coverage for edge detection.
+        // The more restrictive (inner) result wins — prevents grid from expanding into labels.
+        let refinedTopLum = scanOutward(
+            profile: hProj, from: centerY,
+            toward: max(0, Int(aiBBox.yMin * Double(height)) - searchH), direction: -1
         )
-        let refinedBottom = scanOutward(
-            profile: hProj,
-            from: centerY,
-            toward: min(height - 1, Int(aiBBox.yMax * Double(height)) + searchH),
-            direction: 1
+        let refinedTopCov = scanOutward(
+            profile: hCoverage, from: centerY,
+            toward: max(0, Int(aiBBox.yMin * Double(height)) - searchH), direction: -1
         )
-        let refinedLeft = scanOutward(
-            profile: vProj,
-            from: centerX,
-            toward: max(0, Int(aiBBox.xMin * Double(width)) - searchW),
-            direction: -1
-        )
-        let refinedRight = scanOutward(
-            profile: vProj,
-            from: centerX,
-            toward: min(width - 1, Int(aiBBox.xMax * Double(width)) + searchW),
-            direction: 1
-        )
+        let refinedTop = max(refinedTopLum, refinedTopCov)  // innermost wins
 
-        let result = RefinedBBox(
+        let refinedBottomLum = scanOutward(
+            profile: hProj, from: centerY,
+            toward: min(height - 1, Int(aiBBox.yMax * Double(height)) + searchH), direction: 1
+        )
+        let refinedBottomCov = scanOutward(
+            profile: hCoverage, from: centerY,
+            toward: min(height - 1, Int(aiBBox.yMax * Double(height)) + searchH), direction: 1
+        )
+        let refinedBottom = min(refinedBottomLum, refinedBottomCov)  // innermost wins
+
+        let refinedLeftLum = scanOutward(
+            profile: vProj, from: centerX,
+            toward: max(0, Int(aiBBox.xMin * Double(width)) - searchW), direction: -1
+        )
+        let refinedLeftCov = scanOutward(
+            profile: vCoverage, from: centerX,
+            toward: max(0, Int(aiBBox.xMin * Double(width)) - searchW), direction: -1
+        )
+        let refinedLeft = max(refinedLeftLum, refinedLeftCov)
+
+        let refinedRightLum = scanOutward(
+            profile: vProj, from: centerX,
+            toward: min(width - 1, Int(aiBBox.xMax * Double(width)) + searchW), direction: 1
+        )
+        let refinedRightCov = scanOutward(
+            profile: vCoverage, from: centerX,
+            toward: min(width - 1, Int(aiBBox.xMax * Double(width)) + searchW), direction: 1
+        )
+        let refinedRight = min(refinedRightLum, refinedRightCov)
+
+        let densityResult = RefinedBBox(
             xMin: Double(refinedLeft) / Double(width),
             yMin: Double(refinedTop) / Double(height),
             xMax: Double(refinedRight) / Double(width),
             yMax: Double(refinedBottom) / Double(height)
         )
 
+        // Try contiguous border line detection — more accurate for charts with grid borders.
+        // Grid borders are continuous lines spanning the full width/height; numbers are broken.
+        if let borderResult = detectBorderLines(image: image, aiBBox: aiBBox) {
+            // Validate: border detection result should be reasonable
+            let bw = borderResult.xMax - borderResult.xMin
+            let bh = borderResult.yMax - borderResult.yMin
+            let aiW = aiBBox.xMax - aiBBox.xMin
+            let aiH = aiBBox.yMax - aiBBox.yMin
+            // Border result should be at least 50% of AI bbox (not too small)
+            // and not larger than AI bbox + 5% (not wildly expanding)
+            if bw > aiW * 0.50 && bh > aiH * 0.50 &&
+               bw < aiW * 1.05 && bh < aiH * 1.05 {
+                #if DEBUG
+                print("""
+                [GridDetector] Using BORDER LINE detection (preferred):
+                  AI bbox  = (\(String(format:"%.3f",aiBBox.xMin)), \(String(format:"%.3f",aiBBox.yMin))) – (\(String(format:"%.3f",aiBBox.xMax)), \(String(format:"%.3f",aiBBox.yMax)))
+                  Density  = (\(String(format:"%.3f",densityResult.xMin)), \(String(format:"%.3f",densityResult.yMin))) – (\(String(format:"%.3f",densityResult.xMax)), \(String(format:"%.3f",densityResult.yMax)))
+                  Border   = (\(String(format:"%.3f",borderResult.xMin)), \(String(format:"%.3f",borderResult.yMin))) – (\(String(format:"%.3f",borderResult.xMax)), \(String(format:"%.3f",borderResult.yMax)))
+                """)
+                #endif
+                return borderResult
+            }
+        }
+
         #if DEBUG
         print("""
-        [GridDetector] Pixel refinement:
+        [GridDetector] Using DENSITY refinement (border detection failed or invalid):
           AI bbox = (\(String(format:"%.3f",aiBBox.xMin)), \(String(format:"%.3f",aiBBox.yMin))) – (\(String(format:"%.3f",aiBBox.xMax)), \(String(format:"%.3f",aiBBox.yMax)))
-          Refined = (\(String(format:"%.3f",result.xMin)), \(String(format:"%.3f",result.yMin))) – (\(String(format:"%.3f",result.xMax)), \(String(format:"%.3f",result.yMax)))
+          Refined = (\(String(format:"%.3f",densityResult.xMin)), \(String(format:"%.3f",densityResult.yMin))) – (\(String(format:"%.3f",densityResult.xMax)), \(String(format:"%.3f",densityResult.yMax)))
         """)
         #endif
 
-        return result
+        return densityResult
     }
 
     /// Scans outward from the grid center toward an edge, finding where
@@ -590,6 +668,193 @@ struct ChartGridDetector {
         }
 
         return lastAbove
+    }
+
+    // MARK: - Contiguous Line Border Detection
+
+    /// Detects the grid boundary by finding contiguous border lines.
+    /// Knitting chart grids have continuous horizontal/vertical lines (gridlines)
+    /// that span the full grid width/height. Row/column numbers, by contrast, are
+    /// discrete characters with gaps between them.
+    ///
+    /// Algorithm: scan each pixel row/column and find the longest continuous run
+    /// of non-white pixels. Grid border rows have runs ≥ 60% of the AI-estimated
+    /// grid width. Number rows have short runs (individual digits ~10-20px with gaps).
+    private static func detectBorderLines(
+        image: UIImage,
+        aiBBox: (xMin: Double, yMin: Double, xMax: Double, yMax: Double)
+    ) -> RefinedBBox? {
+        guard let cgImage = image.cgImage,
+              let context = CGContext(
+                  data: nil,
+                  width: cgImage.width,
+                  height: cgImage.height,
+                  bitsPerComponent: 8,
+                  bytesPerRow: cgImage.width * 4,
+                  space: CGColorSpaceCreateDeviceRGB(),
+                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else { return nil }
+
+        let width = cgImage.width
+        let height = cgImage.height
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let pixels = context.data?.assumingMemoryBound(to: UInt8.self) else { return nil }
+        let bytesPerRow = context.bytesPerRow
+        let bpp = 4
+
+        // Threshold: pixel is "ink" (not white background) if any channel < this value
+        let inkThreshold: UInt8 = 220
+        // Minimum gap to break a "continuous" run — allows for 1-2px anti-aliasing gaps
+        let gapTolerance = max(2, width / 200)
+
+        // Estimated grid width in pixels from AI bbox (used as reference for "full width" runs)
+        let aiGridWidthPx = Int((aiBBox.xMax - aiBBox.xMin) * Double(width))
+        let aiGridHeightPx = Int((aiBBox.yMax - aiBBox.yMin) * Double(height))
+        // A "grid border" run must be ≥ 60% of AI-estimated grid dimension
+        let hRunThreshold = max(20, Int(Double(aiGridWidthPx) * 0.60))
+        let vRunThreshold = max(20, Int(Double(aiGridHeightPx) * 0.60))
+
+        // Search zone: AI bbox ± 15% margin
+        let margin = 0.15
+        let ySearchLo = max(0, Int((aiBBox.yMin - margin) * Double(height)))
+        let ySearchHi = min(height - 1, Int((aiBBox.yMax + margin) * Double(height)))
+        let xSearchLo = max(0, Int((aiBBox.xMin - margin) * Double(width)))
+        let xSearchHi = min(width - 1, Int((aiBBox.xMax + margin) * Double(width)))
+
+        // --- Horizontal scan: find rows with long continuous runs ---
+        // For each row, find the longest continuous run of ink pixels
+        var rowsWithBorderLines: [(row: Int, runStart: Int, runEnd: Int)] = []
+
+        for y in ySearchLo...ySearchHi {
+            var longestStart = 0
+            var longestLen = 0
+            var currentStart = -1
+            var currentLen = 0
+            var gapCount = 0
+
+            for x in xSearchLo...xSearchHi {
+                let off = y * bytesPerRow + x * bpp
+                let r = pixels[off]
+                let g = pixels[off + 1]
+                let b = pixels[off + 2]
+                let isInk = r < inkThreshold || g < inkThreshold || b < inkThreshold
+
+                if isInk {
+                    if currentStart == -1 {
+                        currentStart = x
+                        currentLen = 1
+                    } else {
+                        currentLen += gapCount + 1
+                        gapCount = 0
+                    }
+                } else {
+                    if currentStart != -1 {
+                        gapCount += 1
+                        if gapCount > gapTolerance {
+                            // Run ended
+                            if currentLen > longestLen {
+                                longestLen = currentLen
+                                longestStart = currentStart
+                            }
+                            currentStart = -1
+                            currentLen = 0
+                            gapCount = 0
+                        }
+                    }
+                }
+            }
+            // Close final run
+            if currentLen > longestLen {
+                longestLen = currentLen
+                longestStart = currentStart
+            }
+
+            if longestLen >= hRunThreshold {
+                rowsWithBorderLines.append((y, longestStart, longestStart + longestLen))
+            }
+        }
+
+        // --- Vertical scan: find columns with long continuous runs ---
+        var colsWithBorderLines: [(col: Int, runStart: Int, runEnd: Int)] = []
+
+        for x in xSearchLo...xSearchHi {
+            var longestStart = 0
+            var longestLen = 0
+            var currentStart = -1
+            var currentLen = 0
+            var gapCount = 0
+
+            for y in ySearchLo...ySearchHi {
+                let off = y * bytesPerRow + x * bpp
+                let r = pixels[off]
+                let g = pixels[off + 1]
+                let b = pixels[off + 2]
+                let isInk = r < inkThreshold || g < inkThreshold || b < inkThreshold
+
+                if isInk {
+                    if currentStart == -1 {
+                        currentStart = y
+                        currentLen = 1
+                    } else {
+                        currentLen += gapCount + 1
+                        gapCount = 0
+                    }
+                } else {
+                    if currentStart != -1 {
+                        gapCount += 1
+                        if gapCount > gapTolerance {
+                            if currentLen > longestLen {
+                                longestLen = currentLen
+                                longestStart = currentStart
+                            }
+                            currentStart = -1
+                            currentLen = 0
+                            gapCount = 0
+                        }
+                    }
+                }
+            }
+            if currentLen > longestLen {
+                longestLen = currentLen
+                longestStart = currentStart
+            }
+
+            if longestLen >= vRunThreshold {
+                colsWithBorderLines.append((x, longestStart, longestStart + longestLen))
+            }
+        }
+
+        guard !rowsWithBorderLines.isEmpty, !colsWithBorderLines.isEmpty else {
+            #if DEBUG
+            print("[GridDetector] Border detection: no border lines found (hRows=\(rowsWithBorderLines.count), vCols=\(colsWithBorderLines.count))")
+            #endif
+            return nil
+        }
+
+        // Find the top/bottom grid borders: first and last rows with full-width runs
+        let topBorder = rowsWithBorderLines.first!.row
+        let bottomBorder = rowsWithBorderLines.last!.row
+        let leftBorder = colsWithBorderLines.first!.col
+        let rightBorder = colsWithBorderLines.last!.col
+
+        let result = RefinedBBox(
+            xMin: Double(leftBorder) / Double(width),
+            yMin: Double(topBorder) / Double(height),
+            xMax: Double(rightBorder) / Double(width),
+            yMax: Double(bottomBorder) / Double(height)
+        )
+
+        #if DEBUG
+        print("""
+        [GridDetector] Border line detection:
+          hRows with border lines: \(rowsWithBorderLines.count), vCols: \(colsWithBorderLines.count)
+          Top border: row \(topBorder), Bottom: row \(bottomBorder)
+          Left border: col \(leftBorder), Right: col \(rightBorder)
+          Result: (\(String(format:"%.3f",result.xMin)), \(String(format:"%.3f",result.yMin))) – (\(String(format:"%.3f",result.xMax)), \(String(format:"%.3f",result.yMax)))
+        """)
+        #endif
+
+        return result
     }
 
     // MARK: - Private

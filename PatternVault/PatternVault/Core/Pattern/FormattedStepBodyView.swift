@@ -25,6 +25,7 @@ struct StepBodyBlock: Identifiable {
 struct FormattedStepBodyView: View {
     let stepBody: String
     let craftType: String?
+    @State private var glossaryEntry: StitchGlossary.Entry?
 
     init(stepBody: String, craftType: String? = nil) {
         self.stepBody = stepBody
@@ -459,5 +460,68 @@ struct FormattedStepBodyView: View {
             .tint(Theme.dustyBlue)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(stepBody)
+            .environment(\.openURL, OpenURLAction { url in
+                if url.scheme == "patternvault", url.host == "glossary",
+                   let abbr = url.pathComponents.last,
+                   let entry = StitchGlossary.lookup(abbr) {
+                    glossaryEntry = entry
+                    return .handled
+                }
+                return .systemAction
+            })
+            .sheet(item: $glossaryEntry) { entry in
+                GlossaryPopoverView(entry: entry)
+                    .presentationDetents([.medium])
+            }
+    }
+}
+
+// MARK: - Glossary Popover
+
+private struct GlossaryPopoverView: View {
+    let entry: StitchGlossary.Entry
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                HStack(spacing: Theme.Spacing.md) {
+                    Text(entry.abbreviation)
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.deepPlum)
+                    Text(entry.craft == .crochet ? "Crochet" : "Knitting")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(entry.craft == .crochet ? Theme.softCoral : Theme.dustyBlue)
+                        .clipShape(Capsule())
+                    Text(entry.category.rawValue)
+                        .font(Theme.Typography.caption2)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                }
+
+                Text(entry.fullName)
+                    .font(Theme.Typography.sectionTitle)
+                    .foregroundStyle(Theme.deepPlum)
+
+                Text(entry.description)
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer()
+            }
+            .padding(Theme.Spacing.xl)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.warmCream)
+            .navigationTitle(entry.fullName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
     }
 }

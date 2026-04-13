@@ -12,6 +12,7 @@ struct DailyRewardOverlayView: View {
     let onDismiss: () -> Void
 
     @State private var isVisible = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if isVisible {
@@ -19,10 +20,10 @@ struct DailyRewardOverlayView: View {
                 SpriteMascotView.jumping(size: 32)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("+\(result.pointsGranted) Thread Points!")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.footnoteSemibold)
                         .foregroundStyle(Theme.Semantic.textPrimary)
                     Text("Day \(result.consecutiveDay) check-in")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(Theme.Typography.caption2.weight(.semibold))
                         .foregroundStyle(Theme.Semantic.textSecondary)
                 }
                 Spacer()
@@ -39,14 +40,14 @@ struct DailyRewardOverlayView: View {
             .padding(.top, 6)
             .transition(.move(edge: .top).combined(with: .opacity))
             .onTapGesture {
-                withAnimation(.easeOut(duration: 0.25)) {
+                withAnimation(reduceMotion ? .none : .easeOut(duration: 0.25)) {
                     isVisible = false
                 }
                 onDismiss()
             }
             .task {
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
-                withAnimation(.easeOut(duration: 0.3)) {
+                withAnimation(reduceMotion ? .none : .easeOut(duration: 0.3)) {
                     isVisible = false
                 }
                 onDismiss()

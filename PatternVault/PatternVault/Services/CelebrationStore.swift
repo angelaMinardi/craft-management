@@ -54,10 +54,11 @@ final class CelebrationStore: ObservableObject {
         }
     }
 
-    /// Call when a milestone is reached. If not already unlocked and celebrations enabled, sets pending so UI can show overlay.
-    func unlock(_ id: String) {
-        guard !id.isEmpty else { return }
-        guard !unlockedMilestoneIds.contains(id) else { return }
+    /// Call when a milestone is reached. Returns true only when this call unlocked it.
+    @discardableResult
+    func unlock(_ id: String) -> Bool {
+        guard !id.isEmpty else { return false }
+        guard !unlockedMilestoneIds.contains(id) else { return false }
         var next = unlockedMilestoneIds
         next.insert(id)
         unlockedMilestoneIds = next
@@ -65,6 +66,7 @@ final class CelebrationStore: ObservableObject {
         if celebrationsEnabled {
             pendingMilestone = PendingMilestone(milestoneId: id)
         }
+        return true
     }
 
     func clearPending() {
@@ -79,6 +81,10 @@ final class CelebrationStore: ObservableObject {
         case "stash_started": return "Stash started!"
         case "toolbox_ready": return "Toolbox ready!"
         case "first_note": return "First note!"
+        case "progress_25": return "Quarter of the way there!"
+        case "progress_50": return "Halfway point!"
+        case "progress_75": return "Almost there!"
+        case "progress_100": return "You finished!"
         default: return nil
         }
     }
@@ -90,6 +96,10 @@ final class CelebrationStore: ObservableObject {
         case "stash_started": return "You're ready for the next project."
         case "toolbox_ready": return "Your first tool is in."
         case "first_note": return "You're tracking your makes."
+        case "progress_25": return "Keep the momentum going."
+        case "progress_50": return "The finish line is in sight."
+        case "progress_75": return "You've got this!"
+        case "progress_100": return "Time to celebrate your finished piece."
         default: return nil
         }
     }
@@ -100,6 +110,10 @@ final class CelebrationStore: ObservableObject {
         "vault_10",
         "stash_started",
         "toolbox_ready",
-        "first_note"
+        "first_note",
+        "progress_25",
+        "progress_50",
+        "progress_75",
+        "progress_100"
     ]
 }

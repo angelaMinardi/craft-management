@@ -27,9 +27,23 @@ struct MainTabView: View {
         )
     }
 
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
+
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
+                if !networkMonitor.isConnected {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: "wifi.slash")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Offline — using cached data")
+                            .font(Theme.Typography.caption)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(Theme.honey)
+                }
                 TabView(selection: tabSelection) {
                     DashboardView(store: store, tutorialStore: tutorialStore, onSelectCraft: { craft in
                         patternsCraftFilter = craft
@@ -114,7 +128,7 @@ struct MainTabView: View {
                 currentProjectStore.clearCurrentPattern()
                 return
             }
-            if pattern.status == .completed {
+            if pattern.status == .completed || pattern.status == .frogged {
                 currentProjectStore.clearCurrentPattern()
             }
         }
@@ -231,36 +245,78 @@ private struct CurrentProjectTabView: View {
     @ObservedObject var store: PatternStore
     @ObservedObject var currentProjectStore: CurrentProjectStore
     @ObservedObject private var chartStore = ChartHighlightStore.shared
+    @ObservedObject private var progressStore = PatternProgressStore.shared
+    @ObservedObject private var rowCounterStore = RowCounterStore.shared
     @State private var showPicker = false
     @State private var workspaceHighlight: ChartHighlight?
+    @State private var appeared = false
+    @State private var showGoalSheet = false
+    @State private var showProgressShare = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                    sectionHeader
+                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                     if let pattern = currentPattern {
-                        currentProjectCard(pattern)
+                        heroCard(pattern)
+                            .staggeredAppear(index: 0)
+                        progressSection(pattern)
+                            .staggeredAppear(index: 1)
+                        quickActionsRow(pattern)
+                            .staggeredAppear(index: 2)
                         extractedChartsSection(pattern)
+                            .staggeredAppear(index: 3)
                     } else {
                         emptySelectionCard
                     }
                 }
                 .padding(Theme.Spacing.lg)
+                .padding(.bottom, Theme.Spacing.xl)
             }
             .background(Theme.screenGradient.ignoresSafeArea())
             .navigationTitle("Current Project")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button(currentPattern == nil ? "Choose" : "Change") {
-                        showPicker = true
+                    Menu {
+                        Button { showPicker = true } label: {
+                            Label(currentPattern == nil ? "Choose Project" : "Change Project", systemImage: "arrow.triangle.swap")
+                        }
+                        if currentPattern != nil {
+                            Button(role: .destructive) { currentProjectStore.clearCurrentPattern() } label: {
+                                Label("Clear Current", systemImage: "xmark.circle")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(Theme.deepPlum)
                     }
                 }
             }
         }
+        .sheet(isPresented: $showGoalSheet) {
+            if let pattern = currentPattern {
+                let stepNames = progressStore.progress(for: pattern.id)?.customStepLayout?.stepTitles ?? []
+                GoalSettingView(
+                    patternId: pattern.id,
+                    makeId: nil,
+                    stepNames: stepNames,
+                    progressStore: progressStore
+                )
+            }
+        }
+        .sheet(isPresented: $showProgressShare) {
+            if let pattern = currentPattern {
+                ProgressShareCardView(
+                    pattern: pattern,
+                    progressStore: progressStore,
+                    rowCounterStore: rowCounterStore
+                )
+            }
+        }
         .sheet(isPresented: $showPicker) {
             CurrentProjectPickerSheet(
-                patterns: store.patterns.filter { $0.status != .completed },
+                patterns: store.patterns.filter { $0.status != .completed && $0.status != .frogged },
                 currentPatternId: currentProjectStore.currentPatternId,
                 onSelect: { currentProjectStore.setCurrentPattern($0.id) },
                 onClear: { currentProjectStore.clearCurrentPattern() }
@@ -278,79 +334,390 @@ private struct CurrentProjectTabView: View {
 
     private var currentPattern: Pattern? {
         guard let id = currentProjectStore.currentPatternId else { return nil }
-        return store.patterns.first(where: { $0.id == id && $0.status != .completed })
+        return store.patterns.first(where: { $0.id == id && $0.status != .completed && $0.status != .frogged })
     }
 
-    private var sectionHeader: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-            Text("Focus Mode")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.softCoral)
-            Text("Keep your active chart front and center.")
-                .font(Theme.Typography.body)
-                .foregroundStyle(Theme.deepPlum.opacity(0.7))
-        }
-    }
+    // MARK: - Hero Card
 
     @ViewBuilder
-    private func currentProjectCard(_ pattern: Pattern) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("Primary project")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.deepPlum.opacity(0.6))
-            Text(pattern.title)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(Theme.deepPlum)
-            Text("Jump into chart tracking and annotations for your active work.")
-                .font(Theme.Typography.body)
-                .foregroundStyle(Theme.deepPlum.opacity(0.7))
-                .lineSpacing(2)
+    private func heroCard(_ pattern: Pattern) -> some View {
+        VStack(spacing: 0) {
+            // Thumbnail or gradient header
+            ZStack(alignment: .bottomLeading) {
+                if let thumbnailUrl = pattern.thumbnailUrl,
+                   let imageURL = URL(string: thumbnailUrl) {
+                    CachedAsyncImage(url: imageURL, userId: nil) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 180)
+                                .clipped()
+                                .overlay(
+                                    LinearGradient(
+                                        colors: [.clear, Color.black.opacity(0.45)],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                        default:
+                            heroPlaceholder(pattern)
+                        }
+                    }
+                } else {
+                    heroPlaceholder(pattern)
+                }
 
-            HStack(spacing: Theme.Spacing.sm) {
-                Button("Change project") { showPicker = true }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.softCoral)
-                Button("Clear") { currentProjectStore.clearCurrentPattern() }
-                    .buttonStyle(.bordered)
+                // Status badge on image
+                HStack(spacing: Theme.Spacing.xs) {
+                    Image(systemName: Theme.statusIcon(for: pattern.status))
+                        .font(.system(size: 10, weight: .bold))
+                    Text(pattern.status.displayName)
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, Theme.Spacing.sm)
+                .padding(.vertical, Theme.Spacing.xs)
+                .background(Theme.statusColor(for: pattern.status).opacity(0.9))
+                .clipShape(Capsule())
+                .padding(Theme.Spacing.md)
             }
-            .padding(.top, Theme.Spacing.xs)
-        }
-        .padding(Theme.Spacing.md)
-        .background(Theme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
-                .stroke(Theme.softCoral.opacity(0.2), lineWidth: 1.5)
-        )
-    }
+            .frame(height: 180)
 
-    @ViewBuilder
-    private func extractedChartsSection(_ pattern: Pattern) -> some View {
-        let highlights = chartStore.extractedHighlights(patternId: pattern.id, makeId: nil)
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Chart workspaces")
-                .font(Theme.Typography.headline)
-                .foregroundStyle(Theme.deepPlum)
+            // Title + metadata below image
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text(pattern.title)
+                    .font(Theme.Typography.title)
+                    .foregroundStyle(Theme.deepPlum)
+                    .lineLimit(2)
 
-            if highlights.isEmpty {
-                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                    Label("No chart workspaces yet", systemImage: "square.grid.3x3")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Theme.deepPlum)
-                    Text("Open this pattern, choose a chart area, and save to create your first workspace.")
+                // Metadata chips
+                HStack(spacing: Theme.Spacing.sm) {
+                    if let craft = pattern.craftType, !craft.isEmpty {
+                        metadataChip(icon: "scissors", text: craft.capitalized)
+                    }
+                    if let difficulty = pattern.difficulty, !difficulty.isEmpty {
+                        metadataChip(icon: "gauge.medium", text: difficulty.capitalized)
+                    }
+                    if let yarn = pattern.yarnWeightYardage, !yarn.isEmpty {
+                        metadataChip(icon: "line.3.horizontal.decrease", text: yarn)
+                    }
+                }
+
+                if let desc = pattern.patternDescription, !desc.isEmpty {
+                    Text(desc)
                         .font(Theme.Typography.body)
                         .foregroundStyle(Theme.deepPlum.opacity(0.65))
+                        .lineLimit(2)
                         .lineSpacing(2)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Theme.Spacing.lg)
+        }
+        .background(Theme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
+        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+    }
+
+    private func heroPlaceholder(_ pattern: Pattern) -> some View {
+        ZStack {
+            LinearGradient(
+                colors: [Theme.softCoral.opacity(0.15), Theme.dustyBlue.opacity(0.12)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Image("CrowMascot")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 80, height: 80)
+                .opacity(0.6)
+        }
+        .frame(height: 180)
+    }
+
+    private func metadataChip(icon: String, text: String) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .semibold))
+            Text(text)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+        }
+        .foregroundStyle(Theme.deepPlum.opacity(0.6))
+        .padding(.horizontal, Theme.Spacing.sm)
+        .padding(.vertical, 3)
+        .background(Theme.warmCream)
+        .clipShape(Capsule())
+    }
+
+    // MARK: - Progress Section
+
+    @ViewBuilder
+    private func progressSection(_ pattern: Pattern) -> some View {
+        let rowState = rowCounterStore.state(for: pattern.id, makeId: nil)
+        let fraction = progressStore.progressFraction(for: pattern.id)
+        let hasRowData = rowState.totalRows != nil && rowState.totalRows! > 0
+        let goal = progressStore.progress(for: pattern.id)?.goal
+
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeaderView(title: "Progress")
+
+            HStack(spacing: Theme.Spacing.lg) {
+                // Progress ring
+                ZStack {
+                    Circle()
+                        .stroke(Theme.deepPlum.opacity(0.08), lineWidth: 6)
+                    Circle()
+                        .trim(from: 0, to: reduceMotion ? fraction : fraction)
+                        .stroke(
+                            Theme.sageGreen,
+                            style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .animation(reduceMotion ? nil : Theme.Motion.spring, value: fraction)
+                    Text("\(Int(fraction * 100))%")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.deepPlum)
+                        .contentTransition(.numericText())
+                }
+                .frame(width: 64, height: 64)
+
+                // Stats
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    if hasRowData {
+                        progressStat(
+                            label: "Row",
+                            value: "\(rowState.globalRow)",
+                            total: "\(rowState.totalRows ?? 0)",
+                            color: Theme.dustyBlue
+                        )
+                    }
+                    if let stepData = progressStore.progress(for: pattern.id),
+                       let stepCount = stepData.stepCount, stepCount > 0 {
+                        progressStat(
+                            label: "Step",
+                            value: "\(stepData.currentStepIndex + 1)",
+                            total: "\(stepCount)",
+                            color: Theme.honey
+                        )
+                    }
+                    if !hasRowData && progressStore.progress(for: pattern.id) == nil {
+                        Text("No progress yet — open to start tracking")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(Theme.Spacing.lg)
+            .background(Theme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                    .stroke(Theme.deepPlum.opacity(0.06), lineWidth: 1)
+            )
+
+            // Inline row counter
+            if hasRowData {
+                HStack(spacing: Theme.Spacing.md) {
+                    Button {
+                        rowCounterStore.decrementGlobal(patternId: pattern.id, makeId: nil, patternTitle: pattern.title)
+                    } label: {
+                        Image(systemName: "chevron.down.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Theme.deepPlum)
+                    }
+                    .buttonStyle(.plain)
+
+                    Text("Row \(rowState.globalRow)")
+                        .font(Theme.Typography.cardTitle)
+                        .foregroundStyle(Theme.deepPlum)
+                        .contentTransition(.numericText())
+                        .frame(maxWidth: .infinity)
+
+                    Button {
+                        rowCounterStore.incrementGlobal(patternId: pattern.id, makeId: nil, patternTitle: pattern.title)
+                    } label: {
+                        Image(systemName: "chevron.up.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(Theme.sageGreen)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(Theme.Spacing.md)
                 .background(Theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                        .stroke(Theme.deepPlum.opacity(0.06), lineWidth: 1)
+                )
+            }
+
+            // Goal & deadline
+            if let goal {
+                goalSummaryCard(goal)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func goalSummaryCard(_ goal: ProjectGoal) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            if let days = goal.daysRemaining {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: days > 0 ? "calendar.badge.clock" : "exclamationmark.triangle.fill")
+                        .foregroundStyle(days > 3 ? Theme.sageGreen : (days > 0 ? Theme.honey : Theme.softCoral))
+                    Text(days > 0 ? "\(days) days remaining" : (days == 0 ? "Due today!" : "\(abs(days)) days overdue"))
+                        .font(Theme.Typography.bodySemibold)
+                        .foregroundStyle(Theme.deepPlum)
+                }
+            }
+
+            if let next = goal.nextMilestone {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.honey)
+                    Text("Next: \(next.stepName)")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                    Spacer()
+                    Text(next.targetDate, format: .dateTime.month(.abbreviated).day())
+                        .font(Theme.Typography.caption2)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                }
+            }
+
+            if !goal.stepMilestones.isEmpty {
+                let completed = goal.stepMilestones.filter(\.isCompleted).count
+                let total = goal.stepMilestones.count
+                ProgressView(value: Double(completed), total: Double(total))
+                    .tint(Theme.sageGreen)
+                Text("\(completed)/\(total) milestones complete")
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
+            }
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.honey.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+    }
+
+    private func progressStat(label: String, value: String, total: String, color: Color) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(Theme.deepPlum)
+                .contentTransition(.numericText())
+            Text("/ \(total)")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.deepPlum.opacity(0.45))
+        }
+    }
+
+    // MARK: - Quick Actions
+
+    @ViewBuilder
+    private func quickActionsRow(_ pattern: Pattern) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeaderView(title: "Quick Actions")
+
+            HStack(spacing: Theme.Spacing.md) {
+                NavigationLink {
+                    PatternDetailView(store: store, pattern: pattern)
+                } label: {
+                    quickActionButton(icon: "doc.text.fill", label: "Pattern", color: Theme.dustyBlue)
+                }
+                .buttonStyle(.plain)
+
+                Button { showGoalSheet = true } label: {
+                    quickActionButton(icon: "flag.fill", label: "Goal", color: Theme.honey)
+                }
+                .buttonStyle(.plain)
+
+                Button { showProgressShare = true } label: {
+                    quickActionButton(icon: "square.and.arrow.up", label: "Share", color: Theme.sageGreen)
+                }
+                .buttonStyle(.plain)
+
+                Button { showPicker = true } label: {
+                    quickActionButton(icon: "arrow.triangle.swap", label: "Switch", color: Theme.deepPlum.opacity(0.5))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func quickActionButton(icon: String, label: String, color: Color) -> some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(Theme.deepPlum.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Theme.Spacing.lg)
+        .background(Theme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                .stroke(Theme.deepPlum.opacity(0.06), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Chart Workspaces
+
+    @ViewBuilder
+    private func extractedChartsSection(_ pattern: Pattern) -> some View {
+        let highlights = chartStore.extractedHighlights(patternId: pattern.id, makeId: nil)
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeaderView(title: "Chart Workspaces")
+
+            if highlights.isEmpty {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "square.grid.3x3")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Theme.dustyBlue.opacity(0.4))
+                        .frame(width: 48, height: 48)
+                        .background(Theme.dustyBlue.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
+
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                        Text("No chart workspaces yet")
+                            .font(Theme.Typography.callout)
+                            .foregroundStyle(Theme.deepPlum)
+                        Text("Open this pattern and save a chart area to create your first workspace.")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                            .lineSpacing(2)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(Theme.Spacing.lg)
+                .background(Theme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                        .stroke(Theme.deepPlum.opacity(0.06), lineWidth: 1)
+                )
             } else {
-                ForEach(highlights) { highlight in
+                ForEach(Array(highlights.enumerated()), id: \.element.id) { index, highlight in
                     Button {
                         workspaceHighlight = highlight
                     } label: {
-                        HStack(spacing: Theme.Spacing.sm) {
+                        HStack(spacing: Theme.Spacing.md) {
                             if let data = highlight.extractedChartPNGData, let image = UIImage(data: data) {
                                 Image(uiImage: image)
                                     .resizable()
@@ -359,56 +726,85 @@ private struct CurrentProjectTabView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
                             } else {
                                 RoundedRectangle(cornerRadius: Theme.CornerRadius.small)
-                                    .fill(Theme.cardBackground)
+                                    .fill(Theme.warmCream)
                                     .frame(width: 56, height: 56)
+                                    .overlay(
+                                        Image(systemName: "square.grid.3x3")
+                                            .foregroundStyle(Theme.deepPlum.opacity(0.2))
+                                    )
                             }
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: 3) {
                                 Text(label(for: highlight))
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .font(Theme.Typography.callout)
                                     .foregroundStyle(Theme.deepPlum)
-                                Text("Row \(highlight.currentRow)/\(max(1, highlight.rows))  •  Col \(highlight.currentColumn)/\(max(1, highlight.columns))")
-                                    .font(Theme.Typography.caption)
-                                    .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                                HStack(spacing: Theme.Spacing.sm) {
+                                    progressPill(label: "Row", current: highlight.currentRow, total: max(1, highlight.rows))
+                                    progressPill(label: "Col", current: highlight.currentColumn, total: max(1, highlight.columns))
+                                }
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .foregroundStyle(Theme.deepPlum.opacity(0.4))
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Theme.deepPlum.opacity(0.3))
                         }
-                        .padding(Theme.Spacing.sm)
+                        .padding(Theme.Spacing.md)
                         .background(Theme.cardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
                         .overlay(
                             RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                                .stroke(Theme.deepPlum.opacity(0.08), lineWidth: 1)
+                                .stroke(Theme.deepPlum.opacity(0.06), lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)
+                    .staggeredAppear(index: min(4 + index, 10))
                 }
             }
         }
     }
 
+    private func progressPill(label: String, current: Int, total: Int) -> some View {
+        Text("\(label) \(current)/\(total)")
+            .font(.system(size: 10, weight: .semibold, design: .rounded))
+            .foregroundStyle(Theme.deepPlum.opacity(0.5))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Theme.warmCream)
+            .clipShape(Capsule())
+    }
+
+    // MARK: - Empty State
+
     private var emptySelectionCard: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            SpriteMascotView.thinking(size: 90)
-            Text("Pick your current project")
-                .font(Theme.Typography.headline)
-                .foregroundStyle(Theme.deepPlum)
-            Text("Choose one pattern to keep front-and-center for chart tracking and annotation.")
-                .font(Theme.Typography.body)
-                .foregroundStyle(Theme.deepPlum.opacity(0.65))
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-            Button("Choose primary project") { showPicker = true }
-                .buttonStyle(PrimaryButtonStyle())
+        VStack(spacing: Theme.Spacing.xl) {
+            SpriteMascotView.thinking(size: 100)
+
+            VStack(spacing: Theme.Spacing.sm) {
+                Text("Pick your focus project")
+                    .font(Theme.Typography.title)
+                    .foregroundStyle(Theme.deepPlum)
+                Text("Choose one pattern to keep front and center for chart tracking and quick access.")
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
+
+            Button { showPicker = true } label: {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: "target")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Choose Primary Project")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
         }
-        .padding(Theme.Spacing.md)
+        .padding(Theme.Spacing.xl)
+        .frame(maxWidth: .infinity)
         .background(Theme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
-                .stroke(Theme.deepPlum.opacity(0.08), lineWidth: 1)
-        )
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .padding(.top, Theme.Spacing.xxl)
     }
 
     private func label(for highlight: ChartHighlight) -> String {
@@ -452,7 +848,7 @@ private struct CurrentProjectPickerSheet: View {
                             HStack(spacing: Theme.Spacing.sm) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(pattern.title)
-                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .font(Theme.Typography.callout)
                                         .foregroundStyle(Theme.deepPlum)
                                         .multilineTextAlignment(.leading)
                                     Text(pattern.status.displayName)

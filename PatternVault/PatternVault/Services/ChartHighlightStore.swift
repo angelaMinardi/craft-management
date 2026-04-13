@@ -90,7 +90,11 @@ final class ChartHighlightStore: ObservableObject {
         if let idx = highlights.firstIndex(where: { $0.id == highlight.id }) {
             highlights[idx] = highlight
         } else if let idx = highlights.firstIndex(where: { isSameSurface($0, highlight) }) {
+            let replacedId = highlights[idx].id
             highlights[idx] = highlight
+            if replacedId != highlight.id {
+                removeFiles(for: replacedId)
+            }
         } else {
             highlights.append(highlight)
         }
@@ -128,6 +132,12 @@ final class ChartHighlightStore: ObservableObject {
         for h in toRemove { removeFiles(for: h.id) }
     }
 
+    func deleteAll(patternId: UUID) {
+        let toRemove = highlights.filter { $0.patternId == patternId }
+        highlights.removeAll { h in toRemove.contains(where: { $0.id == h.id }) }
+        for h in toRemove { removeFiles(for: h.id) }
+    }
+
     // MARK: - File-Based Persistence
 
     private func ensureDirectory() {
@@ -146,16 +156,77 @@ final class ChartHighlightStore: ObservableObject {
         storageDir.appendingPathComponent("\(id.uuidString).drawing")
     }
 
+    private func colorworkURL(for id: UUID) -> URL {
+        storageDir.appendingPathComponent("\(id.uuidString).colorwork")
+    }
+
+    private func progressURL(for id: UUID) -> URL {
+        storageDir.appendingPathComponent("\(id.uuidString).progress")
+    }
+
+    // MARK: - Colorwork Grid I/O
+
+    func loadColorworkGrid(for id: UUID) -> ColorworkGrid? {
+        guard let data = try? Data(contentsOf: colorworkURL(for: id)) else { return nil }
+        return try? JSONDecoder().decode(ColorworkGrid.self, from: data)
+    }
+
+    func saveColorworkGrid(_ grid: ColorworkGrid, for id: UUID) {
+        if let data = try? JSONEncoder().encode(grid) {
+            try? data.write(to: colorworkURL(for: id))
+        }
+    }
+
+    // MARK: - Progress State I/O
+
+    func loadProgress(for id: UUID) -> ChartProgressState? {
+        guard let data = try? Data(contentsOf: progressURL(for: id)) else { return nil }
+        return try? JSONDecoder().decode(ChartProgressState.self, from: data)
+    }
+
+    private var progressSaveTimers: [UUID: Timer] = [:]
+
+    func saveProgress(_ state: ChartProgressState, for id: UUID) {
+        // Debounce writes to avoid thrashing on rapid row advances
+        progressSaveTimers[id]?.invalidate()
+        progressSaveTimers[id] = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.progressSaveTimers.removeValue(forKey: id)
+                if let data = try? JSONEncoder().encode(state) {
+                    try? data.write(to: self.progressURL(for: id))
+                }
+            }
+        }
+    }
+
+    /// Immediately persists progress (use on view dismiss).
+    func saveProgressImmediately(_ state: ChartProgressState, for id: UUID) {
+        progressSaveTimers[id]?.invalidate()
+        progressSaveTimers.removeValue(forKey: id)
+        if let data = try? JSONEncoder().encode(state) {
+            try? data.write(to: progressURL(for: id))
+        }
+    }
+
     private func load() {
         let fm = FileManager.default
         guard let files = try? fm.contentsOfDirectory(at: storageDir, includingPropertiesForKeys: nil) else { return }
         let jsonFiles = files.filter { $0.pathExtension == "json" }
 
-        var loaded: [ChartHighlight] = []
+        var loadedBySurface: [String: (highlight: ChartHighlight, fileURL: URL)] = [:]
         let decoder = JSONDecoder()
-        for file in jsonFiles {
-            guard let data = try? Data(contentsOf: file),
-                  var highlight = try? decoder.decode(ChartHighlight.self, from: data) else { continue }
+        for file in jsonFiles.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
+            guard let data = try? Data(contentsOf: file) else { continue }
+            var highlight: ChartHighlight
+            do {
+                highlight = try decoder.decode(ChartHighlight.self, from: data)
+            } catch {
+                #if DEBUG
+                print("[ChartHighlightStore] Failed to decode \(file.lastPathComponent): \(error)")
+                #endif
+                continue
+            }
 
             // Load image data from separate file if not inline
             if highlight.extractedChartPNGData == nil {
@@ -173,12 +244,33 @@ final class ChartHighlightStore: ObservableObject {
                 }
             }
 
-            loaded.append(highlight)
+            #if DEBUG
+            if highlight.isAIExtracted {
+                print("[ChartHighlightStore] LOAD \(highlight.chartLabel ?? highlight.id.uuidString): insets L=\(String(format:"%.3f",highlight.gridInsetLeft)) T=\(String(format:"%.3f",highlight.gridInsetTop)) R=\(String(format:"%.3f",highlight.gridInsetRight)) B=\(String(format:"%.3f",highlight.gridInsetBottom))")
+            }
+            #endif
+            let surfaceKey = storageSurfaceKey(for: highlight)
+            if let existing = loadedBySurface[surfaceKey] {
+                removeFiles(for: existing.highlight.id)
+                loadedBySurface[surfaceKey] = (highlight, file)
+            } else {
+                loadedBySurface[surfaceKey] = (highlight, file)
+            }
         }
-        highlights = loaded
+        highlights = loadedBySurface.values
+            .map(\.highlight)
+            .sorted { lhs, rhs in
+                let lhsPage = lhs.pdfPageIndex ?? Int.max
+                let rhsPage = rhs.pdfPageIndex ?? Int.max
+                if lhsPage != rhsPage { return lhsPage < rhsPage }
+                return lhs.id.uuidString < rhs.id.uuidString
+            }
     }
 
     private func persistHighlight(_ highlight: ChartHighlight) {
+        #if DEBUG
+        print("[ChartHighlightStore] PERSIST \(highlight.chartLabel ?? highlight.id.uuidString): insets L=\(String(format:"%.3f",highlight.gridInsetLeft)) T=\(String(format:"%.3f",highlight.gridInsetTop)) R=\(String(format:"%.3f",highlight.gridInsetRight)) B=\(String(format:"%.3f",highlight.gridInsetBottom))")
+        #endif
         // Write image data to separate file, strip from JSON
         var stripped = highlight
         let imageData = stripped.extractedChartPNGData
@@ -206,6 +298,8 @@ final class ChartHighlightStore: ObservableObject {
         try? fm.removeItem(at: jsonURL(for: id))
         try? fm.removeItem(at: imageURL(for: id))
         try? fm.removeItem(at: drawingURL(for: id))
+        try? fm.removeItem(at: colorworkURL(for: id))
+        try? fm.removeItem(at: progressURL(for: id))
     }
 
     // MARK: - Migration from UserDefaults
@@ -243,5 +337,16 @@ final class ChartHighlightStore: ObservableObject {
             return true
         }
         return false
+    }
+
+    private func storageSurfaceKey(for highlight: ChartHighlight) -> String {
+        if let imageId = highlight.imageId {
+            return "\(highlight.patternId.uuidString)|\(highlight.makeId?.uuidString ?? "default")|image|\(imageId.uuidString)"
+        }
+        if let pageIndex = highlight.pdfPageIndex {
+            let label = highlight.chartLabel ?? "page_\(pageIndex)"
+            return "\(highlight.patternId.uuidString)|\(highlight.makeId?.uuidString ?? "default")|pdf|\(pageIndex)|\(label)"
+        }
+        return "\(highlight.patternId.uuidString)|\(highlight.id.uuidString)"
     }
 }

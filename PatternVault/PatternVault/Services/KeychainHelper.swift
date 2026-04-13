@@ -16,14 +16,20 @@ enum KeychainHelper {
     static func saveRavelryTokens(userId: UUID, accessToken: String, accessTokenSecret: String = "") throws {
         let key = "ravelry_\(userId.uuidString)"
         let data = accessTokenSecret.isEmpty ? "\(accessToken)\n".data(using: .utf8)! : "\(accessToken)\n\(accessTokenSecret)".data(using: .utf8)!
-        let query: [String: Any] = [
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: key
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        let addQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
             kSecAttrAccount as String: key,
-            kSecValueData as String: data
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         ]
-        SecItemDelete(query as CFDictionary) // remove existing
-        let status = SecItemAdd(query as CFDictionary, nil)
+        let status = SecItemAdd(addQuery as CFDictionary, nil)
         guard status == errSecSuccess else {
             throw KeychainError.saveFailed(status)
         }

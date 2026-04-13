@@ -57,11 +57,18 @@ struct NoteDetailView: View {
                     }
                 }
 
-                // Timestamps
+                // Timestamps + duration
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text("Created \(current.createdAt, style: .date) at \(current.createdAt, style: .time)")
                     if current.updatedAt != current.createdAt {
                         Text("Updated \(current.updatedAt, style: .relative) ago")
+                    }
+                    if let minutes = current.durationMinutes, minutes > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                            Text("Session: \(minutes >= 60 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes) min")")
+                        }
+                        .foregroundStyle(Theme.sageGreen)
                     }
                 }
                 .font(Theme.Typography.caption)

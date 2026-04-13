@@ -25,6 +25,8 @@ struct AIPatternResult: Sendable {
     /// JSON string of AI-parsed instructions (v2): [{"section":"...", "start_row":0, ...}]
     /// Falls back to v1 format [{"title":"...", "body":"..."}] for older imports.
     let parsedStepsJSON: String?
+    /// True when this result was produced by the fallback path (no AI enrichment).
+    let isFallback: Bool
 }
 
 struct YarnLinkEntry: Sendable {
@@ -222,7 +224,8 @@ enum AIPatternAnalyzer {
                 tags: [], craftType: nil, difficulty: nil, materials: nil,
                 cleanedContent: nil, videoUrl: nil, gauge: nil, needleHookSizes: nil, yarnWeightYardage: nil, techniques: nil,
                 yarnLinks: [],
-                parsedStepsJSON: nil
+                parsedStepsJSON: nil,
+                isFallback: true
             )
         }
 
@@ -258,7 +261,8 @@ enum AIPatternAnalyzer {
             videoUrl: videoUrl, gauge: gauge, needleHookSizes: needleHookSizes,
             yarnWeightYardage: yarnWeightYardage, techniques: techniques,
             yarnLinks: yarnLinks,
-            parsedStepsJSON: parsedStepsJSON
+            parsedStepsJSON: parsedStepsJSON,
+            isFallback: false
         )
     }
 
@@ -442,7 +446,8 @@ enum AIPatternAnalyzer {
             yarnWeightYardage: nil,
             techniques: nil,
             yarnLinks: [],
-            parsedStepsJSON: nil
+            parsedStepsJSON: nil,
+            isFallback: true
         )
     }
 }

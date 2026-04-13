@@ -6,6 +6,7 @@
 import SwiftUI
 import WebKit
 import UIKit
+import PhotosUI
 
 struct PatternDetailView: View {
     @EnvironmentObject var auth: AuthService
@@ -14,6 +15,7 @@ struct PatternDetailView: View {
 
     @StateObject private var noteStore = ProjectNoteStore()
     @StateObject private var tagStore = TagStore()
+    @StateObject private var collectionStore = CollectionStore()
     @StateObject private var imageStore = PatternImageStore()
     @StateObject private var yarnLinkStore = PatternYarnLinkStore()
     @State private var isEditingTitle = false
@@ -21,6 +23,7 @@ struct PatternDetailView: View {
     @State private var editDescription = ""
     @State private var showDeleteConfirm = false
     @State private var showAddNote = false
+    @State private var showCollectionPicker = false
     @State private var showTagPicker = false
     @State private var showWebView = false
     @State private var showPdfViewer = false
@@ -112,12 +115,9 @@ struct PatternDetailView: View {
                         .padding(.horizontal, Theme.Spacing.lg)
                         .frame(width: contentWidth)
                         .padding(.top, Theme.Spacing.xl)
-                        .padding(.bottom, 120)
+                        .padding(.bottom, 150)
                     }
                 }
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear.frame(height: 84)
             }
             .background(Theme.screenGradient.ignoresSafeArea())
 
@@ -134,7 +134,8 @@ struct PatternDetailView: View {
         .modifier(PatternDetailToolbar(
             pattern: current,
             showWebView: $showWebView,
-            showPdfViewer: $showPdfViewer
+            showPdfViewer: $showPdfViewer,
+            showCollectionPicker: $showCollectionPicker
         ))
         .confirmationDialog("Delete Pattern", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) { deletePattern() }
@@ -147,6 +148,20 @@ struct PatternDetailView: View {
         }
         .sheet(isPresented: $showTagPicker) {
             TagPickerView(tagStore: tagStore, patternId: current.id)
+        }
+        .sheet(isPresented: $showCollectionPicker) {
+            CollectionPickerView(
+                collectionStore: collectionStore,
+                currentCollectionId: current.collectionId,
+                onSelect: { collectionId in
+                    Task {
+                        await collectionStore.movePattern(patternId: current.id, collectionId: collectionId)
+                        if let userId = auth.currentUserId {
+                            await store.load(userId: userId)
+                        }
+                    }
+                }
+            )
         }
         .sheet(isPresented: $showWebView) {
             NavigationStack {
@@ -206,6 +221,8 @@ struct PatternDetailView: View {
             async let allTags: () = tagStore.loadAllTags()
             async let images: () = imageStore.load(patternId: current.id)
             if let userId = auth.currentUserId {
+                async let collections: () = collectionStore.load(userId: userId)
+                _ = await collections
                 async let yarnLinks: () = yarnLinkStore.load(patternId: current.id, userId: userId)
                 async let makesLoad: () = loadMakes()
                 _ = await (allTags, images, yarnLinks, makesLoad)
@@ -484,6 +501,8 @@ struct PatternDetailView: View {
             return "Next: log your latest progress"
         case .completed:
             return "Nice work - share or save notes for your next make"
+        case .frogged:
+            return "This one got frogged — cast on again when you're ready"
         }
     }
 
@@ -495,6 +514,8 @@ struct PatternDetailView: View {
             return "Small updates keep momentum and make the next session easier."
         case .completed:
             return "Captured wins help you repeat success faster on future projects."
+        case .frogged:
+            return "Frogging is part of the craft. Keep the pattern for next time."
         }
     }
 
@@ -608,37 +629,39 @@ struct PatternDetailView: View {
     // MARK: - Status Picker (horizontal pills)
 
     private var statusPicker: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            ForEach(PatternStatus.allCases, id: \.self) { status in
-                Button { changeStatus(to: status) } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: Theme.statusIcon(for: status))
-                            .font(.system(size: 11, weight: .bold))
-                        Text(status.displayName)
-                            .font(Theme.Typography.captionSemibold)
-                    }
-                    .foregroundStyle(
-                        current.status == status ? .white : Theme.statusColor(for: status)
-                    )
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        current.status == status
-                            ? Theme.statusColor(for: status)
-                            : Theme.statusColor(for: status).opacity(0.1)
-                    )
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule().stroke(
-                            current.status == status
-                                ? Color.clear
-                                : Theme.statusColor(for: status).opacity(0.25),
-                            lineWidth: 1
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Theme.Spacing.sm) {
+                ForEach(PatternStatus.allCases, id: \.self) { status in
+                    Button { changeStatus(to: status) } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: Theme.statusIcon(for: status))
+                                .font(.system(size: 11, weight: .bold))
+                            Text(status.displayName)
+                                .font(Theme.Typography.captionSemibold)
+                                .fixedSize()
+                        }
+                        .foregroundStyle(
+                            current.status == status ? .white : Theme.statusColor(for: status)
                         )
-                    )
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(
+                            current.status == status
+                                ? Theme.statusColor(for: status)
+                                : Theme.statusColor(for: status).opacity(0.1)
+                        )
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule().stroke(
+                                current.status == status
+                                    ? Color.clear
+                                    : Theme.statusColor(for: status).opacity(0.25),
+                                lineWidth: 1
+                            )
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -1185,6 +1208,7 @@ private struct PatternDetailToolbar: ViewModifier {
     let pattern: Pattern
     @Binding var showWebView: Bool
     @Binding var showPdfViewer: Bool
+    @Binding var showCollectionPicker: Bool
 
     @State private var shareFinishedImage: UIImage?
     @ObservedObject private var progressStore = PatternProgressStore.shared
@@ -1224,6 +1248,11 @@ private struct PatternDetailToolbar: ViewModifier {
                             } label: {
                                 Label("Print full pattern", systemImage: "doc.text")
                             }
+                        }
+                        Button {
+                            showCollectionPicker = true
+                        } label: {
+                            Label("Move to folder…", systemImage: "folder")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -1331,6 +1360,7 @@ private struct PatternChartsSectionView: View {
     @ObservedObject private var chartStore = ChartHighlightStore.shared
     @ObservedObject private var rowCounterStore = RowCounterStore.shared
     @State private var selectedWorkspaceHighlight: ChartHighlight?
+    @State private var knittingModeHighlight: ChartHighlight?
 
     private var aiCharts: [ChartHighlight] {
         chartStore.aiExtractedHighlights(patternId: pattern.id)
@@ -1365,6 +1395,13 @@ private struct PatternChartsSectionView: View {
                     patternId: pattern.id,
                     makeId: nil,
                     onSave: { chartStore.save($0) }
+                )
+            }
+            .fullScreenCover(item: $knittingModeHighlight) { highlight in
+                InteractiveChartGridView(
+                    highlight: highlight,
+                    patternId: pattern.id,
+                    makeId: nil
                 )
             }
         } else if !legacy.isEmpty {
@@ -1412,6 +1449,18 @@ private struct PatternChartsSectionView: View {
                         .stroke(Theme.deepPlum.opacity(0.15), lineWidth: 1)
                 )
                 .onTapGesture { selectedWorkspaceHighlight = highlight }
+                .contextMenu {
+                    Button {
+                        knittingModeHighlight = highlight
+                    } label: {
+                        Label("Knitting Mode", systemImage: "chart.bar.doc.horizontal")
+                    }
+                    Button {
+                        selectedWorkspaceHighlight = highlight
+                    } label: {
+                        Label("Open Workspace", systemImage: "pencil.and.outline")
+                    }
+                }
             }
 
             HStack(spacing: Theme.Spacing.sm) {
@@ -1422,9 +1471,13 @@ private struct PatternChartsSectionView: View {
                     .font(Theme.Typography.caption2)
                     .foregroundStyle(Theme.softCoral)
                 Spacer()
-                Text("Tap to open workspace")
-                    .font(Theme.Typography.caption2)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.4))
+                Button {
+                    knittingModeHighlight = highlight
+                } label: {
+                    Label("Knit", systemImage: "chart.bar.doc.horizontal")
+                        .font(Theme.Typography.caption2)
+                        .foregroundStyle(Theme.sageGreen)
+                }
             }
         }
         .cardStyle()
@@ -1490,6 +1543,29 @@ private struct PatternChartsSectionView: View {
 
 // MARK: - PatternStepSectionView
 
+/// A display-level step that may group multiple consecutive single-row PatternSteps.
+private struct DisplayStep: Identifiable {
+    let id = UUID()
+    let originalSteps: [PatternStep]       // 1 or more original steps
+    let groupedRows: [ParsedRow]?          // non-nil when multiple rows are grouped
+    let displayTitle: String?              // override title for grouped steps
+
+    /// The primary step (first in group, or the only step)
+    var primary: PatternStep { originalSteps[0] }
+
+    /// Display title: section name for groups, original title for singles
+    var title: String { displayTitle ?? primary.title }
+
+    /// The body text — for singles, the original body. For groups, combined.
+    var body: String { primary.body }
+
+    /// Whether this is a grouped multi-row display step
+    var isGrouped: Bool { groupedRows != nil }
+
+    /// RepeatInfo from the primary step
+    var repeatInfo: RepeatInfo? { primary.repeatInfo }
+}
+
 private struct PatternStepSectionView: View {
     @EnvironmentObject var auth: AuthService
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1512,6 +1588,8 @@ private struct PatternStepSectionView: View {
     @State private var updateTotalRows = ""
     @State private var showPaywall = false
     @State private var aiStepErrorIsEntitlement = false
+    @State private var showStepNoteSheet = false
+    @State private var stepNoteIndex: Int?
 
     private static let hasSeenWandTipKey = "PatternVaultHasSeenWandTip"
 
@@ -1540,6 +1618,127 @@ private struct PatternStepSectionView: View {
         let stepCount = max(1, steps.count)
         let index = currentStepIndex
         return Double(index + 1) / Double(stepCount)
+    }
+
+    /// Navigates to a display step by computing the original step index for the first step in the group.
+    private func navigateToDisplayStep(_ displayIdx: Int) {
+        let grouped = groupedSteps
+        guard displayIdx >= 0, displayIdx < grouped.count else { return }
+        // Compute the original step index of the first step in the target display step
+        var originalIdx = 0
+        for i in 0..<displayIdx {
+            originalIdx += grouped[i].originalSteps.count
+        }
+        let steps = patternSteps
+        withAnimation(reduceMotion ? .none : .default) {
+            stepTabSelection = min(max(0, originalIdx), max(0, steps.count - 1))
+        }
+        progressStore.setCurrentStep(patternId: pattern.id, makeId: selectedMakeId, index: originalIdx, stepCount: steps.count)
+    }
+
+    /// Groups consecutive single-row steps in the same section into one display step.
+    /// Returns an array of DisplayStep, each containing one or more original PatternSteps.
+    private var groupedSteps: [DisplayStep] {
+        let steps = patternSteps
+        guard !steps.isEmpty else { return [] }
+
+        var result: [DisplayStep] = []
+        var currentGroup: [PatternStep] = []
+        var currentSection = ""
+
+        func flushGroup() {
+            guard !currentGroup.isEmpty else { return }
+            if currentGroup.count >= 2 {
+                // Group of consecutive rows — merge into one display step
+                let title = currentGroup.first!.title.components(separatedBy: ":").first ?? currentGroup.first!.title
+                let rows = currentGroup.enumerated().map { idx, step in
+                    ParsedRow(
+                        id: idx + 1,
+                        instruction: step.body,
+                        stitchCount: nil,
+                        isRepeatStart: false,
+                        repeatCount: nil,
+                        note: nil
+                    )
+                }
+                result.append(DisplayStep(
+                    originalSteps: currentGroup,
+                    groupedRows: rows,
+                    displayTitle: title
+                ))
+            } else {
+                // Single step — show as-is
+                result.append(DisplayStep(
+                    originalSteps: currentGroup,
+                    groupedRows: nil,
+                    displayTitle: nil
+                ))
+            }
+            currentGroup = []
+        }
+
+        for step in steps {
+            let section = step.title.components(separatedBy: ":").first?.trimmingCharacters(in: .whitespaces) ?? ""
+            let hasRowLabel = step.title.lowercased().contains("row ") || step.title.lowercased().contains("rnd ")
+
+            // A step is groupable if: it has a row label, no repeat info, and is a single-row instruction
+            let isGroupable = hasRowLabel
+                && step.repeatInfo == nil
+                && RepeatInfo.detect(from: step.body) == nil
+
+            if isGroupable && section == currentSection {
+                // Continue the group
+                currentGroup.append(step)
+            } else {
+                // Flush previous group and start fresh
+                flushGroup()
+                currentSection = section
+                if isGroupable {
+                    currentGroup = [step]
+                } else {
+                    // Non-groupable step — add directly
+                    result.append(DisplayStep(
+                        originalSteps: [step],
+                        groupedRows: nil,
+                        displayTitle: nil
+                    ))
+                    currentSection = ""
+                }
+            }
+        }
+        flushGroup()
+        return result
+    }
+
+    /// Maps the original step index to the corresponding display step (which may be grouped)
+    private var currentDisplayStep: DisplayStep? {
+        let grouped = groupedSteps
+        let originalIdx = currentStepIndex
+        // Find which display step contains the original step at originalIdx
+        var originalCounter = 0
+        for ds in grouped {
+            let count = ds.originalSteps.count
+            if originalIdx < originalCounter + count {
+                return ds
+            }
+            originalCounter += count
+        }
+        return grouped.last
+    }
+
+    /// Display step index (for grouped navigation)
+    private var currentDisplayStepIndex: Int {
+        let grouped = groupedSteps
+        let originalIdx = currentStepIndex
+        var originalCounter = 0
+        for (i, ds) in grouped.enumerated() {
+            let count = ds.originalSteps.count
+            if originalIdx < originalCounter + count {
+                return i
+            }
+            originalCounter += count
+        }
+        return max(0, grouped.count - 1)
     }
 
     private var currentStepRows: [ParsedRow] {
@@ -1629,21 +1828,43 @@ private struct PatternStepSectionView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                     VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                         HStack {
-                            SectionHeaderView(title: steps.count > 1 ? "Step \(index + 1) of \(steps.count)" : "Step 1")
+                            SectionHeaderView(title: {
+                                let displayCount = groupedSteps.count
+                                let displayIdx = currentDisplayStepIndex
+                                return displayCount > 1 ? "Step \(displayIdx + 1) of \(displayCount)" : "Step 1"
+                            }())
                                 .accessibilityAddTraits(.isHeader)
                             Spacer()
                             if canShowAnalyzeStepsWand && !isAnalyzingSteps {
-                                Button {
-                                    markWandTipSeen()
-                                    showWandTip = false
-                                    analyzeStepsWithAI()
+                                Menu {
+                                    Button {
+                                        markWandTipSeen()
+                                        showWandTip = false
+                                        analyzeStepsOnly()
+                                    } label: {
+                                        Label("Re-analyze Steps", systemImage: "text.badge.star")
+                                    }
+                                    Button {
+                                        markWandTipSeen()
+                                        showWandTip = false
+                                        analyzeChartsOnly()
+                                    } label: {
+                                        Label("Re-detect Charts", systemImage: "chart.bar.doc.horizontal")
+                                    }
+                                    Divider()
+                                    Button {
+                                        markWandTipSeen()
+                                        showWandTip = false
+                                        analyzeStepsWithAI()
+                                    } label: {
+                                        Label("Re-analyze Everything", systemImage: "wand.and.stars")
+                                    }
                                 } label: {
                                     Image(systemName: "wand.and.stars")
                                         .font(.system(size: 20))
                                         .foregroundStyle(Theme.dustyBlue)
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(pattern.parsedSteps == nil ? "Analyze steps with AI" : "Re-analyze steps with AI")
                             }
                             Button {
                                 saveHeuristicRowsForCurrentStep()
@@ -1667,37 +1888,40 @@ private struct PatternStepSectionView: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("Edit steps")
-                            if steps.count > 1 {
+                            if groupedSteps.count > 1 {
+                                let dsIdx = currentDisplayStepIndex
+                                let dsCount = groupedSteps.count
                                 HStack(spacing: Theme.Spacing.xs) {
                                     Button {
-                                        withAnimation(reduceMotion ? .none : .default) { stepTabSelection = max(0, index - 1) }
+                                        navigateToDisplayStep(dsIdx - 1)
                                     } label: {
                                         Image(systemName: "chevron.left.circle.fill")
                                             .font(.system(size: 22))
-                                            .foregroundStyle(index > 0 ? Theme.softCoral : Theme.deepPlum.opacity(0.2))
+                                            .foregroundStyle(dsIdx > 0 ? Theme.softCoral : Theme.deepPlum.opacity(0.2))
                                     }
-                                    .disabled(index <= 0)
+                                    .disabled(dsIdx <= 0)
                                     .buttonStyle(.plain)
                                     .accessibilityLabel("Previous step")
-                                    .accessibilityHint("Step \(index) of \(steps.count)")
                                     Button {
-                                        withAnimation(reduceMotion ? .none : .default) { stepTabSelection = min(steps.count - 1, index + 1) }
+                                        navigateToDisplayStep(dsIdx + 1)
                                     } label: {
                                         Image(systemName: "chevron.right.circle.fill")
                                             .font(.system(size: 22))
-                                            .foregroundStyle(index < steps.count - 1 ? Theme.softCoral : Theme.deepPlum.opacity(0.2))
+                                            .foregroundStyle(dsIdx < dsCount - 1 ? Theme.softCoral : Theme.deepPlum.opacity(0.2))
                                     }
-                                    .disabled(index >= steps.count - 1)
+                                    .disabled(dsIdx >= dsCount - 1)
                                     .buttonStyle(.plain)
                                     .accessibilityLabel("Next step")
-                                    .accessibilityHint("Step \(index + 2) of \(steps.count)")
                                 }
                             }
                         }
-                        if steps[index].title != "Step \(index + 1)" {
-                            Text(steps[index].title)
-                                .font(Theme.Typography.caption)
-                                .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                        if let ds = currentDisplayStep {
+                            let displayTitle = ds.title
+                            if displayTitle != "Step \(currentDisplayStepIndex + 1)" {
+                                Text(displayTitle)
+                                    .font(Theme.Typography.caption)
+                                    .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                            }
                         }
                     }
 
@@ -1705,7 +1929,28 @@ private struct PatternStepSectionView: View {
                         ProgressView(value: stepProgressFraction, total: 1)
                             .tint(Theme.softCoral)
                             .accessibilityValue("\(Int(stepProgressFraction * 100)) percent complete")
-                        if !currentStepRows.isEmpty {
+                        if let repeatInfo = steps[index].repeatInfo ?? RepeatInfo.detect(from: steps[index].body) {
+                            RepeatStepView(
+                                repeatInfo: repeatInfo,
+                                referencedSteps: resolveReferencedSteps(repeatInfo: repeatInfo, allSteps: steps, currentIndex: index),
+                                stepLabel: steps[index].title,
+                                patternId: pattern.id,
+                                makeId: selectedMakeId,
+                                stepBody: steps[index].body,
+                                startingStitchesAllSizes: findStartingStitchesAllSizes(before: index, in: steps),
+                                startingStitches: findStartingStitches(before: index, in: steps)
+                            )
+                            .id("repeat_\(index)")
+                        } else if let displayStep = currentDisplayStep, displayStep.isGrouped,
+                                  let groupedRows = displayStep.groupedRows {
+                            // Grouped consecutive rows — show as interactive row reader
+                            InteractiveRowReaderView(
+                                rows: groupedRows,
+                                patternId: pattern.id,
+                                makeId: selectedMakeId,
+                                patternTitle: pattern.title
+                            )
+                        } else if !currentStepRows.isEmpty {
                             InteractiveRowReaderView(
                                 rows: currentStepRows,
                                 patternId: pattern.id,
@@ -1728,6 +1973,9 @@ private struct PatternStepSectionView: View {
                                 .font(Theme.Typography.caption)
                                 .foregroundStyle(Theme.deepPlum.opacity(0.5))
                         }
+
+                        // Per-step notes
+                        stepNotesSection(stepIndex: index)
                     }
                     .padding(Theme.Spacing.lg)
                     .modifier(StepCardStyle(isCurrentStep: index == currentStepIndex))
@@ -1845,6 +2093,49 @@ private struct PatternStepSectionView: View {
         }
     }
 
+    // MARK: - Per-Step Notes
+
+    @ViewBuilder
+    private func stepNotesSection(stepIndex: Int) -> some View {
+        let stepNotes = noteStore.notes.filter { $0.stepIndex == stepIndex }
+
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            if !stepNotes.isEmpty {
+                Divider().padding(.vertical, Theme.Spacing.xs)
+                ForEach(stepNotes) { note in
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: "note.text")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Theme.dustyBlue)
+                            .padding(.top, 2)
+                        Text(note.content)
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.75))
+                    }
+                }
+            }
+
+            Button {
+                stepNoteIndex = stepIndex
+                showStepNoteSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus.bubble")
+                        .font(.system(size: 11))
+                    Text("Add step note")
+                        .font(Theme.Typography.caption)
+                }
+                .foregroundStyle(Theme.dustyBlue)
+            }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $showStepNoteSheet) {
+            if let idx = stepNoteIndex {
+                AddNoteView(noteStore: noteStore, patternId: pattern.id, stepIndex: idx)
+            }
+        }
+    }
+
     // MARK: - Step Section Helpers
 
     private var wandTipBanner: some View {
@@ -1866,6 +2157,128 @@ private struct PatternStepSectionView: View {
         .padding(Theme.Spacing.md)
         .background(Theme.honey.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
+    }
+
+    /// Resolves the referenced steps for a repeat instruction.
+    /// E.g., "rep rnds 1 & 2" with referencedStartRow=1, referencedEndRow=2
+    /// finds the steps in the same section whose startRow matches 1 and 2.
+    private func resolveReferencedSteps(repeatInfo: RepeatInfo, allSteps: [PatternStep], currentIndex: Int) -> [PatternStep] {
+        guard let refStart = repeatInfo.referencedStartRow,
+              let refEnd = repeatInfo.referencedEndRow else {
+            return []
+        }
+
+        // Get the current step's section (from the title prefix before ":")
+        let currentTitle = allSteps[currentIndex].title
+        let currentSection = currentTitle.components(separatedBy: ":").first?.trimmingCharacters(in: .whitespaces) ?? ""
+
+        // Find steps BEFORE the current step in the same section whose row numbers match
+        var matched: [PatternStep] = []
+        for i in 0..<currentIndex {
+            let step = allSteps[i]
+            let stepSection = step.title.components(separatedBy: ":").first?.trimmingCharacters(in: .whitespaces) ?? ""
+            guard stepSection == currentSection || currentSection.isEmpty else { continue }
+
+            let titleLower = step.title.lowercased()
+            for row in refStart...refEnd {
+                if titleLower.contains("row \(row)") || titleLower.contains("rnd \(row)")
+                    || titleLower.contains("round \(row)") {
+                    matched.append(step)
+                    break
+                }
+            }
+        }
+
+        // Deduplicate: if we matched more rows than expected (e.g., "Row 3" appears in multiple sub-sections),
+        // take only the LAST N matches (closest to the repeat step)
+        let expectedCount = refEnd - refStart + 1
+        if matched.count > expectedCount {
+            matched = Array(matched.suffix(expectedCount))
+        }
+
+        // If we couldn't match by title, try sequential offset: the N steps immediately before the repeat
+        if matched.isEmpty {
+            let cycleLength = refEnd - refStart + 1
+            let startIdx = max(0, currentIndex - cycleLength)
+            for i in startIdx..<currentIndex {
+                matched.append(allSteps[i])
+            }
+        }
+
+        return matched
+    }
+
+    /// Finds ALL size variants of the starting stitch count from steps before the current one.
+    /// Example: "for 28 (32, 36) sts total" → [28, 32, 36]
+    private func findStartingStitchesAllSizes(before index: Int, in steps: [PatternStep]) -> [Int]? {
+        let multiSizePattern = #"(\d+)\s*\((\d+),\s*(\d+)\)\s*sts"#
+        for i in stride(from: index - 1, through: 0, by: -1) {
+            let body = steps[i].body
+            // Skip stitch-change annotations
+            if body.lowercased().contains("sts inc") || body.lowercased().contains("sts dec") {
+                // Check if this body ALSO has a total count
+                let lower = body.lowercased()
+                if !lower.contains("total") && !lower.contains("for ") { continue }
+            }
+            if let regex = try? NSRegularExpression(pattern: multiSizePattern, options: .caseInsensitive) {
+                let matches = regex.matches(in: body, range: NSRange(body.startIndex..., in: body))
+                // Use the LAST multi-size group (most likely the total)
+                if let match = matches.last {
+                    let vals = [
+                        Range(match.range(at: 1), in: body).flatMap { Int(body[$0]) },
+                        Range(match.range(at: 2), in: body).flatMap { Int(body[$0]) },
+                        Range(match.range(at: 3), in: body).flatMap { Int(body[$0]) }
+                    ].compactMap { $0 }
+                    if !vals.isEmpty { return vals }
+                }
+            }
+        }
+        return nil
+    }
+
+    /// Finds the TOTAL stitch count from steps before the current one (smallest size).
+    /// Skips stitch-change annotations like "(4 sts inc)" or "(2 sts dec)".
+    private func findStartingStitches(before index: Int, in steps: [PatternStep]) -> Int? {
+        for i in stride(from: index - 1, through: 0, by: -1) {
+            let body = steps[i].body
+
+            // Look for "N sts total" or "total of N sts" or "for N (M, L) sts total"
+            let totalPattern = #"(\d+)\s*(?:\(\d+,\s*\d+\)\s*)?sts\s*total"#
+            if let regex = try? NSRegularExpression(pattern: totalPattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: body, range: NSRange(body.startIndex..., in: body)),
+               let range = Range(match.range(at: 1), in: body),
+               let count = Int(body[range]) {
+                return count
+            }
+
+            // Look for "for N (M, L) sts" at end of instruction (cast-on counts)
+            let forStsPattern = #"for\s+(\d+)\s*\(\d+,\s*\d+\)\s*sts"#
+            if let regex = try? NSRegularExpression(pattern: forStsPattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: body, range: NSRange(body.startIndex..., in: body)),
+               let range = Range(match.range(at: 1), in: body),
+               let count = Int(body[range]) {
+                return count
+            }
+
+            // Find "(N sts)" but EXCLUDE "(N sts inc)", "(N sts dec)", "(N sts increase)", "(N sts decrease)"
+            // These are stitch-change annotations, not stitch counts
+            let stsPattern = #"\((\d+)\s*(?:\(\d+,\s*\d+\)\s*)?sts\)"#
+            if let regex = try? NSRegularExpression(pattern: stsPattern, options: .caseInsensitive) {
+                let matches = regex.matches(in: body, range: NSRange(body.startIndex..., in: body))
+                // Filter out matches followed by inc/dec
+                for match in matches.reversed() {
+                    guard let numRange = Range(match.range(at: 1), in: body),
+                          let count = Int(body[numRange]) else { continue }
+                    // Check the full match text doesn't contain inc/dec
+                    if let fullRange = Range(match.range, in: body) {
+                        let fullText = String(body[fullRange]).lowercased()
+                        if fullText.contains("inc") || fullText.contains("dec") { continue }
+                    }
+                    return count
+                }
+            }
+        }
+        return nil
     }
 
     private func markWandTipSeen() {
@@ -2054,6 +2467,70 @@ private struct PatternStepSectionView: View {
         }
     }
 
+    /// Re-analyzes ONLY the steps (no chart detection). Preserves existing chart highlights.
+    private func analyzeStepsOnly() {
+        guard let userId = auth.currentUserId else {
+            aiStepErrorMessage = "You must be signed in to analyze steps."
+            return
+        }
+        if !SubscriptionStore.shared.canUseAI() {
+            aiStepErrorMessage = "You've used your 5 free AI analyses this month. Upgrade to Premium for unlimited."
+            aiStepErrorIsEntitlement = true
+            return
+        }
+        isAnalyzingSteps = true
+        aiStepErrorMessage = nil
+        Task {
+            do {
+                let contentToUse = try await getPatternContent()
+                guard let content = contentToUse else {
+                    isAnalyzingSteps = false
+                    return
+                }
+                // Steps only — no images, no chart detection
+                let instructions = try await AIStepParserService.parseInstructions(from: content)
+                if !instructions.isEmpty {
+                    await store.saveParsedInstructions(pattern: pattern, userId: userId, instructions: instructions)
+                    _ = await SubscriptionStore.shared.recordAIUse(userId: userId)
+                    progressStore.clearCustomStepLayout(patternId: pattern.id)
+                }
+            } catch {
+                aiStepErrorMessage = error.localizedDescription
+            }
+            isAnalyzingSteps = false
+        }
+    }
+
+    /// Re-detects ONLY the charts (no step re-analysis). Preserves existing parsed steps.
+    private func analyzeChartsOnly() {
+        guard auth.currentUserId != nil else { return }
+        store.extractChartsFromPDF(patternId: pattern.id)
+    }
+
+    /// Gets pattern content from source_content or PDF text extraction.
+    private func getPatternContent() async throws -> String? {
+        let existing = PatternStepParser.truncateAtEndOfPattern(pattern.sourceContent) ?? pattern.sourceContent
+        let trimmed = existing?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmed.isEmpty { return trimmed }
+
+        if let pdfUrlString = pattern.pdfUrl, !pdfUrlString.isEmpty, let pdfURL = URL(string: pdfUrlString) {
+            let (data, response) = try await URLSession.shared.data(from: pdfURL)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                aiStepErrorMessage = "Couldn't download the pattern PDF."
+                return nil
+            }
+            guard let extracted = PDFTextExtractor.extractText(from: data),
+                  !extracted.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                aiStepErrorMessage = "Couldn't extract text from the PDF."
+                return nil
+            }
+            return extracted.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        aiStepErrorMessage = "No pattern content available to analyze."
+        return nil
+    }
+
     private var updateProgressSheet: some View {
         let data = progressStore.progress(for: pattern.id, makeId: selectedMakeId)
         return NavigationStack {
@@ -2136,6 +2613,12 @@ private struct FloatingToolPaletteView: View {
     @State private var logTimeHours = 0
     @State private var logTimeMinutes = 0
     @State private var showYarnColorSheet = false
+    @State private var progressPhotoItem: PhotosPickerItem?
+
+    // Live session timer
+    @State private var isTimerRunning = false
+    @State private var timerAccumulatedSeconds: Int = 0
+    @State private var displayTimer: Timer?
     @State private var showVoiceRowSheet = false
     @State private var voiceRowSuccessMessage: String?
     @StateObject private var voiceRowService = VoiceRowService()
@@ -2150,7 +2633,11 @@ private struct FloatingToolPaletteView: View {
             VStack(alignment: .trailing, spacing: Theme.Spacing.sm) {
                 HStack(spacing: Theme.Spacing.sm) {
                     Button { showLogTimeSheet = true } label: {
-                        toolPaletteChip(icon: "clock", label: "Log time")
+                        if isTimerRunning {
+                            toolPaletteChip(icon: "stop.circle.fill", label: timerDisplay, tint: Theme.softCoral)
+                        } else {
+                            toolPaletteChip(icon: "clock", label: "Log time")
+                        }
                     }
                     .buttonStyle(.plain)
                     Button { showVoiceRowSheet = true } label: {
@@ -2161,6 +2648,10 @@ private struct FloatingToolPaletteView: View {
                     .accessibilityHint("Say your current row, round, step number, or percent")
                     Button { showYarnColorSheet = true } label: {
                         toolPaletteChip(icon: "paintpalette.fill", label: yarnLabel)
+                    }
+                    .buttonStyle(.plain)
+                    PhotosPicker(selection: $progressPhotoItem, matching: .images) {
+                        toolPaletteChip(icon: "camera.fill", label: "Photo")
                     }
                     .buttonStyle(.plain)
                 }
@@ -2178,28 +2669,46 @@ private struct FloatingToolPaletteView: View {
                     .padding(.trailing, 8)
                     .accessibilityHidden(true)
             }
-            .padding(.bottom, 100)
+            .padding(.bottom, 16)
         }
         .padding(.trailing, Theme.Spacing.lg)
         .sheet(isPresented: $showLogTimeSheet) { logTimeSheet }
         .sheet(isPresented: $showYarnColorSheet) { yarnColorSheet }
+        .onChange(of: progressPhotoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self),
+                   let userId = auth.currentUserId {
+                    let store = PatternImageStore()
+                    _ = await store.addFromData(patternId: pattern.id, userId: userId, imageData: data, displayOrder: 999)
+                    HapticService.success()
+                }
+                progressPhotoItem = nil
+            }
+        }
         .sheet(isPresented: $showVoiceRowSheet) { voiceRowSheet }
     }
 
-    private func toolPaletteChip(icon: String, label: String) -> some View {
+    private func toolPaletteChip(icon: String, label: String, tint: Color? = nil) -> some View {
         VStack(spacing: 2) {
             Image(systemName: icon)
                 .font(.system(size: 14))
-                .foregroundStyle(Theme.dustyBlue)
+                .foregroundStyle(tint ?? Theme.dustyBlue)
             if !label.isEmpty {
                 Text(label)
                     .font(Theme.Typography.caption2.weight(.semibold))
-                    .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                    .foregroundStyle(tint ?? Theme.deepPlum.opacity(0.7))
                     .lineLimit(1)
-                    .truncationMode(.tail)
+                    .fixedSize()
             }
         }
-        .frame(minWidth: 44, maxWidth: 56, minHeight: 40)
+        .frame(minWidth: 44, minHeight: 40)
+    }
+
+    private var timerDisplay: String {
+        let m = timerAccumulatedSeconds / 60
+        let s = timerAccumulatedSeconds % 60
+        return String(format: "%d:%02d", m, s)
     }
 
     // MARK: Log Time Sheet
@@ -2207,7 +2716,48 @@ private struct FloatingToolPaletteView: View {
     private var logTimeSheet: some View {
         NavigationStack {
             Form {
-                Section("Duration") {
+                // Live timer section
+                Section("Session Timer") {
+                    HStack(spacing: Theme.Spacing.md) {
+                        Image(systemName: isTimerRunning ? "stop.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(isTimerRunning ? Theme.softCoral : Theme.sageGreen)
+
+                        Text(liveTimerDisplay)
+                            .font(.system(.title2, design: .monospaced, weight: .semibold))
+                            .foregroundStyle(Theme.deepPlum)
+                            .monospacedDigit()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Button {
+                            if isTimerRunning {
+                                stopSessionTimer()
+                            } else {
+                                startSessionTimer()
+                            }
+                        } label: {
+                            Text(isTimerRunning ? "Stop" : (timerAccumulatedSeconds > 0 ? "Resume" : "Start"))
+                                .font(Theme.Typography.bodySemibold)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(isTimerRunning ? Theme.softCoral : Theme.sageGreen)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.vertical, 4)
+
+                    if timerAccumulatedSeconds > 0 && !isTimerRunning {
+                        Button("Reset timer", role: .destructive) {
+                            timerAccumulatedSeconds = 0
+                        }
+                        .font(Theme.Typography.caption)
+                    }
+                }
+
+                // Manual fallback
+                Section("Or log manually") {
                     HStack {
                         Picker("Hours", selection: $logTimeHours) {
                             ForEach(0...12, id: \.self) { hour in
@@ -2216,9 +2766,6 @@ private struct FloatingToolPaletteView: View {
                         }
                         .pickerStyle(.wheel)
                         .frame(maxWidth: .infinity)
-                        .onChange(of: logTimeHours) { _, _ in
-                            HapticService.selection()
-                        }
 
                         Picker("Minutes", selection: $logTimeMinutes) {
                             ForEach(Self.logMinuteOptions, id: \.self) { minute in
@@ -2227,15 +2774,8 @@ private struct FloatingToolPaletteView: View {
                         }
                         .pickerStyle(.wheel)
                         .frame(maxWidth: .infinity)
-                        .onChange(of: logTimeMinutes) { _, _ in
-                            HapticService.selection()
-                        }
                     }
-                    .frame(height: 140)
-
-                    Text(logTimeDurationSummary)
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                    .frame(height: 120)
                 }
 
                 Section("Total logged") {
@@ -2259,22 +2799,58 @@ private struct FloatingToolPaletteView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showLogTimeSheet = false }
+                    Button("Cancel") {
+                        // Don't stop timer on cancel — it keeps running
+                        showLogTimeSheet = false
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Log") { saveLogTime() }
-                        .disabled(totalLoggedMinutes == 0)
+                    Button("Save") { saveLogTime() }
+                        .disabled(effectiveLogMinutes == 0)
                 }
             }
         }
     }
 
+    private func startSessionTimer() {
+        isTimerRunning = true
+        displayTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            timerAccumulatedSeconds += 1
+        }
+    }
+
+    private func stopSessionTimer() {
+        isTimerRunning = false
+        displayTimer?.invalidate()
+        displayTimer = nil
+    }
+
+    /// Timer display or manual picker — whichever has time
+    private var effectiveLogMinutes: Int {
+        let timerMinutes = timerAccumulatedSeconds / 60
+        let manualMinutes = (logTimeHours * 60) + logTimeMinutes
+        return max(timerMinutes, manualMinutes)
+    }
+
+    private var liveTimerDisplay: String {
+        let h = timerAccumulatedSeconds / 3600
+        let m = (timerAccumulatedSeconds % 3600) / 60
+        let s = timerAccumulatedSeconds % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        }
+        return String(format: "%02d:%02d", m, s)
+    }
+
     private func saveLogTime() {
-        guard totalLoggedMinutes > 0 else { return }
+        stopSessionTimer()
+        let totalMinutes = effectiveLogMinutes
+        guard totalMinutes > 0 else { return }
+        let durationLabel = totalMinutes >= 60 ? "\(totalMinutes / 60)h \(totalMinutes % 60)m" : "\(totalMinutes)m"
         let trimmedNote = logTimeNote.trimmingCharacters(in: .whitespacesAndNewlines)
         let content = trimmedNote.isEmpty
-            ? "Logged \(logTimeDurationSummary)"
-            : "Logged \(logTimeDurationSummary) - \(trimmedNote)"
+            ? "Logged \(durationLabel)"
+            : "Logged \(durationLabel) - \(trimmedNote)"
         guard let userId = auth.currentUserId else { showLogTimeSheet = false; return }
         Task {
             _ = await noteStore.add(
@@ -2283,18 +2859,15 @@ private struct FloatingToolPaletteView: View {
                 noteType: .progressUpdate,
                 content: content,
                 photoData: nil,
-                durationMinutes: totalLoggedMinutes
+                durationMinutes: totalMinutes
             )
         }
         HapticService.success()
         logTimeNote = ""
         logTimeHours = 0
         logTimeMinutes = 0
+        timerAccumulatedSeconds = 0
         showLogTimeSheet = false
-    }
-
-    private var totalLoggedMinutes: Int {
-        (logTimeHours * 60) + logTimeMinutes
     }
 
     private var logTimeDurationSummary: String {

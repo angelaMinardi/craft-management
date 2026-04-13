@@ -12,6 +12,7 @@ struct InteractiveRowReaderView: View {
     let patternTitle: String
 
     @ObservedObject private var rowCounterStore = RowCounterStore.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showCounterSheet = false
     @State private var editingCounterId: UUID?
 
@@ -44,7 +45,7 @@ struct InteractiveRowReaderView: View {
                     proxy.scrollTo(startRow, anchor: .center)
                 }
                 .onChange(of: currentRow) { _, newRow in
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(reduceMotion ? .none : .easeInOut(duration: 0.2)) {
                         proxy.scrollTo(newRow, anchor: .center)
                     }
                 }
@@ -54,6 +55,7 @@ struct InteractiveRowReaderView: View {
                 currentRow: currentRow,
                 totalRows: rows.count,
                 secondaryCounters: currentState.secondaryCounters,
+                alertRows: currentState.alertRows,
                 onDecrement: {
                     rowCounterStore.decrementGlobal(patternId: patternId, makeId: makeId, patternTitle: patternTitle)
                 },
@@ -70,6 +72,12 @@ struct InteractiveRowReaderView: View {
                 onLongPressSecondary: { counterId in
                     editingCounterId = counterId
                     showCounterSheet = true
+                },
+                onAddAlertRow: { row in
+                    rowCounterStore.addAlertRow(patternId: patternId, makeId: makeId, row: row)
+                },
+                onRemoveAlertRow: { row in
+                    rowCounterStore.removeAlertRow(patternId: patternId, makeId: makeId, row: row)
                 }
             )
         }
@@ -105,10 +113,10 @@ struct InteractiveRowReaderView: View {
         let isPast = row.id < currentRow
         HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
             Text(isCurrent ? ">" : " ")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(Theme.Typography.captionSemibold)
                 .foregroundStyle(Theme.honey)
             Text("Row \(row.id): \(row.instruction)")
-                .font(.system(size: 14, weight: isCurrent ? .semibold : .regular, design: .rounded))
+                .font(isCurrent ? Theme.Typography.footnoteSemibold : Theme.Typography.footnote)
                 .foregroundStyle(Theme.deepPlum)
                 .opacity(isPast ? 0.55 : 1)
             Spacer(minLength: 0)

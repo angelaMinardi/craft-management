@@ -35,6 +35,7 @@ struct ParsedInstruction: Codable, Identifiable, Sendable, Equatable {
     let note: String?
     let chartImageUrl: String?
     let chartLabel: String?
+    let repeatInfo: RepeatInfo?
 
     var id: String {
         "\(section)-\(startRow)-\(endRow)-\(instruction.prefix(30))"
@@ -49,6 +50,7 @@ struct ParsedInstruction: Codable, Identifiable, Sendable, Equatable {
         case note
         case chartImageUrl = "chart_image_url"
         case chartLabel = "chart_label"
+        case repeatInfo = "repeat_info"
     }
 
     /// Formatted row range for display (e.g., "Row 5", "Rows 1-10", or empty for non-numbered).
@@ -73,7 +75,7 @@ struct ParsedInstruction: Codable, Identifiable, Sendable, Equatable {
         if let stitchCount {
             body += "\n(\(stitchCount) sts)"
         }
-        return PatternStep(title: title, body: body, chartImageUrl: chartImageUrl, chartLabel: chartLabel)
+        return PatternStep(title: title, body: body, chartImageUrl: chartImageUrl, chartLabel: chartLabel, repeatInfo: repeatInfo)
     }
 }
 
@@ -99,6 +101,7 @@ struct Pattern: Identifiable, Codable, Sendable, Hashable {
     var parsedRows: String?
     var enrichmentStatus: String?
     var enrichmentError: String?
+    var collectionId: UUID?
     var createdAt: Date
     var updatedAt: Date
 
@@ -124,6 +127,7 @@ struct Pattern: Identifiable, Codable, Sendable, Hashable {
         case parsedRows = "parsed_rows"
         case enrichmentStatus = "enrichment_status"
         case enrichmentError = "enrichment_error"
+        case collectionId = "collection_id"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -165,12 +169,14 @@ enum PatternStatus: String, Codable, CaseIterable, Sendable {
     case wantToMake = "want_to_make"
     case inProgress = "in_progress"
     case completed = "completed"
+    case frogged = "frogged"
 
     var displayName: String {
         switch self {
         case .wantToMake: return "Want to Make"
         case .inProgress: return "In Progress"
         case .completed: return "Completed"
+        case .frogged: return "Frogged"
         }
     }
 }

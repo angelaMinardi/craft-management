@@ -13,9 +13,9 @@ enum StitchCraftKind {
 
 enum StitchAbbreviationLinkBuilder {
     private static let abbreviationPattern =
-        #"\b(?:kfb|k2tog|ssk|yo|m1l|m1r|p2tog|sl1|psso|cdd|s2kp2|p2sso|k\d+|p\d+|c\d+|sc|dc|hdc|tr|dtr|inc|dec|ch|slst)\b"#
+        #"\b(?:kfb|pfb|k2tog|p2tog|ssk|ssp|sssk|yo|m1l|m1r|m1p|m1|sl1k|sl1p|sl1|psso|p2sso|cdd|s2kp2|sk2p|skp|tbl|w&t|wyif|wyib|k1b|k\d+|p\d+|c\d+[fb]|t\d+[fb]|rt|lt|sc2tog|dc2tog|hdc2tog|invdec|sc|dc|hdc|tr|dtr|inc|dec|ch|slst|fpdc|bpdc|fptr|bptr|fphdc|bphdc|blo|flo|bo|co|pm|sm|cn|pc|cl|sh|mr|tss|tks|tps|mc|cc)\b"#
     private static let urlPattern = #"(?:https?://|www\.)\S+"#
-    private static let crochetSignalPattern = #"\b(?:dc|sc|hdc|tr|dtr|ch|slst)\b"#
+    private static let crochetSignalPattern = #"\b(?:dc|sc|hdc|tr|dtr|ch|slst|fpdc|bpdc|blo|flo|mr|invdec)\b"#
 
     static func inferCraftKind(explicitCraftType: String?, text: String) -> StitchCraftKind {
         if let explicit = explicitCraftType?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
@@ -34,6 +34,12 @@ enum StitchAbbreviationLinkBuilder {
         let normalized = abbreviation.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !normalized.isEmpty else { return nil }
 
+        // Use in-app glossary URL if we have a definition
+        if StitchGlossary.lookup(normalized) != nil {
+            return URL(string: "patternvault://glossary/\(normalized)")
+        }
+
+        // Fall back to web search for unknown abbreviations
         let prefix = craftKind == .crochet ? "crochet how to" : "knitting how to"
         let query = "\(prefix) \(normalized)"
         guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {

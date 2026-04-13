@@ -28,6 +28,11 @@ struct RavelryLibraryEntry: Sendable {
     var imageUrl: String?
     var craftName: String?
     var pdfUrl: String?
+    var patternDescription: String?
+    var difficulty: String?
+    var gauge: String?
+    var needleHookSizes: String?
+    var yarnWeightYardage: String?
 }
 
 @MainActor
@@ -82,7 +87,11 @@ enum RavelryUserService {
         request.httpMethod = "GET"
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = 15
-        return try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode == 401 {
+            throw RavelryUserError.tokenExpired
+        }
+        return (data, response)
     }
 
     /// Parse a Volume (list) from library/search.json. Volume has pattern_id, title, first_photo, small_image_url, etc.
@@ -230,9 +239,21 @@ enum RavelryUserService {
         )
     }
 
-    /// Batch fetch full pattern details (first_photo, pdf_url). GET /patterns.json?ids=1+2+3. Returns map patternId -> (imageUrl, pdfUrl).
+    /// Rich detail extracted from Ravelry batch pattern API.
+    struct RavelryPatternDetail: Sendable {
+        var imageUrl: String?
+        var pdfUrl: String?
+        var description: String?
+        var difficulty: String?
+        var gauge: String?
+        var craftName: String?
+        var needleHookSizes: String?
+        var yarnWeightYardage: String?
+    }
+
+    /// Batch fetch full pattern details. GET /patterns.json?ids=1+2+3. Returns map patternId -> RavelryPatternDetail.
     /// Accepts both array and dictionary response shapes; uses free_pdf_url when pdf_url is nil.
-    static func fetchPatternDetails(userId: UUID, patternIds: [Int]) async throws -> [Int: (imageUrl: String?, pdfUrl: String?)] {
+    static func fetchPatternDetails(userId: UUID, patternIds: [Int]) async throws -> [Int: RavelryPatternDetail] {
         guard !patternIds.isEmpty else { return [:] }
         guard let (accessToken, _) = RavelryOAuthService.shared.tokens(for: userId) else {
             throw RavelryUserError.notConnected
@@ -246,27 +267,22 @@ enum RavelryUserService {
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
         let result = parsePatternDetailsPayload(json["patterns"])
         #if DEBUG
-        if let payload = json["patterns"] {
-            if (payload as? [[String: Any]]) != nil { print("[Ravelry] fetchPatternDetails: patterns is array, count=\(result.count)") }
-            else if (payload as? [String: Any]) != nil { print("[Ravelry] fetchPatternDetails: patterns is dictionary, count=\(result.count)") }
-            else { print("[Ravelry] fetchPatternDetails: patterns is neither array nor dictionary, type=\(type(of: payload))") }
-        }
         if let first = result.first {
-            print("[Ravelry] first pattern id=\(first.key), hasPdfUrl=\(first.value.pdfUrl != nil)")
+            print("[Ravelry] fetchPatternDetails: count=\(result.count), first id=\(first.key), hasPdfUrl=\(first.value.pdfUrl != nil)")
         }
         #endif
         return result
     }
 
-    /// Parses the "patterns" payload from Ravelry batch API (array or dictionary, flat or nested "pattern" wrapper). Used by fetchPatternDetails; exposed for unit tests.
-    static func parsePatternDetailsPayload(_ patternsPayload: Any?) -> [Int: (imageUrl: String?, pdfUrl: String?)] {
-        var result: [Int: (imageUrl: String?, pdfUrl: String?)] = [:]
+    /// Parses the "patterns" payload from Ravelry batch API (array or dictionary, flat or nested "pattern" wrapper).
+    static func parsePatternDetailsPayload(_ patternsPayload: Any?) -> [Int: RavelryPatternDetail] {
+        var result: [Int: RavelryPatternDetail] = [:]
         guard let payload = patternsPayload else { return result }
         if let arr = payload as? [[String: Any]] {
             for item in arr {
                 let pattern = (item["pattern"] as? [String: Any]) ?? item
                 guard let patternId = pattern["id"] as? Int else { continue }
-                result[patternId] = extractImageAndPdfUrl(from: pattern)
+                result[patternId] = extractPatternDetail(from: pattern)
             }
         } else if let patternsMap = payload as? [String: Any] {
             for (key, value) in patternsMap {
@@ -274,20 +290,102 @@ enum RavelryUserService {
                 let raw = value as? [String: Any]
                 let pattern = raw.flatMap { ($0["pattern"] as? [String: Any]) ?? $0 }
                 guard let pattern = pattern else { continue }
-                result[patternId] = extractImageAndPdfUrl(from: pattern)
+                result[patternId] = extractPatternDetail(from: pattern)
             }
         }
         return result
     }
 
-    private static func extractImageAndPdfUrl(from pattern: [String: Any]) -> (imageUrl: String?, pdfUrl: String?) {
+    private static func extractPatternDetail(from pattern: [String: Any]) -> RavelryPatternDetail {
         var imageUrl: String?
         if let photo = pattern["first_photo"] as? [String: Any] {
             imageUrl = (photo["medium_url"] as? String) ?? (photo["small_url"] as? String)
         }
         let pdfUrl = (pattern["pdf_url"] as? String).flatMap { $0.isEmpty ? nil : $0 }
             ?? (pattern["free_pdf_url"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-        return (imageUrl, pdfUrl)
+
+        // Description from notes (plain text preferred, strip HTML if needed)
+        var description: String?
+        if let notes = pattern["notes"] as? String, !notes.isEmpty {
+            description = notes
+        } else if let notesHtml = pattern["notes_html"] as? String, !notesHtml.isEmpty {
+            description = stripHTML(notesHtml)
+        }
+
+        // Difficulty: Ravelry returns difficulty_average as a Float (1.0–10.0)
+        var difficulty: String?
+        if let avg = pattern["difficulty_average"] as? Double, avg > 0 {
+            let level = Int(avg.rounded())
+            switch level {
+            case 1...2: difficulty = "Beginner"
+            case 3...4: difficulty = "Easy"
+            case 5...6: difficulty = "Intermediate"
+            case 7...8: difficulty = "Advanced"
+            case 9...10: difficulty = "Expert"
+            default: difficulty = "Level \(level)/10"
+            }
+        }
+
+        // Gauge
+        let gauge = (pattern["gauge_description"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+            ?? (pattern["gauge"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+
+        // Craft name
+        let craftName = (pattern["craft"] as? [String: Any])?["name"] as? String
+
+        // Needle/hook sizes
+        var needleHookSizes: String?
+        if let needles = pattern["pattern_needle_sizes"] as? [[String: Any]], !needles.isEmpty {
+            let sizes = needles.compactMap { needle -> String? in
+                let name = needle["name"] as? String
+                let us = needle["us"] as? String
+                let metric = needle["metric"] as? Double
+                if let name, !name.isEmpty { return name }
+                if let us, !us.isEmpty, let metric {
+                    return "US \(us) (\(String(format: "%g", metric))mm)"
+                }
+                if let metric { return "\(String(format: "%g", metric))mm" }
+                return us.map { "US \($0)" }
+            }
+            if !sizes.isEmpty { needleHookSizes = sizes.joined(separator: ", ") }
+        }
+
+        // Yarn weight + yardage
+        var yarnWeightYardage: String?
+        let weightName = (pattern["yarn_weight"] as? [String: Any])?["name"] as? String
+        let yardage = pattern["yardage"] as? Int ?? pattern["yardage_max"] as? Int
+        if let weightName, !weightName.isEmpty {
+            if let yardage {
+                yarnWeightYardage = "\(weightName) — \(yardage) yards"
+            } else {
+                yarnWeightYardage = weightName
+            }
+        } else if let yardage {
+            yarnWeightYardage = "\(yardage) yards"
+        }
+
+        return RavelryPatternDetail(
+            imageUrl: imageUrl,
+            pdfUrl: pdfUrl,
+            description: description,
+            difficulty: difficulty,
+            gauge: gauge,
+            craftName: craftName,
+            needleHookSizes: needleHookSizes,
+            yarnWeightYardage: yarnWeightYardage
+        )
+    }
+
+    /// Strip basic HTML tags from a string.
+    private static func stripHTML(_ html: String) -> String {
+        html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func parseFavoriteEntry(_ bookmark: [String: Any]) -> RavelryLibraryEntry? {
@@ -328,11 +426,13 @@ enum RavelryUserService {
         case notConnected
         case invalidResponse
         case apiError(Int)
+        case tokenExpired
         var errorDescription: String? {
             switch self {
             case .notConnected: return "Ravelry account is not connected."
             case .invalidResponse: return "Invalid response from Ravelry."
             case .apiError(let code): return "Ravelry returned error \(code)."
+            case .tokenExpired: return "Ravelry session expired. Please reconnect your account in Settings."
             }
         }
     }

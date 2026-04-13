@@ -24,6 +24,7 @@ struct AddPatternView: View {
     @State private var showPdfPicker = false
     @State private var fetchTask: Task<Void, Never>?
     @State private var duplicateExisting: Pattern?
+    @State private var shakeError = false
     @FocusState private var focusedField: Field?
 
     enum Field { case url, title, description }
@@ -137,6 +138,11 @@ struct AddPatternView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Theme.Spacing.xs)
+                        .disapprovingShake(trigger: $shakeError)
+                    }
+                    .onAppear {
+                        shakeError = true
+                        UINotificationFeedbackGenerator().notificationOccurred(.error)
                     }
                 }
             }
@@ -155,6 +161,10 @@ struct AddPatternView: View {
                         .disabled(url.isEmpty || title.isEmpty || isSaving)
                         .accessibilityLabel("Save")
                         .accessibilityHint("Save the pattern to your vault")
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focusedField = nil }
                 }
             }
             .onAppear {
@@ -181,9 +191,6 @@ struct AddPatternView: View {
                 attachedPdfData = try? Data(contentsOf: first)
             }
         }
-        // This form is designed for the app's light brand palette.
-        // Force light mode here so field text and section headers stay readable.
-        .environment(\.colorScheme, .light)
     }
 
     private func scheduleFetch(for urlString: String) {

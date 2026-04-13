@@ -132,10 +132,15 @@ final class RavelryImportStore: ObservableObject {
                 let details = try await RavelryUserService.fetchPatternDetails(userId: userId, patternIds: chunk)
                 for i in allEntries.indices {
                     let id = allEntries[i].patternId
-                    if let (imageUrl, pdfUrl) = details[id] {
-                        if let imageUrl = imageUrl, !imageUrl.isEmpty { allEntries[i].imageUrl = imageUrl }
-                        if let pdfUrl = pdfUrl, !pdfUrl.isEmpty { allEntries[i].pdfUrl = pdfUrl }
-                    }
+                    guard let detail = details[id] else { continue }
+                    if let v = detail.imageUrl, !v.isEmpty { allEntries[i].imageUrl = v }
+                    if let v = detail.pdfUrl, !v.isEmpty { allEntries[i].pdfUrl = v }
+                    if let v = detail.description, !v.isEmpty { allEntries[i].patternDescription = v }
+                    if let v = detail.difficulty, !v.isEmpty { allEntries[i].difficulty = v }
+                    if let v = detail.gauge, !v.isEmpty { allEntries[i].gauge = v }
+                    if let v = detail.craftName, !v.isEmpty { allEntries[i].craftName = v }
+                    if let v = detail.needleHookSizes, !v.isEmpty { allEntries[i].needleHookSizes = v }
+                    if let v = detail.yarnWeightYardage, !v.isEmpty { allEntries[i].yarnWeightYardage = v }
                 }
             } catch {
                 #if DEBUG
@@ -157,18 +162,28 @@ final class RavelryImportStore: ObservableObject {
             let added = await patternStore.add(
                 userId: userId,
                 title: entry.name,
-                description: nil,
+                description: entry.patternDescription,
                 sourceUrl: sourceUrl,
                 status: .wantToMake,
                 thumbnailUrl: entry.imageUrl,
+                difficulty: entry.difficulty,
                 craftType: entry.craftName,
-                pdfUrl: entry.pdfUrl
+                pdfUrl: entry.pdfUrl,
+                gauge: entry.gauge,
+                needleHookSizes: entry.needleHookSizes,
+                yarnWeightYardage: entry.yarnWeightYardage,
+                enrichmentStatus: "pending"
             )
             if added {
                 imported += 1
                 existingUrls.insert(sourceUrl)
             }
             importProgressImported = imported
+        }
+
+        // Reload to trigger enrichment polling for newly imported patterns
+        if imported > 0 {
+            await patternStore.load(userId: userId)
         }
 
         // Import Ravelry stash into yarn stash

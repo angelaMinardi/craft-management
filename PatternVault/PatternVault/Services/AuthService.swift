@@ -68,19 +68,15 @@ final class AuthService: ObservableObject {
             defaults?.set(key, forKey: "supabase_anon_key")
         }
         if let session {
-            // Store access token and user ID in shared Keychain (primary, secure)
             Self.saveToSharedKeychain(account: Self.keychainTokenAccount, value: session.accessToken)
             Self.saveToSharedKeychain(account: Self.keychainUserIdAccount, value: session.user.id.uuidString)
-            // DEPRECATED: UserDefaults token storage kept for backward compatibility during transition.
-            // Remove once all users have updated to the Keychain-based version.
-            defaults?.set(session.accessToken, forKey: "supabase_access_token")
-            defaults?.set(session.user.id.uuidString, forKey: "supabase_user_id")
         } else {
             Self.deleteFromSharedKeychain(account: Self.keychainTokenAccount)
             Self.deleteFromSharedKeychain(account: Self.keychainUserIdAccount)
-            defaults?.removeObject(forKey: "supabase_access_token")
-            defaults?.removeObject(forKey: "supabase_user_id")
         }
+        // Clean up legacy UserDefaults token storage
+        defaults?.removeObject(forKey: "supabase_access_token")
+        defaults?.removeObject(forKey: "supabase_user_id")
         defaults?.synchronize()
     }
 
@@ -97,7 +93,7 @@ final class AuthService: ObservableObject {
         SecItemDelete(query as CFDictionary)
         var addQuery = query
         addQuery[kSecValueData as String] = data
-        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         SecItemAdd(addQuery as CFDictionary, nil)
     }
 
@@ -133,7 +129,7 @@ final class AuthService: ObservableObject {
             session = client.auth.currentSession
             if session != nil { HapticService.success() }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = Self.sanitizedAuthError(error, fallback: "Sign in failed.")
         }
     }
 
@@ -145,7 +141,7 @@ final class AuthService: ObservableObject {
             self.session = newSession
             HapticService.success()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = Self.sanitizedAuthError(error, fallback: "Sign in failed.")
         }
     }
 
@@ -202,7 +198,7 @@ final class AuthService: ObservableObject {
                 redirectTo: redirectURL
             )
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = Self.sanitizedAuthError(error, fallback: "Google sign-in failed.")
         }
     }
 
@@ -214,7 +210,7 @@ final class AuthService: ObservableObject {
             try await client.auth.signOut()
             session = nil
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = Self.sanitizedAuthError(error, fallback: "Sign out failed.")
         }
     }
 
@@ -230,7 +226,7 @@ final class AuthService: ObservableObject {
             try await client.auth.signOut()
             session = nil
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = Self.sanitizedAuthError(error, fallback: "Account deletion failed.")
         }
     }
 
@@ -265,13 +261,39 @@ final class AuthService: ObservableObject {
             throw NSError(domain: "AuthService", code: -4, userInfo: [NSLocalizedDescriptionKey: "Account deletion failed."])
         }
         guard (200...299).contains(http.statusCode) else {
-            let message = String(data: data, encoding: .utf8)
-            let detail = (message?.isEmpty == false) ? message! : "Please try again."
-            throw NSError(domain: "AuthService", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "Could not delete account. \(detail)"])
+            #if DEBUG
+            let serverMessage = String(data: data, encoding: .utf8) ?? ""
+            NSLog("[AuthService] deleteAccount HTTP %d: %@", http.statusCode, serverMessage)
+            #endif
+            throw NSError(domain: "AuthService", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: "Could not delete account. Please try again."])
         }
     }
 
     func clearError() {
         errorMessage = nil
+    }
+
+    /// Maps auth errors to user-safe messages. Logs details in DEBUG only.
+    private static func sanitizedAuthError(_ error: Error, fallback: String) -> String {
+        #if DEBUG
+        NSLog("[AuthService] %@", error.localizedDescription)
+        #endif
+        let message = error.localizedDescription.lowercased()
+        if message.contains("invalid login") || message.contains("invalid email") || message.contains("wrong password") {
+            return "Invalid email or password."
+        }
+        if message.contains("email not confirmed") {
+            return "Please confirm your email address first."
+        }
+        if message.contains("already registered") || message.contains("already exists") {
+            return "An account with this email already exists."
+        }
+        if message.contains("network") || message.contains("internet") || message.contains("offline") {
+            return "Network error. Please check your connection and try again."
+        }
+        if message.contains("rate limit") || message.contains("too many") {
+            return "Too many attempts. Please wait a moment and try again."
+        }
+        return fallback
     }
 }

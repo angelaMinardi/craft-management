@@ -69,7 +69,7 @@ struct StashMatchPatternsView: View {
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.deepPlum.opacity(0.6))
             Text(stashItem.displaySummary)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.deepPlum)
             if let yd = stashItem.totalYardage {
                 Text("\(yd) yards total")
@@ -109,7 +109,7 @@ struct StashMatchPatternsView: View {
         return HStack(alignment: .top, spacing: Theme.Spacing.md) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text(pattern.title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.callout)
                     .foregroundStyle(Theme.deepPlum)
                     .lineLimit(2)
                 if let craft = pattern.craftType, !craft.isEmpty {
@@ -190,7 +190,7 @@ struct StashMatchPatternsView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 Text(result.title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.cardTitle)
                     .foregroundStyle(Theme.deepPlum)
                     .lineLimit(2)
                 if let craft = result.craftType {

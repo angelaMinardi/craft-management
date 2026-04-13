@@ -12,13 +12,14 @@ struct AnimatedCrowView: View {
     var size: CGFloat = 120
     /// If true, adds a gentle vertical bob and scale pulse. If false, only a very subtle idle motion.
     var isProminent: Bool = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0/30.0, paused: false)) { context in
+        TimelineView(.animation(minimumInterval: 1.0/30.0, paused: reduceMotion)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
-            let bob = isProminent ? sin(t * 1.2) * 4 : sin(t * 0.8) * 2
-            let scale = isProminent ? 1.0 + sin(t * 0.9) * 0.04 : 1.0
-            let tilt = sin(t * 0.6) * 2.5
+            let bob = reduceMotion ? 0 : (isProminent ? sin(t * 1.2) * 4 : sin(t * 0.8) * 2)
+            let scale = reduceMotion ? 1.0 : (isProminent ? 1.0 + sin(t * 0.9) * 0.04 : 1.0)
+            let tilt = reduceMotion ? 0 : sin(t * 0.6) * 2.5
 
             Image("CrowMascot")
                 .resizable()

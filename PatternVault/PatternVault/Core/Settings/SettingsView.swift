@@ -10,17 +10,13 @@ struct SettingsView: View {
     @EnvironmentObject var auth: AuthService
     @ObservedObject var store: PatternStore
     @ObservedObject var tutorialStore: AppTutorialStore
-    @ObservedObject private var junkStore = JunkPhraseStore.shared
     @ObservedObject private var celebrationStore = CelebrationStore.shared
-    @ObservedObject private var storyStore = MascotStoryStore.shared
-
     private var currentStepAnchor: TutorialAnchor? {
         guard tutorialStore.isActive, tutorialStore.currentStep < AppTutorialStore.steps.count else { return nil }
         return AppTutorialStore.steps[tutorialStore.currentStep].anchorId
     }
     @State private var showSignOutConfirm = false
     @State private var showDeleteConfirm = false
-    @State private var showClearJunkConfirm = false
     @State private var showPaywall = false
     @State private var exportFileItem: ExportFileItem?
     @State private var isExporting = false
@@ -29,7 +25,7 @@ struct SettingsView: View {
     @State private var showRavelryImportConfirm = false
     @State private var ravelryOAuthError: String?
     @State private var showMascotHelp = false
-    @State private var showStoryDiagnostics = false
+    @State private var showAIInfo = false
 
     var body: some View {
         NavigationStack {
@@ -39,8 +35,8 @@ struct SettingsView: View {
                     premiumSection
                     accountSection
                     userBackupSection
-                    contentCleanupSection
                     duplicatesSection
+                    ravelrySection
                     #if DEBUG
                     testingExportSection
                     #endif
@@ -75,14 +71,6 @@ struct SettingsView: View {
             } message: {
                 Text("This will permanently delete your account and all your data. This cannot be undone.")
             }
-            .confirmationDialog("Clear removed phrases", isPresented: $showClearJunkConfirm) {
-                Button("Clear All", role: .destructive) {
-                    junkStore.clearAll()
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: {
-                Text("Phrases will no longer be hidden from pattern steps. You can add them again by marking steps as \"Not part of pattern\".")
-            }
             .sheet(item: $exportFileItem) { item in
                 exportReadySheet(fileURL: item.url, isUserBackup: item.isUserBackup)
             }
@@ -92,11 +80,9 @@ struct SettingsView: View {
             .sheet(isPresented: $showMascotHelp) {
                 MascotHelpView()
             }
-            #if DEBUG
-            .sheet(isPresented: $showStoryDiagnostics) {
-                MascotStoryDiagnosticsView(storyStore: storyStore)
+            .sheet(isPresented: $showAIInfo) {
+                AIInfoView()
             }
-            #endif
             .onReceive(NotificationCenter.default.publisher(for: .ravelryOAuthCallback)) { notification in
                 guard let url = notification.object as? URL, let userId = auth.currentUserId else { return }
                 Task { await processRavelryCallback(url: url, userId: userId) }
@@ -298,26 +284,6 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.deepPlum.opacity(0.5))
                 .padding(.horizontal, Theme.Spacing.lg)
 
-            Button {
-                showStoryDiagnostics = true
-            } label: {
-                HStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "book.closed")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Theme.dustyBlue)
-                        .frame(width: 22)
-                    Text("Story progress diagnostics")
-                        .font(Theme.Typography.body)
-                        .foregroundStyle(Theme.deepPlum)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.deepPlum.opacity(0.2))
-                }
-                .padding(.vertical, Theme.Spacing.md)
-                .padding(.horizontal, Theme.Spacing.lg)
-            }
-            .buttonStyle(.plain)
         }
     }
 
@@ -384,7 +350,7 @@ struct SettingsView: View {
 
                 if let initial = userInitial {
                     Text(initial)
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.titleBold)
                         .foregroundStyle(Theme.softCoral)
                 } else {
                     SpriteMascotView.idle(size: 48)
@@ -395,7 +361,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 if let name = auth.displayName {
                     Text(name)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.sectionTitle)
                         .foregroundStyle(Theme.deepPlum)
                 }
 
@@ -451,11 +417,11 @@ struct SettingsView: View {
                     HStack(spacing: Theme.Spacing.sm) {
                         Image(systemName: "trash")
                             .font(.system(size: 14))
-                            .foregroundStyle(.red.opacity(0.6))
+                            .foregroundStyle(Theme.Semantic.error.opacity(0.6))
                             .frame(width: 22)
                         Text("Delete Account")
                             .font(Theme.Typography.body)
-                            .foregroundStyle(.red.opacity(0.6))
+                            .foregroundStyle(Theme.Semantic.error.opacity(0.6))
                         Spacer()
                     }
                     .padding(.vertical, Theme.Spacing.md)
@@ -607,9 +573,9 @@ struct SettingsView: View {
                                         }
                                         session.presentationContextProvider = RavelryAuthContextProvider.shared
                                         session.prefersEphemeralWebBrowserSession = false
-                                        await MainActor.run { session.start() }
+                                        session.start()
                                     } catch {
-                                        await MainActor.run { ravelryOAuthError = error.localizedDescription }
+                                        ravelryOAuthError = error.localizedDescription
                                     }
                                 }
                             }
@@ -645,57 +611,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Content cleanup (learned junk phrases)
-
-    private var contentCleanupSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeaderView(title: "Content cleanup")
-
-            VStack(alignment: .leading, spacing: 0) {
-                if junkStore.phrases.isEmpty {
-                    Text("Phrases you mark as \"Not part of pattern\" on a step will appear here. They’re hidden from future pattern steps.")
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.deepPlum.opacity(0.6))
-                        .padding(Theme.Spacing.lg)
-                } else {
-                    ForEach(junkStore.phrases, id: \.phrase) { item in
-                        HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-                            Text(item.phrase)
-                                .font(Theme.Typography.caption)
-                                .foregroundStyle(Theme.deepPlum)
-                                .lineLimit(2)
-                            Spacer(minLength: 8)
-                            Button {
-                                junkStore.removePhrase(item.phrase)
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(Theme.deepPlum.opacity(0.35))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.vertical, Theme.Spacing.sm)
-                        .padding(.horizontal, Theme.Spacing.lg)
-                        if item.phrase != junkStore.phrases.last?.phrase {
-                            Divider()
-                                .overlay(Theme.deepPlum.opacity(0.06))
-                                .padding(.leading, Theme.Spacing.lg)
-                        }
-                    }
-                    Button {
-                        showClearJunkConfirm = true
-                    } label: {
-                        Text("Clear all")
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.softCoral)
-                    }
-                    .padding(.vertical, Theme.Spacing.sm)
-                    .padding(.horizontal, Theme.Spacing.lg)
-                }
-            }
-            .borderedCard()
-        }
-    }
 
     // MARK: - Duplicate patterns
 
@@ -711,7 +626,7 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.softCoral)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Find duplicates")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .font(Theme.Typography.callout)
                             .foregroundStyle(Theme.deepPlum)
                         Text("See patterns saved more than once and remove extras.")
                             .font(Theme.Typography.caption)
@@ -743,6 +658,7 @@ struct SettingsView: View {
                     .padding(.leading, 54)
 
                 aboutRow(icon: "hammer.fill", label: "Built with", value: "SwiftUI + Supabase")
+                aboutRow(icon: "lock.shield.fill", label: "Your data", value: "Private & exportable")
             }
             .borderedCard()
 
@@ -879,6 +795,37 @@ struct SettingsView: View {
                     .padding(.horizontal, Theme.Spacing.lg)
                 }
                 .buttonStyle(.plain)
+
+                Divider()
+                    .overlay(Theme.deepPlum.opacity(0.06))
+                    .padding(.leading, 54)
+
+                Button {
+                    showAIInfo = true
+                } label: {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Theme.sageGreen)
+                            .frame(width: 22)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("How AI works in Pattern Vault")
+                                .font(Theme.Typography.body)
+                                .foregroundStyle(Theme.deepPlum)
+                            Text("What the AI does — and doesn't — do")
+                                .font(Theme.Typography.caption2)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.deepPlum.opacity(0.2))
+                    }
+                    .padding(.vertical, Theme.Spacing.md)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("How AI works in Pattern Vault")
             }
             .borderedCard()
             .tutorialAnchor(.settingsTutorialRow, isActive: currentStepAnchor == .settingsTutorialRow)
@@ -957,11 +904,11 @@ struct SettingsView: View {
             TappableMascotView(size: 72)
 
             Text("Pattern Vault")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.deepPlum.opacity(0.4))
 
             Text("Your craft companion")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(Theme.Typography.captionSemibold)
                 .foregroundStyle(Theme.deepPlum.opacity(0.25))
         }
         .frame(maxWidth: .infinity)
@@ -1090,84 +1037,3 @@ private struct DebugPatternEntry: Encodable {
         pdfUrl = p.pdfUrl
     }
 }
-
-#if DEBUG
-private struct MascotStoryDiagnosticsView: View {
-    @ObservedObject var storyStore: MascotStoryStore
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section("Story Chapters") {
-                    ForEach(storyStore.chapters) { chapter in
-                        HStack(spacing: Theme.Spacing.sm) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(chapter.title)
-                                    .font(Theme.Typography.body)
-                                    .foregroundStyle(Theme.deepPlum)
-                                Text(chapter.id)
-                                    .font(Theme.Typography.caption2)
-                                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
-                                Text(requirementText(for: chapter.trigger))
-                                    .font(Theme.Typography.caption2)
-                                    .foregroundStyle(Theme.deepPlum.opacity(0.6))
-                            }
-                            Spacer()
-                            let unlocked = storyStore.progress.unlockedIds.contains(chapter.id)
-                            Text(unlocked ? "Unlocked" : "Locked")
-                                .font(Theme.Typography.caption2)
-                                .foregroundStyle(unlocked ? Theme.sageGreen : Theme.softCoral)
-                            if !unlocked {
-                                Button("Unlock") {
-                                    storyStore.forceUnlock(chapterId: chapter.id)
-                                }
-                                .font(Theme.Typography.caption2)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-
-                Section("Actions") {
-                    Button("Reset story progress", role: .destructive) {
-                        storyStore.resetProgressForDebug()
-                    }
-                }
-            }
-            .navigationTitle("Story Diagnostics")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
-        }
-    }
-
-    private func requirementText(for trigger: MascotStoryTrigger) -> String {
-        switch trigger {
-        case .onboardingReturn:
-            return "Requirement: return to dashboard after onboarding"
-        case .streak3:
-            return "Requirement: reach a 3-day streak"
-        case .firstPatternComplete:
-            return "Requirement: complete 1 pattern"
-        case .streak7:
-            return "Requirement: reach a 7-day streak"
-        case .saved10:
-            return "Requirement: save 10 patterns"
-        case .firstNote:
-            return "Requirement: add your first project note"
-        case .completed3:
-            return "Requirement: complete 3 patterns"
-        case .saved25:
-            return "Requirement: save 25 patterns"
-        case .streak14:
-            return "Requirement: reach a 14-day streak"
-        case .seasonal:
-            return "Requirement: open app during seasonal months (Mar, Jun, Sep, Dec)"
-        }
-    }
-}
-#endif

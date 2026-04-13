@@ -24,6 +24,7 @@ private struct ConfettiPiece: Identifiable {
 
 private struct ConfettiOverlay: View {
     @State private var startTime = Date()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let colors: [Color] = [
         Theme.softCoral,
@@ -56,7 +57,7 @@ private struct ConfettiOverlay: View {
 
     var body: some View {
         GeometryReader { geo in
-            TimelineView(.animation(minimumInterval: 1/30)) { context in
+            TimelineView(.animation(minimumInterval: 1/30, paused: reduceMotion)) { context in
                 let t = context.date.timeIntervalSince(startTime)
                 ZStack(alignment: .topLeading) {
                     ForEach(Self.pieces) { piece in
@@ -130,7 +131,7 @@ struct CelebrationOverlayView: View {
                 }
                 VStack(spacing: Theme.Spacing.sm) {
                     Text(title)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.titleBold)
                         .foregroundStyle(Theme.deepPlum)
                         .multilineTextAlignment(.center)
                     if let subtitle {
@@ -146,7 +147,7 @@ struct CelebrationOverlayView: View {
                     requestDismiss()
                 } label: {
                     Text("Nice!")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .font(Theme.Typography.bodySemibold)
                         .foregroundStyle(.white)
                         .padding(.horizontal, Theme.Spacing.xxl)
                         .padding(.vertical, Theme.Spacing.sm)

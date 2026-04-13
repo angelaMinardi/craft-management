@@ -29,6 +29,7 @@ struct OnboardingView: View {
     @State private var showDiscountOffer = false
     @State private var notificationStatus: String?
     @FocusState private var focusedField: Field?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let totalPages = 5
 
@@ -80,9 +81,9 @@ struct OnboardingView: View {
                     summaryPage.tag(4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.spring(response: 0.45, dampingFraction: 0.82), value: currentPage)
+                .animation(reduceMotion ? .none : .spring(response: 0.45, dampingFraction: 0.82), value: currentPage)
                 .offset(y: isEditingField ? -56 : 0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.82), value: isEditingField)
+                .animation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.82), value: isEditingField)
 
                 // Page dots
                 HStack(spacing: 6) {
@@ -90,7 +91,7 @@ struct OnboardingView: View {
                         Circle()
                             .fill(index == currentPage ? Theme.softCoral : Theme.deepPlum.opacity(0.18))
                             .frame(width: index == currentPage ? 8 : 6, height: 6)
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentPage)
+                            .animation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.7), value: currentPage)
                     }
                 }
                 .padding(.bottom, Theme.Spacing.lg)
@@ -155,13 +156,13 @@ struct OnboardingView: View {
                     Capsule()
                         .fill(Theme.softCoral)
                         .frame(width: 72 * progressFraction)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
+                        .animation(reduceMotion ? .none : .spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
                 }
 
             Spacer()
 
             Button("Skip") {
-                withAnimation(.easeOut(duration: 0.25)) {
+                withAnimation(reduceMotion ? .none : .easeOut(duration: 0.25)) {
                     GrowthOrchestrator.shared.markOnboardingCompleted()
                     GrowthOrchestrator.shared.registerFrictionEvent(.interruptionHeavyFlow)
                     AnalyticsService.shared.track(.onboardingSkipped, properties: [
@@ -259,7 +260,7 @@ struct OnboardingView: View {
 
             VStack(spacing: Theme.Spacing.md) {
                 Text("Meet Your Crafting\nCompanion.")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.largeTitle)
                     .foregroundStyle(Theme.deepPlum)
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
@@ -308,7 +309,7 @@ struct OnboardingView: View {
 
             VStack(spacing: Theme.Spacing.md) {
                 Text("Companion Named!")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.largeTitle)
                     .foregroundStyle(Theme.deepPlum)
                     .offset(y: titleAppeared ? 0 : 16)
                     .opacity(titleAppeared ? 1 : 0)
@@ -391,7 +392,7 @@ struct OnboardingView: View {
 
             VStack(spacing: Theme.Spacing.md) {
                 Text("Tell Us About\nYour Craft.")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.largeTitle)
                     .foregroundStyle(Theme.deepPlum)
                     .multilineTextAlignment(.center)
                     .offset(y: titleAppeared ? 0 : 16)
@@ -405,7 +406,7 @@ struct OnboardingView: View {
                             toggleCraft(craft)
                         } label: {
                             Text(craft)
-                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .font(Theme.Typography.cardTitle)
                                 .foregroundStyle(selectedCrafts.contains(craft) ? .white : Theme.deepPlum)
                                 .padding(.horizontal, 20)
                                 .padding(.vertical, 12)
@@ -445,7 +446,7 @@ struct OnboardingView: View {
 
             VStack(spacing: Theme.Spacing.md) {
                 Text("Your Stash & Goals.")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.largeTitle)
                     .foregroundStyle(Theme.deepPlum)
                     .offset(y: titleAppeared ? 0 : 16)
                     .opacity(titleAppeared ? 1 : 0)
@@ -498,6 +499,24 @@ struct OnboardingView: View {
                     .foregroundStyle(Theme.deepPlum.opacity(0.45))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Theme.Spacing.xl)
+
+                // Trust callout
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(Theme.sageGreen)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Your patterns are yours")
+                            .font(Theme.Typography.bodySemibold)
+                            .foregroundStyle(Theme.deepPlum)
+                        Text("Everything you save is private and encrypted. Export your full library anytime. We never lock patterns behind a subscription.")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    }
+                }
+                .padding(Theme.Spacing.md)
+                .borderedCard()
+                .padding(.horizontal, Theme.Spacing.xl)
             }
 
             Spacer()
@@ -514,7 +533,7 @@ struct OnboardingView: View {
                 // Analyzing state
                 VStack(spacing: Theme.Spacing.xl) {
                     Text("Your Vault is\nAlmost Ready!")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.largeTitle)
                         .foregroundStyle(Theme.deepPlum)
                         .multilineTextAlignment(.center)
 
@@ -532,7 +551,7 @@ struct OnboardingView: View {
                             .stroke(Theme.sageGreen, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                             .frame(width: 80, height: 80)
                             .rotationEffect(.degrees(-90))
-                            .animation(.easeInOut(duration: 0.3), value: analysisProgress)
+                            .animation(reduceMotion ? .none : .easeInOut(duration: 0.3), value: analysisProgress)
                     }
 
                     mascotHero(size: 120, style: .thinking)
@@ -543,7 +562,7 @@ struct OnboardingView: View {
 
                 VStack(spacing: Theme.Spacing.md) {
                     Text("Your Vault & Goals!")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.largeTitle)
                         .foregroundStyle(Theme.deepPlum)
                         .offset(y: titleAppeared ? 0 : 16)
                         .opacity(titleAppeared ? 1 : 0)
@@ -580,7 +599,7 @@ struct OnboardingView: View {
                 Spacer()
 
                 Text("Your Companion Named.")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.largeTitle)
                     .foregroundStyle(Theme.deepPlum)
 
                 SpriteMascotView.jumping(size: 200) {
@@ -611,7 +630,7 @@ struct OnboardingView: View {
                         mascotHero(size: 120, style: .idle)
 
                         Text("Unlock Pattern\nVault Premium.")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(Theme.Typography.largeTitle)
                             .foregroundStyle(Theme.deepPlum)
                             .multilineTextAlignment(.center)
                     }
@@ -629,7 +648,7 @@ struct OnboardingView: View {
                             .foregroundStyle(Theme.deepPlum.opacity(0.6))
 
                         Text("$19.99/year")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .font(Theme.Typography.titleBold)
                             .foregroundStyle(Theme.deepPlum)
                     }
                     .frame(maxWidth: .infinity)
@@ -715,13 +734,13 @@ struct OnboardingView: View {
                 mascotHero(size: 100, style: .waving)
 
                 Text("Wait,\nDon't Miss Out.")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.largeTitle)
                     .foregroundStyle(Theme.deepPlum)
                     .multilineTextAlignment(.center)
 
                 // Discount badge
                 Text("60% OFF")
-                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+                    .font(Theme.Typography.titleBold)
                     .foregroundStyle(.white)
                     .padding(.horizontal, 28)
                     .padding(.vertical, 12)
@@ -852,7 +871,7 @@ struct OnboardingView: View {
     }
 
     private func advanceToNextPage() {
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {
+        withAnimation(reduceMotion ? .none : .spring(response: 0.45, dampingFraction: 0.8)) {
             currentPage = min(currentPage + 1, totalPages - 1)
         }
     }
@@ -902,6 +921,13 @@ struct OnboardingView: View {
         subtitleAppeared = false
         buttonAppeared = false
 
+        if reduceMotion {
+            mascotBounce = true
+            titleAppeared = true
+            subtitleAppeared = true
+            buttonAppeared = true
+            return
+        }
         withAnimation(.spring(response: 0.55, dampingFraction: 0.72).delay(0.08)) {
             mascotBounce = true
         }

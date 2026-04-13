@@ -16,12 +16,11 @@ struct DashboardView: View {
     var onViewAllPatterns: (() -> Void)? = nil
     @State private var showPaywall = false
     @ObservedObject private var mascotStore = MascotInteractionStore.shared
-    @ObservedObject private var storyStore = MascotStoryStore.shared
     @State private var showMascotRename = false
     @State private var mascotNameDraft = ""
     @State private var showStore = false
     @State private var showHelp = false
-    @State private var showStoryLog = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var lastSavedCount = 0
     @State private var lastCompletedCount = 0
     @State private var showEnrichingAlert = false
@@ -44,10 +43,7 @@ struct DashboardView: View {
                 }
                 .padding(.horizontal, Theme.Spacing.lg)
                 .padding(.top, Theme.Spacing.lg)
-                .padding(.bottom, 100)
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear.frame(height: 84)
+                .padding(.bottom, Theme.Spacing.xl)
             }
             .background(seamlessBackground)
             .navigationTitle("Pattern Vault")
@@ -65,20 +61,6 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showHelp) {
                 MascotHelpView()
-            }
-            .sheet(isPresented: $showStoryLog) {
-                MascotStoryLogView(storyStore: storyStore, mascotName: mascotStore.mascotName) { chapter in
-                    storyStore.showingChapterId = chapter.id
-                }
-            }
-            .sheet(item: Binding<MascotStoryChapter?>(
-                get: { storyStore.chapter(for: storyStore.showingChapterId) },
-                set: { _ in storyStore.showingChapterId = nil }
-            )) { chapter in
-                MascotStoryCutsceneView(chapter: chapter, mascotName: mascotStore.mascotName) {
-                    storyStore.markViewed(id: chapter.id)
-                    storyStore.showingChapterId = nil
-                }
             }
             .alert("Still Processing", isPresented: $showEnrichingAlert) {
                 Button("Retry Now") {
@@ -101,31 +83,6 @@ struct DashboardView: View {
             } message: {
                 Text("This name appears in dashboard encouragement.")
             }
-            .overlay(alignment: .top) {
-                if storyStore.showUnlockBanner, let pending = storyStore.chapter(for: storyStore.progress.pendingId) {
-                    Button {
-                        storyStore.openPendingChapter()
-                    } label: {
-                        HStack {
-                            Image(systemName: "sparkles")
-                            Text("Story unlocked: \(pending.title)")
-                                .lineLimit(1)
-                            Spacer()
-                            Text("Play")
-                                .font(.caption.bold())
-                        }
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.vertical, Theme.Spacing.sm)
-                        .background(Theme.deepPlum)
-                        .clipShape(Capsule())
-                        .padding(.top, 6)
-                        .padding(.horizontal, Theme.Spacing.lg)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
             .task {
                 if store.patterns.isEmpty, let userId = auth.currentUserId {
                     await store.load(userId: userId)
@@ -133,7 +90,6 @@ struct DashboardView: View {
                 mascotStore.syncFallbackCounts(patterns: store.patterns)
                 lastSavedCount = store.patterns.count
                 lastCompletedCount = store.completedCount
-                evaluateStoryUnlocks()
             }
             .onChange(of: store.patterns.count) { _, _ in
                 mascotStore.syncFallbackCounts(patterns: store.patterns)
@@ -141,15 +97,12 @@ struct DashboardView: View {
                     mascotStore.rewardForPatternSaved()
                 }
                 lastSavedCount = store.patterns.count
-                evaluateStoryUnlocks()
             }
-            .onChange(of: mascotStore.streakCount) { _, _ in evaluateStoryUnlocks() }
             .onChange(of: store.completedCount) { _, newValue in
                 if newValue > lastCompletedCount {
                     mascotStore.rewardForPatternCompletion()
                 }
                 lastCompletedCount = newValue
-                evaluateStoryUnlocks()
             }
         }
     }
@@ -157,9 +110,31 @@ struct DashboardView: View {
     // MARK: - Loading & empty
 
     private var loadingSection: some View {
-        VStack(spacing: Theme.Spacing.xl) {
-            Spacer().frame(height: 60)
-            SpriteMascotView.thinking(size: 100)
+        VStack(spacing: Theme.Spacing.lg) {
+            Spacer().frame(height: 20)
+            // Skeleton stat cards
+            HStack(spacing: Theme.Spacing.md) {
+                ForEach(0..<3) { _ in
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                        .fill(Theme.warmCream)
+                        .frame(height: 80)
+                        .shimmer()
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+
+            // Skeleton pattern cards
+            HStack(spacing: Theme.Spacing.md) {
+                ForEach(0..<2) { _ in
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                        .fill(Theme.warmCream)
+                        .frame(height: 180)
+                        .shimmer()
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+
+            SpriteMascotView.thinking(size: 80)
                 .accessibilityHidden(true)
             Text("Loading your vault...")
                 .font(Theme.Typography.body)
@@ -167,7 +142,7 @@ struct DashboardView: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Mascot thinking. Loading your vault.")
+        .accessibilityLabel("Loading your vault.")
     }
 
     private var dashboardContent: some View {
@@ -196,20 +171,6 @@ struct DashboardView: View {
                     }
                     .padding(10)
                 }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                Button {
-                    showStoryLog = true
-                } label: {
-                    Label("Story", systemImage: "book.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Theme.deepPlum.opacity(0.82))
-                        .clipShape(Capsule())
-                }
-                .padding(10)
             }
             .tutorialAnchor(.homeVault, isActive: currentStepAnchor == .homeVault)
             .padding(.bottom, -Theme.Spacing.sm)
@@ -267,7 +228,7 @@ struct DashboardView: View {
 
             VStack(spacing: Theme.Spacing.lg) {
                 Text("Your next win starts here")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.title)
                     .foregroundStyle(Theme.deepPlum)
 
                 Text("Save one pattern from Safari or any app.\nYou'll be ready to track progress right away.")
@@ -361,16 +322,6 @@ struct DashboardView: View {
         return "Small updates now make your next session easier."
     }
 
-    private func evaluateStoryUnlocks() {
-        storyStore.evaluateUnlocks(
-            hasSeenOnboarding: UserDefaults.standard.bool(forKey: "hasSeenOnboarding"),
-            streak: mascotStore.streakCount,
-            savedCount: store.patterns.count,
-            completedCount: store.completedCount,
-            hasAnyNote: UserDefaults.standard.bool(forKey: "mascot_has_any_note")
-        )
-    }
-
     // MARK: - Stats (bordered cards, Timespent-style)
 
     private var statsSection: some View {
@@ -424,10 +375,12 @@ struct DashboardView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 Text("\(count)")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.largeTitle)
                     .foregroundStyle(Theme.deepPlum)
+                    .contentTransition(.numericText())
+                    .animation(reduceMotion ? .none : Theme.Motion.spring, value: count)
                 Text(title)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(Theme.Typography.captionSemibold)
                     .foregroundStyle(Theme.deepPlum.opacity(0.5))
             }
 

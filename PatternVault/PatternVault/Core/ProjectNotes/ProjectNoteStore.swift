@@ -19,16 +19,23 @@ final class ProjectNoteStore: ObservableObject {
     var progressUpdateCount: Int { notes.filter { $0.noteType == .progressUpdate }.count }
 
     func load(patternId: UUID) async {
+        let cacheKey = "notes_\(patternId.uuidString)"
+        if let cached: [ProjectNote] = OfflineCacheService.load(key: cacheKey, as: [ProjectNote].self) {
+            notes = cached
+        }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
         do {
             notes = try await repo.fetchNotes(patternId: patternId)
+            OfflineCacheService.save(notes, key: cacheKey)
         } catch {
             #if DEBUG
             print("[ProjectNoteStore] load failed: \(error)")
             #endif
-            errorMessage = "Could not load notes. Please try again."
+            if notes.isEmpty {
+                errorMessage = "Could not load notes. Please try again."
+            }
         }
     }
 
@@ -38,7 +45,8 @@ final class ProjectNoteStore: ObservableObject {
         noteType: ProjectNoteType,
         content: String,
         photoData: Data?,
-        durationMinutes: Int? = nil
+        durationMinutes: Int? = nil,
+        stepIndex: Int? = nil
     ) async -> Bool {
         errorMessage = nil
         do {
@@ -60,7 +68,8 @@ final class ProjectNoteStore: ObservableObject {
                 noteType: noteType,
                 content: content,
                 photoUrl: photoUrl,
-                durationMinutes: durationMinutes
+                durationMinutes: durationMinutes,
+                stepIndex: stepIndex
             )
             notes.insert(note, at: 0)
             return true

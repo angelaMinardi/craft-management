@@ -13,13 +13,14 @@ struct MascotDashboardPanelView: View {
     var showLabels: Bool = false
 
     @State private var isDropTargeted = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: Theme.Spacing.sm) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(store.mascotName)
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.largeTitle)
                         .foregroundStyle(Theme.deepPlum)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -27,14 +28,15 @@ struct MascotDashboardPanelView: View {
                     if showLabels {
                         Text("Bond level")
                             .font(Theme.Typography.caption2)
-                            .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                            .foregroundStyle(Theme.Semantic.textMuted)
                     }
                 }
                 Spacer()
                 Button(action: onOpenSettings) {
                     Image(systemName: "gearshape.fill")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Theme.deepPlum.opacity(0.9))
+                        .foregroundStyle(Theme.Semantic.textPrimary)
+                        .frame(minWidth: 44, minHeight: 44)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Rename mascot")
@@ -45,7 +47,7 @@ struct MascotDashboardPanelView: View {
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity, minHeight: 290, maxHeight: 290)
-                    .offset(y: -22)
+                    .offset(y: -52)
                     .mask(
                         LinearGradient(
                             colors: [.white, .white, .white.opacity(0.8), .white.opacity(0.5)],
@@ -80,11 +82,12 @@ struct MascotDashboardPanelView: View {
                 }
 
                 mascotView
-                    .frame(height: 170)
-                    .padding(.bottom, 10)
-                    .offset(y: 16)
+                    .frame(width: 160, height: 160)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 44)
                     .scaleEffect(isDropTargeted ? 1.04 : 1.0)
-                    .animation(.easeInOut(duration: 0.2), value: isDropTargeted)
+                    .animation(reduceMotion ? .none : .easeInOut(duration: 0.2), value: isDropTargeted)
+                    .animation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.8), value: store.pose)
 
                 utilityRow
                     .padding(.horizontal, Theme.Spacing.md)
@@ -110,7 +113,7 @@ struct MascotDashboardPanelView: View {
             if showLabels {
                 Text("Tap a treat to feed \(store.mascotName)")
                     .font(Theme.Typography.caption2)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                    .foregroundStyle(Theme.Semantic.textMuted)
             }
 
             if let msg = store.transientMessage {
@@ -140,9 +143,9 @@ struct MascotDashboardPanelView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "storefront.fill")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Theme.deepPlum.opacity(0.8))
+                            .foregroundStyle(Theme.Semantic.textSecondary)
                         Text("Store")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .font(Theme.Typography.callout)
                             .foregroundStyle(Theme.deepPlum.opacity(0.85))
                     }
                 }
@@ -156,7 +159,7 @@ struct MascotDashboardPanelView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.softCoral)
                 Text("\(store.streakCount)")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.sectionTitle)
                     .foregroundStyle(Theme.deepPlum)
             }
             .padding(.horizontal, 10)
@@ -185,20 +188,21 @@ struct MascotDashboardPanelView: View {
         .accessibilityLabel("Hearts \(store.heartsCurrent) out of \(store.heartsMax)")
     }
 
+    private let mascotSize: CGFloat = 150
+
     @ViewBuilder
     private var mascotView: some View {
         switch store.pose {
         case .idle:
-            SpriteMascotView.idle(size: 140)
+            SpriteMascotView.idle(size: mascotSize)
         case .knitting:
-            SpriteMascotView.knitting(size: 140)
+            SpriteMascotView.knitting(size: mascotSize)
         case .jumping:
-            // Jump frames read visually smaller; oversize so the mascot keeps perceived size.
-            SpriteMascotView.jumping(size: 170)
+            SpriteMascotView.jumping(size: mascotSize)
         case .pouty:
-            SpriteMascotView.pouty(size: 140)
+            SpriteMascotView.pouty(size: mascotSize)
         case .petting:
-            SpriteMascotView.petting(size: 156)
+            SpriteMascotView.petting(size: mascotSize)
         }
     }
 
@@ -217,8 +221,8 @@ struct MascotDashboardPanelView: View {
                             .scaledToFit()
                             .frame(width: 18, height: 18)
                         Text("\(qty)")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                            .font(Theme.Typography.footnoteSemibold)
+                            .foregroundStyle(Theme.Semantic.textSecondary)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)

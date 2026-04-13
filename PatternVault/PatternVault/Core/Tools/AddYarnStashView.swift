@@ -19,7 +19,11 @@ struct AddYarnStashView: View {
     @State private var skeinsOwned = "1"
     @State private var location = ""
     @State private var notes = ""
+    @State private var barcode = ""
+    @State private var dyeLot = ""
+    @State private var fiberContent = ""
     @State private var isSaving = false
+    @State private var showScanner = false
 
     private var isEditing: Bool { existingItem != nil }
     private var canSave: Bool {
@@ -30,8 +34,18 @@ struct AddYarnStashView: View {
         NavigationStack {
             Form {
                 Section("Item") {
-                    TextField("Brand or name", text: $brandName)
-                        .textInputAutocapitalization(.words)
+                    HStack {
+                        TextField("Brand or name", text: $brandName)
+                            .textInputAutocapitalization(.words)
+                        Button {
+                            showScanner = true
+                        } label: {
+                            Image(systemName: "barcode.viewfinder")
+                                .font(.system(size: 20))
+                                .foregroundStyle(Theme.sageGreen)
+                        }
+                        .buttonStyle(.plain)
+                    }
                     TextField("Color (optional)", text: $colorName)
                         .textInputAutocapitalization(.words)
                     TextField("Weight or spec (optional)", text: $weight, prompt: Text("e.g. DK, thread count, fabric weight"))
@@ -46,7 +60,18 @@ struct AddYarnStashView: View {
                 }
 
                 Section("Details (optional)") {
+                    TextField("Dye lot", text: $dyeLot)
+                    TextField("Fiber content (e.g. 80% wool, 20% nylon)", text: $fiberContent)
                     TextField("Location (e.g. closet, bin)", text: $location)
+                    if !barcode.isEmpty {
+                        HStack {
+                            Image(systemName: "barcode")
+                                .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                            Text(barcode)
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                        }
+                    }
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(2...6)
                 }
@@ -77,8 +102,16 @@ struct AddYarnStashView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(!canSave)
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") { save() }
+                            .disabled(!canSave)
+                    }
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
                 }
             }
             .onAppear {
@@ -90,6 +123,15 @@ struct AddYarnStashView: View {
                     skeinsOwned = item.skeinsOwned == 0 ? "" : "\(item.skeinsOwned)"
                     location = item.location ?? ""
                     notes = item.notes ?? ""
+                    barcode = item.barcode ?? ""
+                    dyeLot = item.dyeLot ?? ""
+                    fiberContent = item.fiberContent ?? ""
+                }
+            }
+            .sheet(isPresented: $showScanner) {
+                BarcodeScannerView { code in
+                    barcode = code
+                    showScanner = false
                 }
             }
         }
@@ -118,6 +160,9 @@ struct AddYarnStashView: View {
                 updated.skeinsOwned = max(0, skeins)
                 updated.location = location.isEmpty ? nil : location.trimmingCharacters(in: .whitespaces)
                 updated.notes = notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces)
+                updated.barcode = barcode.isEmpty ? nil : barcode.trimmingCharacters(in: .whitespaces)
+                updated.dyeLot = dyeLot.isEmpty ? nil : dyeLot.trimmingCharacters(in: .whitespaces)
+                updated.fiberContent = fiberContent.isEmpty ? nil : fiberContent.trimmingCharacters(in: .whitespaces)
                 await stashStore.update(updated)
             } else {
                 await stashStore.add(userId: userId, brandName: brand, colorName: colorName.isEmpty ? nil : colorName.trimmingCharacters(in: .whitespaces), weight: weight.isEmpty ? nil : weight.trimmingCharacters(in: .whitespaces), yardagePerSkein: ypp, skeinsOwned: max(0, skeins), location: location.isEmpty ? nil : location.trimmingCharacters(in: .whitespaces), notes: notes.isEmpty ? nil : notes.trimmingCharacters(in: .whitespaces))

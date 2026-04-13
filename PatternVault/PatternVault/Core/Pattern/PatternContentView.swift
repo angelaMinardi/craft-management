@@ -32,53 +32,33 @@ struct PatternContentView: View {
     @ObservedObject private var rowCounterStore = RowCounterStore.shared
     @State private var configuringImage: PatternImage?
 
-    // MARK: - Reading bar
-    @AppStorage private var readingBarFraction: Double
-    @State private var isDraggingBar = false
-
-    init(pattern: Pattern, store: PatternStore) {
-        self.pattern = pattern
-        self.store = store
-        self._readingBarFraction = AppStorage(
-            wrappedValue: 0.3,
-            "readingBarFraction_\(pattern.id.uuidString)"
-        )
-    }
-
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .bottom) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                        metadataSection
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    metadataSection
 
-                        if !imageStore.images.isEmpty {
-                            photosFromPatternSection
-                        }
-
-                        if isEditMode {
-                            editModeContent
-                                .transition(.opacity)
-                        } else {
-                            normalModeContent
-                                .transition(.opacity)
-                        }
+                    if !imageStore.images.isEmpty {
+                        photosFromPatternSection
                     }
-                    .padding(.vertical, Theme.Spacing.lg)
-                    // Extra bottom padding when floating bar is visible
-                    .padding(.bottom, isEditMode && !removedBlockIds.isEmpty ? 80 : 0)
-                }
-                .background(Theme.warmCream)
 
-                // Floating save bar
-                if isEditMode && !removedBlockIds.isEmpty {
-                    floatingSaveBar
+                    if isEditMode {
+                        editModeContent
+                            .transition(.opacity)
+                    } else {
+                        normalModeContent
+                            .transition(.opacity)
+                    }
                 }
+                .padding(.vertical, Theme.Spacing.lg)
+                // Extra bottom padding when floating bar is visible
+                .padding(.bottom, isEditMode && !removedBlockIds.isEmpty ? 80 : 0)
+            }
+            .background(Theme.warmCream)
 
-                // Reading bar — draggable horizontal highlight line
-                if !isEditMode {
-                    readingBar(in: geo)
-                }
+            // Floating save bar
+            if isEditMode && !removedBlockIds.isEmpty {
+                floatingSaveBar
             }
         }
         .navigationTitle("Pattern Content")
@@ -530,45 +510,6 @@ struct PatternContentView: View {
     }
 
     // MARK: - Floating Save Bar
-
-    // MARK: - Reading Bar
-
-    @ViewBuilder
-    private func readingBar(in geo: GeometryProxy) -> some View {
-        let barY = geo.size.height * readingBarFraction
-
-        ZStack {
-            // Semi-transparent highlight band
-            Rectangle()
-                .fill(Theme.honey.opacity(isDraggingBar ? 0.45 : 0.28))
-                .frame(height: 28)
-                .frame(maxWidth: .infinity)
-
-            // Drag handle
-            HStack {
-                Spacer()
-                Capsule()
-                    .fill(Theme.honey.opacity(0.8))
-                    .frame(width: 36, height: 5)
-                    .padding(.trailing, Theme.Spacing.lg)
-            }
-        }
-        .position(x: geo.size.width / 2, y: barY)
-        .gesture(
-            DragGesture(minimumDistance: 1)
-                .onChanged { value in
-                    isDraggingBar = true
-                    let newY = min(geo.size.height - 20, max(20, barY + value.translation.height))
-                    readingBarFraction = Double(newY / geo.size.height)
-                }
-                .onEnded { _ in
-                    isDraggingBar = false
-                }
-        )
-        .accessibilityLabel("Reading bar")
-        .accessibilityHint("Drag to mark your place in the pattern")
-        .accessibilityValue("Position \(Int(readingBarFraction * 100))%")
-    }
 
     private var floatingSaveBar: some View {
         HStack(spacing: Theme.Spacing.lg) {

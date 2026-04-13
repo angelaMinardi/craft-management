@@ -60,6 +60,8 @@
 	<string>Pattern Vault uses the microphone so you can say your current row or round number hands-free while crafting.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Pattern Vault uses speech recognition to hear your row or round number and update your progress automatically.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Pattern Vault uses the camera to scan yarn barcodes and quickly fill stash details.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

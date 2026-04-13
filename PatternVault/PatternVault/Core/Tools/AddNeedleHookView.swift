@@ -70,8 +70,12 @@ struct AddNeedleHookView: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(!canSave)
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") { save() }
+                            .disabled(!canSave)
+                    }
                 }
             }
             .onAppear {

@@ -20,7 +20,9 @@ enum GeminiMultimodalRequest {
     static func buildRequestBody(
         prompt: String,
         images: [ImageInput],
-        maxOutputTokens: Int = 8192
+        maxOutputTokens: Int = 8192,
+        thinkingBudget: Int = 0,
+        temperature: Double? = nil
     ) -> [String: Any] {
         var parts: [[String: Any]] = []
         parts.append(["text": prompt])
@@ -35,28 +37,40 @@ enum GeminiMultimodalRequest {
             ])
         }
 
+        var generationConfig: [String: Any] = [
+            "responseMimeType": "application/json",
+            "maxOutputTokens": maxOutputTokens,
+            "thinkingConfig": ["thinkingBudget": thinkingBudget]
+        ]
+        if let temperature {
+            generationConfig["temperature"] = temperature
+        }
+
         return [
             "contents": [["parts": parts]],
-            "generationConfig": [
-                "responseMimeType": "application/json",
-                "maxOutputTokens": maxOutputTokens,
-                "thinkingConfig": ["thinkingBudget": 0]
-            ]
+            "generationConfig": generationConfig
         ]
     }
 
     /// Builds a text-only request body (no images). Convenience for when no images are available.
     static func buildTextOnlyRequestBody(
         prompt: String,
-        maxOutputTokens: Int = 4096
+        maxOutputTokens: Int = 4096,
+        thinkingBudget: Int = 0,
+        temperature: Double? = nil
     ) -> [String: Any] {
+        var generationConfig: [String: Any] = [
+            "responseMimeType": "application/json",
+            "maxOutputTokens": maxOutputTokens,
+            "thinkingConfig": ["thinkingBudget": thinkingBudget]
+        ]
+        if let temperature {
+            generationConfig["temperature"] = temperature
+        }
+
         return [
             "contents": [["parts": [["text": prompt]]]],
-            "generationConfig": [
-                "responseMimeType": "application/json",
-                "maxOutputTokens": maxOutputTokens,
-                "thinkingConfig": ["thinkingBudget": 0]
-            ]
+            "generationConfig": generationConfig
         ]
     }
 

@@ -255,6 +255,12 @@ struct PDFViewerView: View {
     }
 
     private func loadDocument() async {
+        // Try local cache first for offline access
+        if let cachedData = PDFCacheService.cachedPDF(for: patternId, sourceURL: url),
+           let cachedDoc = PDFDocument(data: cachedData) {
+            self.document = cachedDoc
+            return
+        }
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
             if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
@@ -265,6 +271,7 @@ struct PDFViewerView: View {
                 errorMessage = "Could not parse this PDF."
                 return
             }
+            PDFCacheService.cachePDF(data: data, patternId: patternId, sourceURL: url)
             self.document = document
         } catch {
             errorMessage = "Could not load PDF. Check your connection and try again."
@@ -814,6 +821,7 @@ struct ExtractedChartWorkspaceView: View {
     @State private var pendingNoteBody = ""
     @State private var placementKind: ChartSurfaceAnnotation.Kind?
     @State private var showAnnotations = true
+    @State private var showKnittingMode = false
 
     init(
         highlight: ChartHighlight,
@@ -894,11 +902,35 @@ struct ExtractedChartWorkspaceView: View {
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        persistChanges()
-                        dismiss()
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Menu {
+                            toolsMenuContent
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.title3)
+                        }
+                        Button("Save") {
+                            persistChanges()
+                            dismiss()
+                        }
                     }
                 }
+                ToolbarItem(placement: .bottomBar) {
+                    Button {
+                        showKnittingMode = true
+                    } label: {
+                        Label("Knitting Mode", systemImage: "hand.point.up.left.and.text")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Theme.sageGreen)
+                }
+            }
+            .fullScreenCover(isPresented: $showKnittingMode) {
+                InteractiveChartGridView(
+                    highlight: workingHighlight,
+                    patternId: patternId,
+                    makeId: makeId
+                )
             }
             .sheet(isPresented: $showAddNoteSheet) {
                 NavigationStack {
@@ -1029,149 +1061,90 @@ struct ExtractedChartWorkspaceView: View {
 
     @ViewBuilder
     private var chartToolbar: some View {
-        VStack(spacing: Theme.Spacing.sm) {
-            HStack(spacing: Theme.Spacing.md) {
-                rowColumnControl(
-                    title: "Row",
-                    current: rowValue,
-                    total: max(1, workingHighlight.rows),
-                    decrement: { workingHighlight.currentRow = max(1, rowValue - 1) },
-                    increment: { workingHighlight.currentRow = min(max(1, workingHighlight.rows), rowValue + 1) }
-                )
-                rowColumnControl(
-                    title: "Col",
-                    current: columnValue,
-                    total: max(1, workingHighlight.columns),
-                    decrement: { workingHighlight.currentColumn = max(1, columnValue - 1) },
-                    increment: { workingHighlight.currentColumn = min(max(1, workingHighlight.columns), columnValue + 1) }
-                )
-            }
+        HStack(spacing: Theme.Spacing.md) {
+            rowColumnControl(
+                title: "Row",
+                current: rowValue,
+                total: max(1, workingHighlight.rows),
+                decrement: { workingHighlight.currentRow = max(1, rowValue - 1) },
+                increment: { workingHighlight.currentRow = min(max(1, workingHighlight.rows), rowValue + 1) }
+            )
+            rowColumnControl(
+                title: "Col",
+                current: columnValue,
+                total: max(1, workingHighlight.columns),
+                decrement: { workingHighlight.currentColumn = max(1, columnValue - 1) },
+                increment: { workingHighlight.currentColumn = min(max(1, workingHighlight.columns), columnValue + 1) }
+            )
+        }
+    }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    Button {
-                        canvasController.undo()
-                    } label: {
-                        Label("Undo", systemImage: "arrow.uturn.backward")
-                            .font(Theme.Typography.caption)
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(!canvasController.canUndo)
+    // MARK: - Tools Menu (accessible from navigation bar ...)
 
-                    Button {
-                        canvasController.redo()
-                    } label: {
-                        Label("Redo", systemImage: "arrow.uturn.forward")
-                            .font(Theme.Typography.caption)
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(!canvasController.canRedo)
-
-                    Button("Clear Ink") {
-                        drawingData = nil
-                        canvasController.clear()
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button {
-                        placeAnnotationImmediately(kind: .pin)
-                    } label: {
-                        Label("Pin", systemImage: "mappin.circle.fill")
-                            .font(Theme.Typography.caption)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button {
-                        showAddNoteSheet = true
-                    } label: {
-                        Label("Note", systemImage: "note.text.badge.plus")
-                            .font(Theme.Typography.caption)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Menu {
-                        Button("Increase", systemImage: "plus.circle.fill") {
-                            placeAnnotationImmediately(kind: .increase)
-                        }
-                        Button("Decrease", systemImage: "minus.circle.fill") {
-                            placeAnnotationImmediately(kind: .decrease)
-                        }
-                        Button("Repeat", systemImage: "arrow.clockwise.circle.fill") {
-                            placeAnnotationImmediately(kind: .repeatSection)
-                        }
-                        Button("Caution", systemImage: "exclamationmark.triangle.fill") {
-                            placeAnnotationImmediately(kind: .caution)
-                        }
-                    } label: {
-                        Label("Marker", systemImage: "tag.circle")
-                            .font(Theme.Typography.caption)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button("Align Grid") {
-                        showGridFitSheet = true
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Theme.softCoral)
-
-                    Button {
-                        showRefineSheet = true
-                    } label: {
-                        Label(isRefining ? "Refining..." : "Refine", systemImage: "sparkles")
-                            .font(Theme.Typography.caption)
-                    }
-                    .buttonStyle(.bordered)
-                    .disabled(isRefining)
-
-                    Button {
-                        showAnnotations.toggle()
-                    } label: {
-                        Label(showAnnotations ? "Hide markers" : "Show markers", systemImage: showAnnotations ? "eye.slash" : "eye")
-                            .font(Theme.Typography.caption)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-
-            HStack(spacing: Theme.Spacing.md) {
-                gridAdjustControl(
-                    title: "Grid rows",
-                    value: max(1, workingHighlight.rows),
-                    decrement: {
+    private var toolsMenuContent: some View {
+        Group {
+            // Grid adjustment
+            Section("Grid") {
+                Menu("Rows: \(workingHighlight.rows)") {
+                    Button("Add Row") { workingHighlight.rows = min(999, workingHighlight.rows + 1) }
+                    Button("Remove Row") {
                         workingHighlight.rows = max(1, workingHighlight.rows - 1)
                         workingHighlight.currentRow = min(max(1, workingHighlight.currentRow), workingHighlight.rows)
-                    },
-                    increment: {
-                        workingHighlight.rows = min(999, workingHighlight.rows + 1)
                     }
-                )
-                gridAdjustControl(
-                    title: "Grid cols",
-                    value: max(1, workingHighlight.columns),
-                    decrement: {
+                }
+                Menu("Columns: \(workingHighlight.columns)") {
+                    Button("Add Column") { workingHighlight.columns = min(999, workingHighlight.columns + 1) }
+                    Button("Remove Column") {
                         workingHighlight.columns = max(1, workingHighlight.columns - 1)
                         workingHighlight.currentColumn = min(max(1, workingHighlight.currentColumn), workingHighlight.columns)
-                    },
-                    increment: {
-                        workingHighlight.columns = min(999, workingHighlight.columns + 1)
                     }
-                )
+                }
+                Button("Adjust Grid Boundaries", systemImage: "square.grid.3x3") {
+                    showGridFitSheet = true
+                }
             }
 
-            HStack {
-                Text("\(annotations.count) markers")
-                    .font(Theme.Typography.caption2)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.6))
-                Spacer()
-                if !showAnnotations {
-                    Text("Hidden")
-                        .font(Theme.Typography.caption2)
-                        .foregroundStyle(Theme.deepPlum.opacity(0.45))
+            // Annotations
+            Section("Annotations") {
+                Button("Drop Pin", systemImage: "mappin.circle.fill") {
+                    placeAnnotationImmediately(kind: .pin)
                 }
-                if placementKind == .note {
-                    Text("Tap chart to place note")
-                        .font(Theme.Typography.caption2)
-                        .foregroundStyle(Theme.softCoral)
+                Button("Add Note", systemImage: "note.text.badge.plus") {
+                    showAddNoteSheet = true
+                }
+                Menu("More Markers") {
+                    Button("Increase", systemImage: "plus.circle.fill") {
+                        placeAnnotationImmediately(kind: .increase)
+                    }
+                    Button("Decrease", systemImage: "minus.circle.fill") {
+                        placeAnnotationImmediately(kind: .decrease)
+                    }
+                    Button("Repeat", systemImage: "arrow.clockwise.circle.fill") {
+                        placeAnnotationImmediately(kind: .repeatSection)
+                    }
+                    Button("Caution", systemImage: "exclamationmark.triangle.fill") {
+                        placeAnnotationImmediately(kind: .caution)
+                    }
+                }
+                Button(showAnnotations ? "Hide Markers" : "Show Markers",
+                       systemImage: showAnnotations ? "eye.slash" : "eye") {
+                    showAnnotations.toggle()
+                }
+            }
+
+            // Drawing
+            Section("Drawing") {
+                Button("Undo", systemImage: "arrow.uturn.backward") {
+                    canvasController.undo()
+                }
+                .disabled(!canvasController.canUndo)
+                Button("Redo", systemImage: "arrow.uturn.forward") {
+                    canvasController.redo()
+                }
+                .disabled(!canvasController.canRedo)
+                Button("Clear Ink", systemImage: "trash", role: .destructive) {
+                    drawingData = nil
+                    canvasController.clear()
                 }
             }
         }
@@ -1187,7 +1160,7 @@ struct ExtractedChartWorkspaceView: View {
     ) -> some View {
         HStack(spacing: Theme.Spacing.xs) {
             Button(action: decrement) {
-                Image(systemName: title == "Row" ? "minus.circle.fill" : "arrow.left.circle.fill")
+                Image(systemName: title == "Row" ? "chevron.down.circle.fill" : "arrow.left.circle.fill")
                     .font(.title3)
                     .foregroundStyle(Theme.deepPlum)
             }
@@ -1199,7 +1172,7 @@ struct ExtractedChartWorkspaceView: View {
                 .frame(minWidth: 90, alignment: .center)
 
             Button(action: increment) {
-                Image(systemName: title == "Row" ? "plus.circle.fill" : "arrow.right.circle.fill")
+                Image(systemName: title == "Row" ? "chevron.up.circle.fill" : "arrow.right.circle.fill")
                     .font(.title3)
                     .foregroundStyle(Theme.deepPlum)
             }

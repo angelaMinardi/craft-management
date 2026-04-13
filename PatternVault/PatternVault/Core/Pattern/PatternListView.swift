@@ -15,6 +15,7 @@ struct PatternListView: View {
     @Binding var sharedURL: String?
     @Binding var craftFilter: String?
     @Binding var savedPatternId: UUID?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var currentStepAnchor: TutorialAnchor? {
         guard tutorialStore.isActive, tutorialStore.currentStep < AppTutorialStore.steps.count else { return nil }
@@ -24,10 +25,12 @@ struct PatternListView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var patternToOpen: Pattern?
     @StateObject private var tagStore = TagStore()
+    @StateObject private var collectionStore = CollectionStore()
     @State private var showAddSheet = false
     @State private var searchText = ""
     @State private var filterStatus: PatternStatus?
     @State private var filterTagIds: Set<UUID> = []
+    @State private var filterCollectionId: UUID?
     @State private var patternTagsMap: [UUID: Set<UUID>] = [:]
     /// In-memory only; continue card reappears on next launch. Optionally persist in UserDefaults/App Group for session-long dismiss.
     private static let dismissedContinueKey = "dismissed_continue_pattern_ids"
@@ -47,6 +50,7 @@ struct PatternListView: View {
     @AppStorage("onboarding_first_win_prompt_consumed") private var onboardingFirstWinPromptConsumed = false
     @State private var showEnrichingAlert = false
     @State private var enrichingAlertPatternId: UUID?
+    @State private var emptyCtaPulse = false
 
     private func recomputeFilteredPatterns() {
         var result = store.patterns
@@ -75,6 +79,9 @@ struct PatternListView: View {
             result = result.filter { pattern in
                 Self.normalizedDifficulty(pattern.difficulty) == diff
             }
+        }
+        if let folderId = filterCollectionId {
+            result = result.filter { $0.collectionId == folderId }
         }
         filteredPatterns = result
     }
@@ -149,6 +156,9 @@ struct PatternListView: View {
                 .onChange(of: filterDifficulty) { _, _ in
                     recomputeFilteredPatterns()
                 }
+                .onChange(of: filterCollectionId) { _, _ in
+                    recomputeFilteredPatterns()
+                }
                 .onChange(of: store.patterns) { _, _ in
                     recomputeFilteredPatterns()
                 }
@@ -200,6 +210,9 @@ struct PatternListView: View {
                 }
                 recomputeFilteredPatterns()
                 await tagStore.loadAllTags()
+                if let userId = auth.currentUserId {
+                    await collectionStore.load(userId: userId)
+                }
                 await loadPatternTagsMap()
                 await loadContinueCardProgressFallback()
             }
@@ -267,8 +280,10 @@ struct PatternListView: View {
         showMassDeleteConfirm = false
         Task {
             await store.deletePatterns(ids: selectedPatternIds, userId: userId)
-            selectedPatternIds = []
-            isSelectionMode = false
+            withAnimation(reduceMotion ? .none : Theme.Motion.spring) {
+                selectedPatternIds = []
+                isSelectionMode = false
+            }
         }
     }
 
@@ -295,7 +310,7 @@ struct PatternListView: View {
                     .frame(width: 40, height: 40)
                 if let initial = userInitial {
                     Text(initial)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.headline)
                         .foregroundStyle(Theme.sageGreen)
                 } else {
                     Image(systemName: "person.fill")
@@ -306,7 +321,7 @@ struct PatternListView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("My Patterns")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.titleBold)
                     .foregroundStyle(Theme.deepPlum)
                 if !SubscriptionStore.shared.isPremium {
                     Text("\(store.patterns.count) / \(SubscriptionStore.shared.patternLimit) patterns")
@@ -322,7 +337,7 @@ struct PatternListView: View {
                     isSelectionMode = false
                     selectedPatternIds = []
                 }
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(Theme.Typography.cardTitle)
                 .foregroundStyle(Theme.deepPlum)
 
                 if !selectedPatternIds.isEmpty {
@@ -333,8 +348,8 @@ struct PatternListView: View {
                             Image(systemName: "trash")
                             Text("Delete \(selectedPatternIds.count)")
                         }
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.red)
+                        .font(Theme.Typography.cardTitle)
+                        .foregroundStyle(Theme.Semantic.error)
                     }
                 }
             } else {
@@ -384,7 +399,7 @@ struct PatternListView: View {
                     .foregroundStyle(Theme.deepPlum.opacity(0.35))
 
                 TextField("Search patterns", text: $searchText)
-                    .font(.system(size: 15, design: .rounded))
+                    .font(Theme.Typography.body)
                     .foregroundStyle(Theme.deepPlum)
 
                 if !searchText.isEmpty {
@@ -436,7 +451,7 @@ struct PatternListView: View {
                 Section("Status") {
                     ForEach([nil] + PatternStatus.allCases, id: \.self) { status in
                         Button {
-                            filterStatus = status
+                            withAnimation(reduceMotion ? .none : Theme.Motion.spring) { filterStatus = status }
                             showFilterOptions = false
                         } label: {
                             HStack {
@@ -486,16 +501,19 @@ struct PatternListView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Theme.Spacing.sm) {
                 statusPill("All", icon: nil, isSelected: filterStatus == nil) {
-                    filterStatus = nil
+                    withAnimation(reduceMotion ? .none : Theme.Motion.spring) { filterStatus = nil }
                 }
                 statusPill("Want to Make", icon: "bookmark", isSelected: filterStatus == .wantToMake) {
-                    filterStatus = filterStatus == .wantToMake ? nil : .wantToMake
+                    withAnimation(reduceMotion ? .none : Theme.Motion.spring) { filterStatus = filterStatus == .wantToMake ? nil : .wantToMake }
                 }
                 statusPill("In Progress", icon: "hammer.fill", isSelected: filterStatus == .inProgress) {
-                    filterStatus = filterStatus == .inProgress ? nil : .inProgress
+                    withAnimation(reduceMotion ? .none : Theme.Motion.spring) { filterStatus = filterStatus == .inProgress ? nil : .inProgress }
                 }
                 statusPill("Done", icon: "checkmark.circle.fill", isSelected: filterStatus == .completed) {
-                    filterStatus = filterStatus == .completed ? nil : .completed
+                    withAnimation(reduceMotion ? .none : Theme.Motion.spring) { filterStatus = filterStatus == .completed ? nil : .completed }
+                }
+                statusPill("Frogged", icon: "arrow.uturn.backward.circle.fill", isSelected: filterStatus == .frogged) {
+                    withAnimation(reduceMotion ? .none : Theme.Motion.spring) { filterStatus = filterStatus == .frogged ? nil : .frogged }
                 }
             }
             .padding(.horizontal, Theme.Spacing.lg)
@@ -511,7 +529,7 @@ struct PatternListView: View {
                         .font(.system(size: 10, weight: .semibold))
                 }
                 Text(label)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(Theme.Typography.footnoteSemibold)
             }
             .foregroundStyle(isSelected ? .white : Theme.deepPlum.opacity(0.65))
             .padding(.horizontal, 14)
@@ -550,10 +568,10 @@ struct PatternListView: View {
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(craftColor(for: cat.type))
                                 Text("\(cat.count)")
-                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .font(Theme.Typography.footnoteSemibold)
                                     .foregroundStyle(Theme.deepPlum)
                                 Text(cat.type.capitalized)
-                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .font(Theme.Typography.caption)
                                     .foregroundStyle(Theme.deepPlum.opacity(0.55))
                             }
                             .padding(.horizontal, 12)
@@ -571,6 +589,49 @@ struct PatternListView: View {
 
     // MARK: - Tag Filter Chips
 
+    // MARK: - Folder Filters
+
+    private var folderFilters: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                Button {
+                    filterCollectionId = nil
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "tray.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("All")
+                            .font(Theme.Typography.caption)
+                    }
+                    .foregroundStyle(filterCollectionId == nil ? .white : Theme.deepPlum.opacity(0.7))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(filterCollectionId == nil ? Theme.dustyBlue : Theme.dustyBlue.opacity(0.12))
+                    .clipShape(Capsule())
+                }
+
+                ForEach(collectionStore.collections) { collection in
+                    Button {
+                        filterCollectionId = filterCollectionId == collection.id ? nil : collection.id
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: collection.icon)
+                                .font(.system(size: 10, weight: .semibold))
+                            Text(collection.name)
+                                .font(Theme.Typography.caption)
+                        }
+                        .foregroundStyle(filterCollectionId == collection.id ? .white : Theme.deepPlum.opacity(0.7))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(filterCollectionId == collection.id ? Theme.dustyBlue : Theme.dustyBlue.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+        }
+    }
+
     private var tagFilters: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
@@ -583,7 +644,7 @@ struct PatternListView: View {
                         }
                     } label: {
                         Text(tag.name)
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .font(Theme.Typography.caption)
                             .foregroundStyle(filterTagIds.contains(tag.id) ? .white : Theme.deepPlum.opacity(0.55))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
@@ -617,11 +678,11 @@ struct PatternListView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Continue \(pattern.title)")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.cardTitle)
                     .foregroundStyle(Theme.deepPlum)
                     .lineLimit(1)
                 Text("\(Int(continueProgressPercent(for: pattern) * 100))%")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .font(Theme.Typography.caption2)
                     .foregroundStyle(Theme.deepPlum.opacity(0.45))
             }
         }
@@ -716,7 +777,7 @@ struct PatternListView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Recent")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.sectionTitle)
                     .foregroundStyle(Theme.deepPlum)
                 Spacer()
                 Text("Latest wins")
@@ -776,7 +837,7 @@ struct PatternListView: View {
                     .padding(.horizontal, Theme.Spacing.lg)
             } else if store.patterns.count > 6 || filterStatus != nil || !searchText.isEmpty {
                 Text(filterStatus != nil || !searchText.isEmpty ? "Results" : "All Patterns")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.sectionTitle)
                     .foregroundStyle(Theme.deepPlum)
                     .padding(.horizontal, Theme.Spacing.lg)
             }
@@ -788,7 +849,8 @@ struct PatternListView: View {
                 ],
                 spacing: Theme.Spacing.md
             ) {
-                ForEach(filteredPatterns, id: \.id) { pattern in
+                ForEach(Array(filteredPatterns.enumerated()), id: \.element.id) { index, pattern in
+                    Group {
                     if isSelectionMode {
                         Button {
                             if selectedPatternIds.contains(pattern.id) {
@@ -843,6 +905,12 @@ struct PatternListView: View {
                         .buttonStyle(.plain)
                         .contentShape(Rectangle())
                     }
+                    }
+                    .staggeredAppear(index: min(index, 15))
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.95).combined(with: .opacity),
+                        removal: .opacity
+                    ))
                 }
             }
             .padding(.horizontal, Theme.Spacing.lg)
@@ -858,6 +926,9 @@ struct PatternListView: View {
         nextActionBanner
         searchBar
             .tutorialAnchor(.patternsSearch, isActive: currentStepAnchor == .patternsSearch)
+        if !collectionStore.collections.isEmpty {
+            folderFilters
+        }
         statusFilters
         craftCategoryChips
 
@@ -938,13 +1009,27 @@ struct PatternListView: View {
     private var loadingView: some View {
         VStack(spacing: Theme.Spacing.lg) {
             headerSection
-            Spacer().frame(height: 40)
-            SpriteMascotView.thinking(size: 100)
+            Spacer().frame(height: 20)
+
+            // Skeleton card grid
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: Theme.Spacing.md), GridItem(.flexible(), spacing: Theme.Spacing.md)],
+                spacing: Theme.Spacing.md
+            ) {
+                ForEach(0..<4) { _ in
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.large)
+                        .fill(Theme.warmCream)
+                        .frame(height: 180)
+                        .shimmer()
+                }
+            }
+            .padding(.horizontal, Theme.Spacing.lg)
+
+            SpriteMascotView.thinking(size: 80)
                 .accessibilityHidden(true)
             Text("Loading patterns...")
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.deepPlum.opacity(0.6))
-            Spacer().frame(height: 100)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
@@ -964,7 +1049,7 @@ struct PatternListView: View {
 
                 VStack(spacing: Theme.Spacing.sm) {
                     Text("Ready for your first save?")
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .font(Theme.Typography.titleBold)
                         .foregroundStyle(Theme.deepPlum)
                         .minimumScaleFactor(0.85)
 
@@ -984,6 +1069,13 @@ struct PatternListView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 .padding(.horizontal, 40)
+                .opacity(emptyCtaPulse ? 1.0 : 0.85)
+                .onAppear {
+                    guard !reduceMotion else { return }
+                    withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                        emptyCtaPulse = true
+                    }
+                }
                 .accessibilityLabel("Save first pattern")
                 .accessibilityHint("Add your first pattern")
             }

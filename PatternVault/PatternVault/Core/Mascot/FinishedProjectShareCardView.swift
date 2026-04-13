@@ -32,10 +32,10 @@ struct FinishedProjectShareCardView: View {
 
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 Text("Finished project")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.footnoteSemibold)
                     .foregroundStyle(Theme.deepPlum.opacity(0.6))
                 Text(patternTitle)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.titleBold)
                     .foregroundStyle(Theme.deepPlum)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
@@ -51,7 +51,7 @@ struct FinishedProjectShareCardView: View {
                             .lineLimit(2)
                     }
                 }
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(Theme.Typography.footnoteSemibold)
                 .foregroundStyle(Theme.deepPlum.opacity(0.85))
                 Spacer(minLength: 0)
             }
@@ -65,7 +65,7 @@ struct FinishedProjectShareCardView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 28, height: 28)
                 Text("Pattern Vault")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.captionSemibold)
                     .foregroundStyle(Theme.deepPlum.opacity(0.7))
             }
             .padding(.horizontal, 12)

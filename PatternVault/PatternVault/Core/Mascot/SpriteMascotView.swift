@@ -16,6 +16,8 @@ struct SpriteMascotView: View {
     var framesPerSecond: Double = 15
     /// If false, plays once and calls onComplete when done.
     var loop: Bool = true
+    /// When true (default for looping), plays forward then backward to avoid a visible jump at the loop point.
+    var pingPong: Bool
     /// Optional fallback folder if `folder` has no readable frames.
     var fallbackFolder: String?
     var onComplete: (() -> Void)?
@@ -25,6 +27,7 @@ struct SpriteMascotView: View {
         size: CGFloat = 180,
         framesPerSecond: Double = 15,
         loop: Bool = true,
+        pingPong: Bool? = nil,
         fallbackFolder: String? = nil,
         onComplete: (() -> Void)? = nil
     ) {
@@ -32,19 +35,24 @@ struct SpriteMascotView: View {
         self.size = size
         self.framesPerSecond = framesPerSecond
         self.loop = loop
+        self.pingPong = pingPong ?? loop  // default: ping-pong when looping
         self.fallbackFolder = fallbackFolder
         self.onComplete = onComplete
     }
 
     /// Max frame index to try (e.g. 36 for frame_000..frame_035). Frames may be missing; we load whatever exists.
     private let maxFrameIndex = 36
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var currentFrame = 0
+    @State private var sequenceIndex = 0
     @State private var loadedImages: [UIImage] = []
+    /// Ping-pong sequence: [0, 1, 2, …, N-1, N-2, …, 1] — avoids repeating first/last frames.
+    @State private var frameSequence: [Int] = []
 
     var body: some View {
         Group {
-            if let img = loadedImages[safe: currentFrame] {
+            let frameIndex = frameSequence[safe: sequenceIndex] ?? 0
+            if let img = loadedImages[safe: frameIndex] {
                 Image(uiImage: img)
                     .resizable()
                     .scaledToFit()
@@ -57,13 +65,17 @@ struct SpriteMascotView: View {
         .onAppear {
             if loadedImages.isEmpty {
                 loadFrames()
-                startTimer()
+                buildSequence()
+                if !reduceMotion {
+                    startTimer()
+                }
             }
         }
         .onDisappear {
             timerTask?.cancel()
             timerTask = nil
         }
+        .accessibilityHidden(true)
     }
 
     @State private var timerTask: Task<Void, Never>?
@@ -74,8 +86,20 @@ struct SpriteMascotView: View {
             images = loadFrames(from: fallbackFolder)
         }
         loadedImages = images
-        if currentFrame >= images.count && !images.isEmpty {
-            currentFrame = 0
+        if sequenceIndex >= images.count && !images.isEmpty {
+            sequenceIndex = 0
+        }
+    }
+
+    /// Builds the playback index sequence. Ping-pong: [0,1,…,N-1, N-2,…,1] (no duplicate endpoints).
+    private func buildSequence() {
+        let count = loadedImages.count
+        guard count > 0 else { frameSequence = []; return }
+        if pingPong && count > 2 {
+            // Forward 0…(N-1), then reverse (N-2)…1 — first and last frames appear once each.
+            frameSequence = Array(0..<count) + Array((1..<(count - 1)).reversed())
+        } else {
+            frameSequence = Array(0..<count)
         }
     }
 
@@ -93,23 +117,23 @@ struct SpriteMascotView: View {
 
     private func startTimer() {
         timerTask?.cancel()
-        let count = loadedImages.isEmpty ? maxFrameIndex : loadedImages.count
-        guard count > 0 else { return }
+        let seqCount = frameSequence.count
+        guard seqCount > 0 else { return }
         let interval = 1.0 / framesPerSecond
         timerTask = Task { @MainActor in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
                 if Task.isCancelled { break }
-                if currentFrame + 1 >= count {
+                if sequenceIndex + 1 >= seqCount {
                     if loop {
-                        currentFrame = (currentFrame + 1) % count
+                        sequenceIndex = 0
                     } else {
-                        currentFrame = count - 1
+                        sequenceIndex = seqCount - 1
                         onComplete?()
                         return
                     }
                 } else {
-                    currentFrame += 1
+                    sequenceIndex += 1
                 }
             }
         }

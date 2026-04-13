@@ -195,14 +195,6 @@ final class PatternStepParserTests: XCTestCase {
         XCTAssertFalse(PatternStepParser.looksLikeRavelryChrome(text))
     }
 
-    func testParseSteps_allJunkBlocks_usesFallback() {
-        let junk = "Share Print Subscribe. Newsletter sign up. Follow us. Menu Home."
-        let steps = PatternStepParser.parseSteps(sourceContent: junk, patternDescription: "Real instructions.")
-        XCTAssertEqual(steps.count, 1)
-        XCTAssertEqual(steps[0].title, "Step 1")
-        XCTAssertTrue(steps[0].body.contains("Real instructions") || steps[0].body.contains("preferred materials"))
-    }
-
     func testParseSteps_patternSectionOnly_usesFallbackOrSingleStep() {
         let content = """
         PATTERN

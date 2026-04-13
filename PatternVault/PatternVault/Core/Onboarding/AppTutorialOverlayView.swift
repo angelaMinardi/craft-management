@@ -11,6 +11,7 @@ import SwiftUI
 struct AppTutorialOverlayView: View {
     @ObservedObject var store: AppTutorialStore
     var anchorFrames: TutorialAnchorFrames
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var bubbleAppeared = false
     @State private var showingSkipPouty = false
     @State private var showingDoneCelebration = false
@@ -56,8 +57,8 @@ struct AppTutorialOverlayView: View {
                             .frame(width: placement.bubbleWidth, height: placement.bubbleHeight)
                             .scaleEffect(bubbleAppeared ? 1 : 0.92)
                             .opacity(bubbleAppeared ? 1 : 0)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: bubbleAppeared)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: store.currentStep)
+                            .animation(reduceMotion ? .none : .spring(response: 0.4, dampingFraction: 0.8), value: bubbleAppeared)
+                            .animation(reduceMotion ? .none : .spring(response: 0.4, dampingFraction: 0.8), value: store.currentStep)
                             .position(x: placement.centerX, y: placement.centerY)
                     }
                 }
@@ -68,7 +69,7 @@ struct AppTutorialOverlayView: View {
         }
         .onChange(of: store.currentStep) { _, _ in
             bubbleAppeared = false
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8).delay(0.05)) {
+            withAnimation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.8).delay(0.05)) {
                 bubbleAppeared = true
             }
             normalizeTutorialStateIfNeeded()
@@ -77,7 +78,7 @@ struct AppTutorialOverlayView: View {
             normalizeTutorialStateIfNeeded()
         }
         .onAppear {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8).delay(0.1)) {
+            withAnimation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.8).delay(0.1)) {
                 bubbleAppeared = true
             }
         }

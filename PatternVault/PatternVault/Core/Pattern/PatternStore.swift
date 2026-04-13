@@ -86,16 +86,25 @@ final class PatternStore: ObservableObject {
 
         enrichmentPollingTask?.cancel()
         enrichmentPollingTask = Task {
+            // Stagger initial enrichment requests to avoid flooding the server
             for pattern in pending {
+                guard !Task.isCancelled else { return }
                 try? await repo.requestEnrichment(patternId: pattern.id)
+                if pending.count > 3 { try? await Task.sleep(for: .milliseconds(500)) }
             }
 
             var remaining = Set(pending.map(\.id))
             for _ in 0..<36 {
                 guard !Task.isCancelled else { return }
                 try? await Task.sleep(for: .seconds(5))
-                for id in remaining {
-                    await refreshPattern(id: id, userId: userId)
+                // Refresh in batches of 3 to limit concurrent requests
+                for batch in stride(from: 0, to: remaining.count, by: 3) {
+                    let batchIds = Array(remaining.sorted(by: { $0.uuidString < $1.uuidString }))[batch..<min(batch + 3, remaining.count)]
+                    await withTaskGroup(of: Void.self) { group in
+                        for id in batchIds {
+                            group.addTask { await self.refreshPattern(id: id, userId: userId) }
+                        }
+                    }
                 }
                 let stillProcessing = remaining.filter { id in
                     patterns.first(where: { $0.id == id })?.isEnriching == true
@@ -137,15 +146,79 @@ final class PatternStore: ObservableObject {
     /// but no ChartHighlight objects yet, and triggers chart detection for each.
     private func triggerPendingChartExtractions(userId: UUID) {
         let chartStore = ChartHighlightStore.shared
+
+        // Adopt orphaned highlights: when a pattern is re-imported with a new UUID,
+        // find existing highlights on disk and reassign them to the current pattern ID.
+        let ownedPatternIds = Set(patterns.map(\.id))
+        let orphanedHighlights = chartStore.highlights.filter { h in
+            h.isAIExtracted && !ownedPatternIds.contains(h.patternId)
+        }
+
+        if !orphanedHighlights.isEmpty {
+            // Group orphans by chartLabel, keep only one per label
+            var bestByLabel: [String: ChartHighlight] = [:]
+            for h in orphanedHighlights {
+                let key = h.chartLabel ?? "page_\(h.pdfPageIndex ?? 0)"
+                if let existing = bestByLabel[key] {
+                    chartStore.delete(highlightId: existing.id)
+                }
+                bestByLabel[key] = h
+            }
+
+            // Try to assign to a matching pattern (one that has a PDF and no charts yet)
+            for pattern in patterns {
+                guard chartStore.aiExtractedHighlights(patternId: pattern.id).isEmpty,
+                      pattern.pdfUrl != nil, !(pattern.pdfUrl?.isEmpty ?? true) else { continue }
+
+                for var h in bestByLabel.values {
+                    h.patternId = pattern.id
+                    chartStore.save(h)
+                }
+                #if DEBUG
+                print("[ChartExtraction] Adopted \(bestByLabel.count) orphaned highlight(s) for \(pattern.title)")
+                #endif
+                break // Only assign to one pattern
+            }
+
+            // Delete any remaining duplicates across ALL patterns
+            var seenByPatternAndLabel: Set<String> = []
+            for h in chartStore.highlights where h.isAIExtracted {
+                let key = "\(h.patternId)_\(h.chartLabel ?? "page_\(h.pdfPageIndex ?? 0)")"
+                if seenByPatternAndLabel.contains(key) {
+                    chartStore.delete(highlightId: h.id)
+                } else {
+                    seenByPatternAndLabel.insert(key)
+                }
+            }
+        }
+
+        // After adoption, skip any pattern that now has charts OR that has a PDF URL matching
+        // any existing highlight's pattern (prevents re-extraction for duplicate imports)
+        let patternsWithCharts = Set(chartStore.highlights.filter(\.isAIExtracted).map(\.patternId))
         let candidates = patterns.filter { pattern in
             !pattern.isEnriching
             && !pattern.enrichmentFailed
             && pattern.pdfUrl != nil && !(pattern.pdfUrl?.isEmpty ?? true)
             && pattern.decodedParsedInstructions?.isEmpty == false
             && chartStore.aiExtractedHighlights(patternId: pattern.id).isEmpty
+            && !patternsWithCharts.contains(pattern.id)
         }
 
+        // Extra safety: if there are ANY orphaned highlights still on disk, don't extract.
+        // The user can always manually trigger extraction via "Re-detect Charts".
+        let hasOrphanedHighlights = chartStore.highlights.contains { h in
+            h.isAIExtracted && !ownedPatternIds.contains(h.patternId)
+        }
+        guard !candidates.isEmpty, !hasOrphanedHighlights else { return }
+
         guard !candidates.isEmpty else { return }
+        #if DEBUG
+        for c in candidates {
+            let existing = chartStore.aiExtractedHighlights(patternId: c.id)
+            let allHighlights = chartStore.highlights.filter { $0.patternId == c.id }
+            print("[ChartExtraction] Candidate: \(c.title), aiExtracted=\(existing.count), allHighlights=\(allHighlights.count), isAIExtracted flags: \(allHighlights.map(\.isAIExtracted))")
+        }
+        #endif
         #if DEBUG
         print("[ChartExtraction] Found \(candidates.count) pattern(s) needing chart detection")
         #endif
@@ -167,26 +240,27 @@ final class PatternStore: ObservableObject {
         let patternId = pattern.id
         let sectionNames = Array(Set(instructions.map(\.section))).sorted()
 
-        Task.detached(priority: .utility) { [weak self] in
-            defer { Task { @MainActor in self?.chartExtractionInFlight.remove(patternId) } }
+        Task(priority: .utility) { [weak self] in
+            guard let self else { return }
+            defer { self.chartExtractionInFlight.remove(patternId) }
             #if DEBUG
             print("[ChartExtraction] Starting automatic chart detection for: \(pattern.title)")
             #endif
 
             guard let pdfURL = URL(string: pdfUrlString) else {
-                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                self.chartExtractionFailed.insert(patternId)
                 return
             }
             guard let (pdfData, response) = try? await URLSession.shared.data(from: pdfURL),
                   let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                self.chartExtractionFailed.insert(patternId)
                 return
             }
 
             let pages = PDFPageRenderer.renderPages(from: pdfData, maxPages: 10, scale: 2.0, jpegQuality: 0.7)
             let images = pages.map(\.imageData)
             guard !images.isEmpty else {
-                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                self.chartExtractionFailed.insert(patternId)
                 return
             }
 
@@ -210,7 +284,7 @@ final class PatternStore: ObservableObject {
                 #if DEBUG
                 print("[ChartExtraction] Error: \(error.localizedDescription)")
                 #endif
-                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                self.chartExtractionFailed.insert(patternId)
             }
         }
     }
@@ -233,22 +307,23 @@ final class PatternStore: ObservableObject {
             sectionNames = []
         }
 
-        Task.detached(priority: .utility) { [weak self] in
-            defer { Task { @MainActor in self?.chartExtractionInFlight.remove(patternId) } }
+        Task(priority: .utility) { [weak self] in
+            guard let self else { return }
+            defer { self.chartExtractionInFlight.remove(patternId) }
             #if DEBUG
             print("[ChartExtraction] Standalone chart detection for: \(pattern.title)")
             #endif
 
             guard let (pdfData, response) = try? await URLSession.shared.data(from: pdfURL),
                   let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                self.chartExtractionFailed.insert(patternId)
                 return
             }
 
             let pages = PDFPageRenderer.renderPages(from: pdfData, maxPages: 10, scale: 2.0, jpegQuality: 0.7)
             let images = pages.map(\.imageData)
             guard !images.isEmpty else {
-                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                self.chartExtractionFailed.insert(patternId)
                 return
             }
 
@@ -272,7 +347,7 @@ final class PatternStore: ObservableObject {
                 #if DEBUG
                 print("[ChartExtraction] Standalone error: \(error.localizedDescription)")
                 #endif
-                await MainActor.run { self?.chartExtractionFailed.insert(patternId) }
+                self.chartExtractionFailed.insert(patternId)
             }
         }
     }
@@ -474,7 +549,7 @@ final class PatternStore: ObservableObject {
     }
 
     /// Adds a pattern (persists pdf_url via repo). UI shows "Download Pattern" / "View PDF" and wand when pattern.pdfUrl != nil.
-    func add(userId: UUID, title: String, description: String?, sourceUrl: String, status: PatternStatus, thumbnailUrl: String? = nil, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, sourceContent: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil) async -> Bool {
+    func add(userId: UUID, title: String, description: String?, sourceUrl: String, status: PatternStatus, thumbnailUrl: String? = nil, difficulty: String? = nil, materials: String? = nil, craftType: String? = nil, sourceContent: String? = nil, pdfUrl: String? = nil, videoUrl: String? = nil, gauge: String? = nil, needleHookSizes: String? = nil, yarnWeightYardage: String? = nil, techniques: String? = nil, enrichmentStatus: String? = nil) async -> Bool {
         errorMessage = nil
         if !SubscriptionStore.shared.canAddPattern(currentPatternCount: patterns.count) {
             errorMessage = "Pattern limit reached. Upgrade to Premium for unlimited patterns."
@@ -499,7 +574,8 @@ final class PatternStore: ObservableObject {
                 gauge: gauge,
                 needleHookSizes: needleHookSizes,
                 yarnWeightYardage: yarnWeightYardage,
-                techniques: techniques
+                techniques: techniques,
+                enrichmentStatus: enrichmentStatus
             )
             patterns.insert(pattern, at: 0)
             return true
@@ -557,6 +633,10 @@ final class PatternStore: ObservableObject {
         do {
             try await repo.deletePattern(id: pattern.id, userId: userId)
             patterns.removeAll { $0.id == pattern.id }
+
+            // Clean up local chart state and cached PDFs for this pattern.
+            ChartHighlightStore.shared.deleteAll(patternId: pattern.id)
+            PDFCacheService.removeAllCachedPDFs(for: pattern.id)
         } catch {
             if !Self.isCancellation(error) { errorMessage = Self.userFacingMessage(for: error, context: .other) }
         }
@@ -569,6 +649,11 @@ final class PatternStore: ObservableObject {
         do {
             try await repo.deletePatterns(ids: Array(ids), userId: userId)
             patterns.removeAll { ids.contains($0.id) }
+            let chartStore = ChartHighlightStore.shared
+            for id in ids {
+                chartStore.deleteAll(patternId: id)
+                PDFCacheService.removeAllCachedPDFs(for: id)
+            }
             if let _ = PatternListCacheService.loadCachedPatterns(userId: userId) {
                 PatternListCacheService.saveCachedPatterns(userId: userId, patterns: patterns)
             }

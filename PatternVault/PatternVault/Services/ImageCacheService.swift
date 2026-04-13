@@ -43,15 +43,16 @@ final class ImageCacheService {
     private func scanExistingCache() {
         guard let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
         let root = caches.appendingPathComponent("PatternImageCache", isDirectory: true)
-        guard let enumerator = fileManager.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey, .contentAccessDateKey], options: [.skipsHiddenFiles]) else { return }
+        guard let enumerator = fileManager.enumerator(at: root, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) else { return }
         var size: Int64 = 0
         var times: [String: Date] = [:]
         for case let fileURL as URL in enumerator {
-            guard let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .contentAccessDateKey, .isRegularFileKey]),
-                  values.isRegularFile == true else { continue }
-            let fileSize = Int64(values.fileSize ?? 0)
-            size += fileSize
-            times[fileURL.path] = values.contentAccessDate ?? Date.distantPast
+            var isDirectory: ObjCBool = false
+            guard fileManager.fileExists(atPath: fileURL.path, isDirectory: &isDirectory),
+                  !isDirectory.boolValue else { continue }
+            guard let data = try? Data(contentsOf: fileURL, options: .mappedIfSafe) else { continue }
+            size += Int64(data.count)
+            times[fileURL.path] = Date.distantPast
         }
         lock.lock()
         totalCacheSize = size
@@ -114,9 +115,8 @@ final class ImageCacheService {
 
         // If we're overwriting an existing file, subtract old size first
         lock.lock()
-        if let oldValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
-           let oldSize = oldValues.fileSize {
-            totalCacheSize -= Int64(oldSize)
+        if let oldData = try? Data(contentsOf: fileURL, options: .mappedIfSafe) {
+            totalCacheSize -= Int64(oldData.count)
         }
         lock.unlock()
 
@@ -148,8 +148,8 @@ final class ImageCacheService {
             if currentSize <= maxCacheSize { break }
 
             let fileURL = URL(fileURLWithPath: path)
-            guard let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
-                  let fileSize = values.fileSize else { continue }
+            guard let fileData = try? Data(contentsOf: fileURL, options: .mappedIfSafe) else { continue }
+            let fileSize = fileData.count
             do {
                 try fileManager.removeItem(at: fileURL)
                 lock.lock()
@@ -170,9 +170,8 @@ final class ImageCacheService {
         lock.lock()
         let pathsToRemove = accessTimes.keys.filter { $0.hasPrefix(dirPath) }
         for path in pathsToRemove {
-            if let values = try? URL(fileURLWithPath: path).resourceValues(forKeys: [.fileSizeKey]),
-               let fileSize = values.fileSize {
-                totalCacheSize -= Int64(fileSize)
+            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
+                totalCacheSize -= Int64(data.count)
             }
             accessTimes.removeValue(forKey: path)
         }

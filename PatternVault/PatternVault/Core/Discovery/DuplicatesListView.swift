@@ -12,6 +12,9 @@ struct DuplicatesListView: View {
     @ObservedObject var store: PatternStore
     @State private var groups: [[Pattern]] = []
     @State private var isDeleting = false
+    @State private var patternToRemove: Pattern?
+    @State private var groupForRemoval: [Pattern]?
+    @State private var showRemoveConfirm = false
 
     var body: some View {
         Group {
@@ -30,6 +33,18 @@ struct DuplicatesListView: View {
         .refreshable {
             groups = PatternDuplicateHelper.duplicateGroups(in: store.patterns)
         }
+        .confirmationDialog("Remove this pattern?", isPresented: $showRemoveConfirm, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                if let pattern = patternToRemove, let group = groupForRemoval {
+                    removePattern(pattern, from: group)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let pattern = patternToRemove {
+                Text("\"\(pattern.title)\" will be permanently deleted.")
+            }
+        }
     }
 
     private var emptyView: some View {
@@ -37,7 +52,7 @@ struct DuplicatesListView: View {
             Spacer().frame(height: 60)
             TappableMascotView(size: 100)
             Text("No duplicates found")
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .font(Theme.Typography.sectionTitle)
                 .foregroundStyle(Theme.deepPlum)
             Text("Patterns with the same link or same title from the same site are listed here.")
                 .font(Theme.Typography.caption)
@@ -72,7 +87,7 @@ struct DuplicatesListView: View {
                 HStack(alignment: .top, spacing: Theme.Spacing.md) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(pattern.title)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .font(Theme.Typography.callout)
                             .foregroundStyle(Theme.deepPlum)
                             .lineLimit(2)
                         if let host = URL(string: pattern.sourceUrl)?.host {
@@ -84,7 +99,9 @@ struct DuplicatesListView: View {
                     Spacer(minLength: 0)
                     if pattern.id != group.first?.id {
                         Button(role: .destructive) {
-                            removePattern(pattern, from: group)
+                            patternToRemove = pattern
+                            groupForRemoval = group
+                            showRemoveConfirm = true
                         } label: {
                             Text("Remove")
                                 .font(Theme.Typography.caption)

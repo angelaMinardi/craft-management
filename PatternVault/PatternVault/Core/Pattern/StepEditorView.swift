@@ -43,7 +43,7 @@ struct StepEditorView: View {
                     VStack(spacing: Theme.Spacing.xl) {
                         SpriteMascotView.idle(size: 100)
                         Text("No content to split")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .font(Theme.Typography.headline)
                             .foregroundStyle(Theme.deepPlum)
                         Text("This pattern has no instruction content. Add or refresh content to define steps.")
                             .font(Theme.Typography.body)

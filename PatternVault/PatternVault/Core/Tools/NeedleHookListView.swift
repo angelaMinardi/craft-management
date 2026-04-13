@@ -73,7 +73,7 @@ struct NeedleHookListView: View {
             SpriteMascotView.thinking(size: 100)
             Text("Loading inventory...")
                 .font(Theme.Typography.body)
-                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                .foregroundStyle(Theme.Semantic.textTertiary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -83,14 +83,14 @@ struct NeedleHookListView: View {
             Spacer().frame(height: 40)
             TappableMascotView(size: 120)
             Text("No tools yet")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(Theme.Typography.title)
                 .foregroundStyle(Theme.deepPlum)
             Text("Nothing here yet—add whatever tools you use when you're ready.")
                 .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                .foregroundStyle(Theme.Semantic.textTertiary)
             Text("Track needles, hooks, cutters, and any other tools. Tap + to add.")
                 .font(Theme.Typography.body)
-                .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                .foregroundStyle(Theme.Semantic.textMuted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.Spacing.xl)
             Button {
@@ -109,10 +109,18 @@ struct NeedleHookListView: View {
         ScrollView(showsIndicators: false) {
             LazyVStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 if let error = needleHookStore.errorMessage {
-                    Text(error)
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.softCoral)
-                        .padding(.horizontal, Theme.Spacing.lg)
+                    VStack(spacing: Theme.Spacing.sm) {
+                        Text(error)
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.softCoral)
+                        Button("Try Again") {
+                            guard let userId = auth.currentUserId else { return }
+                            Task { await needleHookStore.load(userId: userId) }
+                        }
+                        .font(Theme.Typography.captionSemibold)
+                        .foregroundStyle(Theme.deepPlum)
+                    }
+                    .padding(.horizontal, Theme.Spacing.lg)
                 }
 
                 if !needleHookStore.needles.isEmpty {
@@ -144,8 +152,8 @@ struct NeedleHookListView: View {
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
-            .font(.system(size: 13, weight: .semibold, design: .rounded))
-            .foregroundStyle(Theme.deepPlum.opacity(0.6))
+            .font(Theme.Typography.footnoteSemibold)
+            .foregroundStyle(Theme.Semantic.textTertiary)
     }
 
     private func toolIconColor(_ type: String) -> Color {
@@ -165,19 +173,19 @@ struct NeedleHookListView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text(item.typeDisplayName)
                     .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                    .foregroundStyle(Theme.Semantic.textSecondary)
                 Text(item.size)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.callout)
                     .foregroundStyle(Theme.deepPlum)
                 if let len = item.lengthCm, len > 0 {
                     Text("\(Int(len)) cm")
                         .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                        .foregroundStyle(Theme.Semantic.textTertiary)
                 }
                 if let n = item.notes, !n.isEmpty {
                     Text(n)
                         .font(Theme.Typography.caption2)
-                        .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                        .foregroundStyle(Theme.Semantic.textMuted)
                         .lineLimit(2)
                 }
             }
@@ -198,8 +206,10 @@ struct NeedleHookListView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 20))
-                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                    .foregroundStyle(Theme.Semantic.textMuted)
+                    .frame(minWidth: 44, minHeight: 44)
             }
+            .accessibilityLabel("Options")
         }
         .padding(Theme.Spacing.md)
         .borderedCard()

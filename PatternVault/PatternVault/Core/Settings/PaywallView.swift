@@ -54,6 +54,7 @@ struct PaywallView: View {
                         benefitRow(icon: "wand.and.stars", text: "Unlimited AI analyses per month")
                         benefitRow(icon: "photo.stack.fill", text: "Unlimited note photos")
                         benefitRow(icon: "nosign", text: "Ad-free experience")
+                        benefitRow(icon: "lock.shield.fill", text: "Your patterns stay yours — export anytime")
 
                         if !displayProducts.isEmpty {
                             VStack(spacing: Theme.Spacing.sm) {

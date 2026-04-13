@@ -60,9 +60,10 @@ enum AIStepParserService {
 
         guard let key = geminiApiKey else { throw AIStepParserError.noApiKey }
         let prompt = buildInstructionPrompt(content: inputContent, hasImages: false)
-        let requestBody = GeminiMultimodalRequest.buildTextOnlyRequestBody(prompt: prompt, maxOutputTokens: 8192)
+        let requestBody = GeminiMultimodalRequest.buildTextOnlyRequestBody(prompt: prompt, maxOutputTokens: 8192, thinkingBudget: 1024, temperature: 0.1)
         let rawInstructions: [ChartImageProcessor.RawInstruction] = try await callGemini(requestBody: requestBody, apiKey: key)
-        return ChartImageProcessor.rawToInstructions(rawInstructions)
+        let processed = Self.inferMissingRowNumbers(rawInstructions)
+        return ChartImageProcessor.rawToInstructions(processed)
     }
 
     /// Result of parsing instructions with images — includes both the instructions and any detected chart metadata.
@@ -93,14 +94,15 @@ enum AIStepParserService {
         let requestBody: [String: Any]
         if hasImages {
             let imageInputs = GeminiMultimodalRequest.imageInputs(from: images)
-            requestBody = GeminiMultimodalRequest.buildRequestBody(prompt: prompt, images: imageInputs, maxOutputTokens: 8192)
+            requestBody = GeminiMultimodalRequest.buildRequestBody(prompt: prompt, images: imageInputs, maxOutputTokens: 8192, thinkingBudget: 1024, temperature: 0.1)
             debugLog("[AIStepParser] Multimodal request with \(images.count) images")
         } else {
-            requestBody = GeminiMultimodalRequest.buildTextOnlyRequestBody(prompt: prompt, maxOutputTokens: 4096)
+            requestBody = GeminiMultimodalRequest.buildTextOnlyRequestBody(prompt: prompt, maxOutputTokens: 4096, thinkingBudget: 1024, temperature: 0.1)
         }
 
         let rawInstructions: [ChartImageProcessor.RawInstruction] = try await callGemini(requestBody: requestBody, apiKey: key)
-        let instructions = ChartImageProcessor.rawToInstructions(rawInstructions)
+        let processed = Self.inferMissingRowNumbers(rawInstructions)
+        let instructions = ChartImageProcessor.rawToInstructions(processed)
         let charts = extractChartMetadata(from: rawInstructions, imageCount: images.count)
 
         return ParseResult(instructions: instructions, detectedCharts: charts)
@@ -190,6 +192,38 @@ enum AIStepParserService {
 
     // MARK: - Gemini API Call
 
+    // MARK: - Row Number Post-Processing
+
+    /// For each section where ALL instructions have start_row == 0 and end_row == 0,
+    /// auto-number them sequentially starting from 1. This handles patterns with
+    /// clearly sequential instructions that lack explicit row labels.
+    private static func inferMissingRowNumbers(_ instructions: [ChartImageProcessor.RawInstruction]) -> [ChartImageProcessor.RawInstruction] {
+        var result = instructions
+        // Group indices by section, preserving order
+        var sectionIndices: [(section: String, indices: [Int])] = []
+        var seen: [String: Int] = [:]
+        for (i, inst) in instructions.enumerated() {
+            if let idx = seen[inst.section] {
+                sectionIndices[idx].indices.append(i)
+            } else {
+                seen[inst.section] = sectionIndices.count
+                sectionIndices.append((inst.section, [i]))
+            }
+        }
+
+        for (_, indices) in sectionIndices {
+            let allZero = indices.allSatisfy { result[$0].startRow == 0 && result[$0].endRow == 0 }
+            guard allZero, indices.count >= 2 else { continue }
+
+            for (seq, idx) in indices.enumerated() {
+                result[idx].startRow = seq + 1
+                result[idx].endRow = seq + 1
+            }
+        }
+
+        return result
+    }
+
     private static func callGemini<T: Decodable>(requestBody: [String: Any], apiKey: String) async throws -> [T] {
         guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent") else {
             throw AIStepParserError.parseFailed
@@ -237,7 +271,13 @@ enum AIStepParserService {
         guard let jsonData = text.data(using: .utf8) else { throw AIStepParserError.parseFailed }
 
         do {
-            let results = try JSONDecoder().decode([T].self, from: jsonData)
+            // First pass through JSONSerialization to handle duplicate keys safely.
+            // JSONSerialization uses last-value-wins for duplicate keys, while JSONDecoder
+            // crashes with "Duplicate values for key" on Swift's native Dictionary.
+            let sanitized = try JSONSerialization.jsonObject(with: jsonData, options: .fragmentsAllowed)
+            let cleanData = try JSONSerialization.data(withJSONObject: sanitized)
+
+            let results = try JSONDecoder().decode([T].self, from: cleanData)
             debugLog("[AIStepParser] Decoded \(results.count) items from Gemini response")
             return results
         } catch {
@@ -282,7 +322,9 @@ enum AIStepParserService {
         }
 
         return """
-        You are an expert craft pattern parser. Extract every individual working instruction from this pattern content.
+        You are an expert craft pattern parser. Your job is to extract every individual working instruction from this pattern content, preserving the exact text and logical order.
+
+        CRITICAL: The crafter will follow these steps in sequence to make their project. Each step must be complete, accurate, and in the correct working order. Double-check that the steps make logical sense as a complete construction sequence.
 
         Return ONLY a valid JSON array of instruction objects. No markdown fences, no wrapper object.
 
@@ -293,8 +335,10 @@ enum AIStepParserService {
           "end_row": 0,
           "instruction": "Full instruction text exactly as written",
           "stitch_count": null,
-          "note": null
+          "note": null,
+          "repeat_info": null
         }
+        The "repeat_info" field is optional — only include it for repeat instructions (see REPEAT DETECTION RULES below).
 
         SECTION RULES:
         - Group instructions under the construction section they belong to.
@@ -305,14 +349,15 @@ enum AIStepParserService {
         - Do NOT create sections for reference material (Materials, Gauge, Abbreviations, Notes). Skip those entirely.
 
         ROW/ROUND NUMBER RULES:
-        - Extract row or round numbers ONLY when explicitly stated in the text.
+        - Prefer explicit row/round numbers from the text.
         - "Row 1: K across" → start_row: 1, end_row: 1
         - "Rnd 3 (increase): ..." → start_row: 3, end_row: 3
         - "Rows 18-39: Work chart" → start_row: 18, end_row: 39
         - "Rounds 1-11: ..." → start_row: 1, end_row: 11
         - When instructions have row labels like "Rnd 1", "Rnd 2" but the numbering resets per section, use the numbers as written (they restart at 1 for each section).
-        - For setup, cast-on, "repeat until", transitions, or finishing instructions with no explicit row number: start_row: 0, end_row: 0.
-        - NEVER invent or infer row numbers that aren't explicitly in the text.
+        - When instructions within a section are clearly sequential working instructions but lack explicit row numbers (e.g., a list of distinct rows without labels), assign sequential row numbers starting from 1 within that section.
+        - For setup, cast-on, "repeat until", transitions, or finishing instructions that are NOT distinct rows: start_row: 0, end_row: 0.
+        - "Repeat Rows 3 & 4 until piece measures X" is ONE instruction with start_row: 3, end_row: 4, and a note explaining the repeat target.
 
         INSTRUCTION TEXT RULES:
         - Copy the COMPLETE instruction text. Do NOT summarize, paraphrase, abbreviate, or truncate.
@@ -332,6 +377,28 @@ enum AIStepParserService {
         - Only include notes that are separate from the instruction itself.
         - Otherwise null.
 
+        REPEAT DETECTION RULES:
+        When an instruction tells the knitter to repeat previously listed rows or rounds, OR contains an asterisk-delimited repeat section, include a "repeat_info" object with the following fields:
+        - "repeat_type": one of "row_range", "until_count", "until_measure", "fixed_count", "asterisk"
+        - "referenced_start_row": the first row/round being repeated (e.g., 1 for "rep rnds 1 & 2")
+        - "referenced_end_row": the last row/round being repeated (e.g., 2 for "rep rnds 1 & 2")
+        - "fixed_repeat_count": how many times to repeat (for "repeat 6 times" or "*pattern* rep from * once more" = 2 total)
+        - "target_stitch_counts": array of ALL size variants, e.g., "28 (32, 36) sts" → [28, 32, 36]
+        - "target_measurement": for measurement-based repeats, e.g., "7 inches"
+        - "stitches_per_cycle": net stitch change per complete cycle of the referenced rows. Calculate from the increase/decrease instructions in the referenced rows. Positive = increase, negative = decrease.
+        - "asterisk_body": the text content between * markers, e.g., "K1, kfb, k to last 2 sts, kfb, k1"
+
+        Examples:
+        - "Rep rnds 1 & 2 until you have 28 (32, 36) sts on each needle for a total of 56 (64, 72) sts." →
+          "repeat_info": {"repeat_type": "until_count", "referenced_start_row": 1, "referenced_end_row": 2, "target_stitch_counts": [56, 64, 72], "stitches_per_cycle": 4}
+        - "*K1, kfb, k to last 2 sts on N1, kfb, k1*, rep ** once more on N2 to end of rnd." →
+          "repeat_info": {"repeat_type": "asterisk", "asterisk_body": "K1, kfb, k to last 2 sts on N1, kfb, k1", "fixed_repeat_count": 2}
+        - "Repeat rows 3-10 for body, 6 times" →
+          "repeat_info": {"repeat_type": "fixed_count", "referenced_start_row": 3, "referenced_end_row": 10, "fixed_repeat_count": 6}
+        - "Continue in pattern until piece measures 7 inches" →
+          "repeat_info": {"repeat_type": "until_measure", "target_measurement": "7 inches"}
+        If an instruction is NOT a repeat instruction, omit repeat_info entirely (do NOT include it as null).
+
         WHAT TO EXCLUDE:
         - Materials, yarn requirements, gauge swatches
         - Abbreviation glossaries and stitch definitions
@@ -342,7 +409,35 @@ enum AIStepParserService {
         ORDERING:
         - Instructions must appear in the order they should be worked.
         - Within each section, maintain the original sequence.
+
+        EXAMPLES:
+
+        Input: "Toe\nUsing Judy's Magic Cast On, CO 14 sts onto each needle.\nRnd 1: Knit.\nRnd 2: *K1, kfb* to end. (28 sts)\nRnd 3-5: Knit."
+        Output:
+        [
+          {"section":"Toe","start_row":0,"end_row":0,"instruction":"Using Judy's Magic Cast On, CO 14 sts onto each needle.","stitch_count":null,"note":null},
+          {"section":"Toe","start_row":1,"end_row":1,"instruction":"Rnd 1: Knit.","stitch_count":null,"note":null},
+          {"section":"Toe","start_row":2,"end_row":2,"instruction":"Rnd 2: *K1, kfb* to end. (28 sts)","stitch_count":28,"note":"14 sts increased"},
+          {"section":"Toe","start_row":3,"end_row":5,"instruction":"Rnd 3-5: Knit.","stitch_count":null,"note":null}
+        ]
+
+        Input (no explicit row numbers): "Body\nKnit across all stitches.\nPurl across all stitches.\nKnit across all stitches.\nPurl across all stitches."
+        Output:
+        [
+          {"section":"Body","start_row":1,"end_row":1,"instruction":"Knit across all stitches.","stitch_count":null,"note":null},
+          {"section":"Body","start_row":2,"end_row":2,"instruction":"Purl across all stitches.","stitch_count":null,"note":null},
+          {"section":"Body","start_row":3,"end_row":3,"instruction":"Knit across all stitches.","stitch_count":null,"note":null},
+          {"section":"Body","start_row":4,"end_row":4,"instruction":"Purl across all stitches.","stitch_count":null,"note":null}
+        ]
         \(chartPromptSection)
+
+        SELF-VALIDATION (do this before returning):
+        1. Does every section appear in the correct construction order? (e.g., Cast On before Body, Toe before Heel for socks)
+        2. Are row numbers sequential within each section? No gaps or duplicates?
+        3. Does every repeat instruction reference rows that actually exist earlier in the same section?
+        4. Is any instruction text truncated or paraphrased? Every instruction must be the COMPLETE original text.
+        5. Are size variations preserved exactly? "28 (32, 36) sts" must not become "28 sts".
+        6. Is any instruction accidentally split into multiple entries, or multiple instructions merged into one?
 
         Pattern content:
         \(content)

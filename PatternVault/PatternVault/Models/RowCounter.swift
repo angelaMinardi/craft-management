@@ -11,6 +11,7 @@ struct RowCounterState: Codable, Equatable {
     var globalRow: Int = 1
     var totalRows: Int?
     var secondaryCounters: [SecondaryCounter] = []
+    var alertRows: [Int] = []
 }
 
 struct SecondaryCounter: Codable, Identifiable, Equatable {

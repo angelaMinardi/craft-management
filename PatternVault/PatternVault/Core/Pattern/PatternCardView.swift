@@ -82,14 +82,14 @@ struct PatternCardView: View {
             // Title below image — truncate with ellipsis so text never clips at card edges
             VStack(alignment: .leading, spacing: 2) {
                 Text(pattern.title)
-                    .font(.system(size: elevated ? 14 : 13, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.footnoteSemibold)
                     .foregroundStyle(Theme.deepPlum)
                     .lineLimit(2)
                     .truncationMode(.tail)
                     .fixedSize(horizontal: false, vertical: true)
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.system(size: elevated ? 11 : 10, weight: .medium, design: .rounded))
+                        .font(Theme.Typography.caption2.weight(.semibold))
                         .foregroundStyle(Theme.deepPlum.opacity(0.6))
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -101,7 +101,7 @@ struct PatternCardView: View {
                             ProgressView()
                                 .controlSize(.mini)
                             Text("Processing…")
-                                .font(.system(size: 10, weight: .medium, design: .rounded))
+                                .font(Theme.Typography.caption2.weight(.semibold))
                                 .foregroundStyle(Theme.dustyBlue)
                         }
                         Text("We'll notify you when it's ready")
@@ -114,7 +114,7 @@ struct PatternCardView: View {
                             .font(.system(size: 9))
                             .foregroundStyle(Theme.softCoral)
                         Text("Details incomplete")
-                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .font(Theme.Typography.caption2.weight(.semibold))
                             .foregroundStyle(Theme.softCoral)
                     }
                 }

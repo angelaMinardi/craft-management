@@ -44,7 +44,7 @@ struct AchievementGridView: View {
         HStack(spacing: Theme.Spacing.md) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(store.progress.unlockedIds.count) / \(AchievementCatalog.allBadges.count)")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .font(Theme.Typography.largeTitle)
                     .foregroundStyle(Theme.deepPlum)
                 Text("Badges earned")
                     .font(Theme.Typography.caption)
@@ -81,13 +81,13 @@ struct AchievementGridView: View {
                 .font(.system(size: 36))
 
             Text(isUnlocked ? badge.title : "???")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(Theme.Typography.footnoteSemibold)
                 .foregroundStyle(isUnlocked ? Theme.Semantic.textPrimary : Theme.Semantic.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
 
             Text(isUnlocked ? badge.description : badge.hint)
-                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .font(Theme.Typography.caption2.weight(.semibold))
                 .foregroundStyle(isUnlocked ? Theme.Semantic.textSecondary : Theme.Semantic.textTertiary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -95,7 +95,7 @@ struct AchievementGridView: View {
 
             if isUnlocked, let date = unlockDate {
                 Text(date, style: .date)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .font(Theme.Typography.caption2.weight(.semibold))
                     .foregroundStyle(Theme.sageGreen.opacity(0.7))
             }
         }

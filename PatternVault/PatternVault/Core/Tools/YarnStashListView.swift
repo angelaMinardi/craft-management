@@ -81,7 +81,7 @@ struct YarnStashListView: View {
             SpriteMascotView.thinking(size: 100)
             Text("Loading your stash...")
                 .font(Theme.Typography.body)
-                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                .foregroundStyle(Theme.Semantic.textTertiary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -91,14 +91,14 @@ struct YarnStashListView: View {
             Spacer().frame(height: 40)
             TappableMascotView(size: 120)
             Text("No materials yet")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(Theme.Typography.title)
                 .foregroundStyle(Theme.deepPlum)
             Text("Nothing here yet—add something when you're ready.")
                 .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                .foregroundStyle(Theme.Semantic.textTertiary)
             Text("Tap + to add yarn, fabric, or other materials. Track brand, color, weight, and amount.")
                 .font(Theme.Typography.body)
-                .foregroundStyle(Theme.deepPlum.opacity(0.55))
+                .foregroundStyle(Theme.Semantic.textMuted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Theme.Spacing.xl)
             Button {
@@ -117,11 +117,19 @@ struct YarnStashListView: View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: Theme.Spacing.sm) {
                 if let error = stashStore.errorMessage {
-                    Text(error)
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.softCoral)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, Theme.Spacing.lg)
+                    VStack(spacing: Theme.Spacing.sm) {
+                        Text(error)
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.softCoral)
+                        Button("Try Again") {
+                            guard let userId = auth.currentUserId else { return }
+                            Task { await stashStore.load(userId: userId) }
+                        }
+                        .font(Theme.Typography.captionSemibold)
+                        .foregroundStyle(Theme.deepPlum)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Theme.Spacing.lg)
                 }
 
                 ForEach(stashStore.items) { item in
@@ -138,7 +146,7 @@ struct YarnStashListView: View {
         HStack(alignment: .top, spacing: Theme.Spacing.md) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text(item.brandName)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(Theme.Typography.callout)
                     .foregroundStyle(Theme.deepPlum)
                 let yardagePart = item.totalYardage.map { ["\($0) yd"] }
                 let qtyPart: [String]? = yardagePart == nil && item.skeinsOwned != 0
@@ -148,7 +156,7 @@ struct YarnStashListView: View {
                 if !subtitleParts.isEmpty {
                     Text(subtitleParts.joined(separator: " · "))
                         .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                        .foregroundStyle(Theme.Semantic.textTertiary)
                 }
                 if let loc = item.location, !loc.isEmpty {
                     Text(loc)
@@ -159,11 +167,11 @@ struct YarnStashListView: View {
             Spacer(minLength: 0)
             if let yd = item.totalYardage {
                 Text("\(yd) yd")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(Theme.Typography.footnoteSemibold)
                     .foregroundStyle(Theme.sageGreen)
             } else if item.skeinsOwned != 0 {
                 Text(item.skeinsOwned == floor(item.skeinsOwned) ? "\(Int(item.skeinsOwned))" : "\(item.skeinsOwned)")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(Theme.Typography.footnoteSemibold)
                     .foregroundStyle(Theme.sageGreen)
             }
             Menu {
@@ -195,8 +203,10 @@ struct YarnStashListView: View {
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 20))
-                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                    .foregroundStyle(Theme.Semantic.textMuted)
+                    .frame(minWidth: 44, minHeight: 44)
             }
+            .accessibilityLabel("Options")
         }
         .padding(Theme.Spacing.md)
         .borderedCard()

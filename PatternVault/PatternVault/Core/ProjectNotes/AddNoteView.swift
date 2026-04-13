@@ -16,6 +16,9 @@ struct AddNoteView: View {
     /// When editing an existing note, pass it here
     var existingNote: ProjectNote?
 
+    /// When adding a note for a specific step, pass the step index
+    var stepIndex: Int?
+
     @State private var noteType: ProjectNoteType = .general
     @State private var content = ""
     @State private var selectedPhoto: PhotosPickerItem?
@@ -37,6 +40,14 @@ struct AddNoteView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                }
+
+                if let stepIndex {
+                    Section {
+                        Label("Note for Step \(stepIndex + 1)", systemImage: "bookmark.fill")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.dustyBlue)
+                    }
                 }
 
                 Section("Content") {
@@ -92,15 +103,23 @@ struct AddNoteView: View {
                 PaywallView(source: .notePhotoLimit)
             }
             .background(Theme.screenGradient.ignoresSafeArea())
-            .navigationTitle(isEditing ? "Edit Note" : "Add Note")
+            .navigationTitle(isEditing ? "Edit Note" : (stepIndex != nil ? "Step Note" : "Add Note"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(!canSave)
+                    if isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") { save() }
+                            .disabled(!canSave)
+                    }
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
                 }
             }
             .onChange(of: selectedPhoto) { _, newItem in
@@ -135,25 +154,24 @@ struct AddNoteView: View {
 
         Task {
             if let existing = existingNote {
-                // Update existing note
                 await noteStore.update(
                     noteId: existing.id,
                     userId: userId,
                     content: trimmed,
                     noteType: noteType,
-                    photoUrl: existing.photoUrl // keep existing photo for now
+                    photoUrl: existing.photoUrl
                 )
                 isSaving = false
                 HapticService.success()
                 dismiss()
             } else {
-                // Add new note
                 let success = await noteStore.add(
                     patternId: patternId,
                     userId: userId,
                     noteType: noteType,
                     content: trimmed,
-                    photoData: photoData
+                    photoData: photoData,
+                    stepIndex: stepIndex
                 )
                 isSaving = false
                 if success {

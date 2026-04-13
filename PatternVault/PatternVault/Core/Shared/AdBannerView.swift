@@ -33,6 +33,8 @@ struct AdBannerView: View {
                 AdBannerRepresentable(adUnitID: unitId)
                     .frame(height: 50)
                     .background(Color(.systemBackground))
+                    .accessibilityLabel("Advertisement")
+                    .accessibilityHidden(true)
             }
         }
     }

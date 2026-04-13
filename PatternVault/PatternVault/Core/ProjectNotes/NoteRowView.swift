@@ -25,9 +25,21 @@ struct NoteRowView: View {
                     .foregroundStyle(Theme.deepPlum)
                     .lineLimit(2)
 
-                Text(note.createdAt, style: .relative)
-                    .font(Theme.Typography.caption2)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text(note.createdAt, format: .dateTime.month(.abbreviated).day().hour().minute())
+                        .font(Theme.Typography.caption2)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.5))
+
+                    if let minutes = note.durationMinutes, minutes > 0 {
+                        HStack(spacing: 3) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 9, weight: .semibold))
+                            Text(minutes >= 60 ? "\(minutes / 60)h \(minutes % 60)m" : "\(minutes)m")
+                                .font(Theme.Typography.caption2)
+                        }
+                        .foregroundStyle(Theme.sageGreen)
+                    }
+                }
             }
 
             Spacer()

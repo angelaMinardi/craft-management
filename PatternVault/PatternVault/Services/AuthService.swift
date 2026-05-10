@@ -34,6 +34,7 @@ final class AuthService: ObservableObject {
     private static let keychainService = "com.patternvault.app.supabase"
     private static let keychainTokenAccount = "supabase_access_token"
     private static let keychainUserIdAccount = "supabase_user_id"
+    private static let keychainRefreshTokenAccount = "supabase_refresh_token"
     private let client = SupabaseManager.client
 
     private init() {
@@ -70,9 +71,11 @@ final class AuthService: ObservableObject {
         if let session {
             Self.saveToSharedKeychain(account: Self.keychainTokenAccount, value: session.accessToken)
             Self.saveToSharedKeychain(account: Self.keychainUserIdAccount, value: session.user.id.uuidString)
+            Self.saveToSharedKeychain(account: Self.keychainRefreshTokenAccount, value: session.refreshToken)
         } else {
             Self.deleteFromSharedKeychain(account: Self.keychainTokenAccount)
             Self.deleteFromSharedKeychain(account: Self.keychainUserIdAccount)
+            Self.deleteFromSharedKeychain(account: Self.keychainRefreshTokenAccount)
         }
         // Clean up legacy UserDefaults token storage
         defaults?.removeObject(forKey: "supabase_access_token")

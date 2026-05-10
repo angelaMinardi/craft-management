@@ -63,12 +63,14 @@ struct SavePatternResult {
 
 enum SupabaseExtensionError: Error, LocalizedError {
     case notAuthenticated
+    case sessionExpired
     case missingConfig
     case saveFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .notAuthenticated: return "Please sign in to Pattern Vault first."
+        case .sessionExpired: return "Your sign-in session expired."
         case .missingConfig: return "Supabase configuration missing."
         case .saveFailed(let msg): return msg
         }
@@ -99,6 +101,7 @@ enum SupabaseExtensionClient {
     private static let keychainService = "com.patternvault.app.supabase"
     private static let keychainTokenAccount = "supabase_access_token"
     private static let keychainUserIdAccount = "supabase_user_id"
+    private static let keychainRefreshTokenAccount = "supabase_refresh_token"
 
     struct AuthInfo {
         let accessToken: String
@@ -106,6 +109,8 @@ enum SupabaseExtensionClient {
     }
 
     /// Reads shared auth credentials from Keychain (preferred) with UserDefaults fallback.
+    /// Note: this returns the cached access token even if it has expired. For network calls,
+    /// use `freshAuthInfo()` to refresh stale tokens before hitting Supabase.
     static func authInfo() -> AuthInfo? {
         // Try Keychain first (secure, shared via App Group access group)
         if let token = readFromSharedKeychain(account: keychainTokenAccount),
@@ -127,6 +132,108 @@ enum SupabaseExtensionClient {
             return nil
         }
         return AuthInfo(accessToken: token, userId: userId)
+    }
+
+    /// Returns auth credentials, refreshing the access token via Supabase's token endpoint
+    /// if the cached one has expired or is within `expiryMargin` seconds of expiring.
+    /// The Supabase SDK only refreshes tokens while the main app is running, so the share
+    /// extension must do its own refresh to avoid 401s on cold-shared content.
+    static func freshAuthInfo(expiryMargin: TimeInterval = 60) async -> AuthInfo? {
+        guard let current = authInfo() else { return nil }
+        if !isAccessTokenExpired(current.accessToken, withMargin: expiryMargin) {
+            return current
+        }
+        guard let refreshToken = readFromSharedKeychain(account: keychainRefreshTokenAccount),
+              !refreshToken.isEmpty,
+              let cfg = config(),
+              let refreshed = await refreshAccessToken(refreshToken: refreshToken, config: cfg) else {
+            return nil
+        }
+        saveToSharedKeychain(account: keychainTokenAccount, value: refreshed.accessToken)
+        saveToSharedKeychain(account: keychainRefreshTokenAccount, value: refreshed.refreshToken)
+        let userId = jwtSub(from: refreshed.accessToken) ?? current.userId
+        return AuthInfo(accessToken: refreshed.accessToken, userId: userId)
+    }
+
+    private struct RefreshedSession {
+        let accessToken: String
+        let refreshToken: String
+    }
+
+    private static func isAccessTokenExpired(_ token: String, withMargin: TimeInterval) -> Bool {
+        guard let exp = jwtExp(from: token) else {
+            // Treat tokens we can't parse as expired so we attempt a refresh rather than 401.
+            return true
+        }
+        return Date().timeIntervalSince1970 + withMargin >= exp
+    }
+
+    private static func jwtExp(from token: String) -> TimeInterval? {
+        let segments = token.split(separator: ".")
+        guard segments.count >= 2 else { return nil }
+        var payload = String(segments[1])
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let remainder = payload.count % 4
+        if remainder > 0 {
+            payload += String(repeating: "=", count: 4 - remainder)
+        }
+        guard let data = Data(base64Encoded: payload),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+        if let exp = json["exp"] as? TimeInterval { return exp }
+        if let expInt = json["exp"] as? Int { return TimeInterval(expInt) }
+        return nil
+    }
+
+    private static func refreshAccessToken(
+        refreshToken: String,
+        config: (url: String, anonKey: String)
+    ) async -> RefreshedSession? {
+        guard let url = URL(string: "\(config.url)/auth/v1/token?grant_type=refresh_token") else {
+            return nil
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
+        request.timeoutInterval = 15
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                #if DEBUG
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                NSLog("[SaveToPatternVault] token refresh failed HTTP %ld", code)
+                #endif
+                return nil
+            }
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let accessToken = json["access_token"] as? String,
+                  let newRefresh = json["refresh_token"] as? String,
+                  !accessToken.isEmpty, !newRefresh.isEmpty else {
+                return nil
+            }
+            return RefreshedSession(accessToken: accessToken, refreshToken: newRefresh)
+        } catch {
+            return nil
+        }
+    }
+
+    private static func saveToSharedKeychain(account: String, value: String) {
+        guard let data = value.data(using: .utf8) else { return }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: account,
+            kSecAttrAccessGroup as String: appGroupId
+        ]
+        SecItemDelete(query as CFDictionary)
+        var addQuery = query
+        addQuery[kSecValueData as String] = data
+        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        SecItemAdd(addQuery as CFDictionary, nil)
     }
 
     // MARK: - Shared Keychain read (minimal inline helper — cannot import main app's KeychainHelper)
@@ -179,7 +286,7 @@ enum SupabaseExtensionClient {
 
     /// Calls the Edge Function to extract pattern metadata from a YouTube video. Returns nil if not configured or request fails.
     static func extractPatternFromVideo(videoURL: String) async -> VideoExtractionResult? {
-        guard let auth = authInfo(),
+        guard let auth = await freshAuthInfo(),
               let url = videoExtractionFunctionURL() else { return nil }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -278,7 +385,7 @@ enum SupabaseExtensionClient {
         enrichmentStatus: String? = nil,
         progressCallback: ((String) -> Void)? = nil
     ) async throws -> SavePatternResult {
-        guard let auth = authInfo() else { throw SupabaseExtensionError.notAuthenticated }
+        guard let auth = await freshAuthInfo() else { throw SupabaseExtensionError.notAuthenticated }
         guard let config = config() else { throw SupabaseExtensionError.missingConfig }
 
         let patternId = UUID().uuidString
@@ -287,12 +394,16 @@ enum SupabaseExtensionClient {
 
         // If PDF was shared, upload it first and set pdf_url.
         // Do not fail the entire save if PDF upload fails; save metadata and warn instead.
+        // Exception: if the failure is an expired session, surface it so the user knows to
+        // re-auth rather than getting a partially-saved pattern.
         var pdfUrlToUse: String? = pdfUrl
         if let pdfData = pdfDataToUpload, !pdfData.isEmpty {
             progressCallback?("Uploading PDF...")
             do {
                 let uploaded = try await uploadPdfToStorage(pdfData: pdfData, patternId: patternId, auth: auth, config: config)
                 pdfUrlToUse = uploaded
+            } catch SupabaseExtensionError.sessionExpired {
+                throw SupabaseExtensionError.sessionExpired
             } catch {
                 warnings.append("PDF upload failed (\(error.localizedDescription)), but the pattern was still saved.")
             }
@@ -467,6 +578,7 @@ enum SupabaseExtensionClient {
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
             let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if code == 401 { throw SupabaseExtensionError.sessionExpired }
             let responseText = String(data: responseData, encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if responseText.isEmpty {
@@ -484,7 +596,7 @@ enum SupabaseExtensionClient {
     ///   - storagePath: Path within pattern-images bucket (e.g. "patternId/chart_uuid.jpg").
     /// - Returns: Public URL of the uploaded chart image.
     static func uploadChartImage(imageData: Data, storagePath: String) async throws -> String {
-        guard let auth = authInfo() else {
+        guard let auth = await freshAuthInfo() else {
             throw SupabaseExtensionError.saveFailed("Not authenticated")
         }
         guard let cfg = config() else {
@@ -518,6 +630,9 @@ enum SupabaseExtensionClient {
                 data: pdfData,
                 contentType: "application/pdf"
             )
+        } catch SupabaseExtensionError.sessionExpired {
+            // Auth failure won't be fixed by retrying with a different content-type.
+            throw SupabaseExtensionError.sessionExpired
         } catch {
             // Retry once with permissive content type + upsert for stricter bucket settings.
             do {
@@ -530,6 +645,8 @@ enum SupabaseExtensionClient {
                     contentType: "application/octet-stream",
                     upsert: true
                 )
+            } catch SupabaseExtensionError.sessionExpired {
+                throw SupabaseExtensionError.sessionExpired
             } catch {
                 throw SupabaseExtensionError.saveFailed(
                     "PDF upload failed in bucket '\(bucket)' at path '\(path)'. " +
@@ -572,9 +689,14 @@ enum SupabaseExtensionClient {
                 guard let httpResponse = response as? HTTPURLResponse,
                       (200...299).contains(httpResponse.statusCode) else {
                     let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                    if code == 401 { throw SupabaseExtensionError.sessionExpired }
                     throw SupabaseExtensionError.saveFailed("HTTP \(code)")
                 }
                 return
+            } catch SupabaseExtensionError.sessionExpired {
+                // Don't retry — refreshing once at the start of savePattern is enough; if the
+                // server still rejects the JWT, the refresh token is also invalid.
+                throw SupabaseExtensionError.sessionExpired
             } catch {
                 lastError = error
                 if attempt < maxAttempts {
@@ -624,7 +746,7 @@ enum SupabaseExtensionClient {
     /// Fire-and-forget request to the enrich-pattern Edge Function.
     /// The function runs AI analysis server-side and updates the pattern row.
     static func requestEnrichment(patternId: String) async {
-        guard let auth = authInfo(), let config = config() else { return }
+        guard let auth = await freshAuthInfo(), let config = config() else { return }
         guard let url = URL(string: "\(config.url)/functions/v1/enrich-pattern") else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -638,7 +760,7 @@ enum SupabaseExtensionClient {
 
     /// Calls RPC increment_ai_usage for the current user. Returns true if increment succeeded (used for entitlement).
     static func incrementAIUsage() async -> Bool {
-        guard let auth = authInfo(), let config = config() else { return false }
+        guard let auth = await freshAuthInfo(), let config = config() else { return false }
         guard let url = URL(string: "\(config.url)/rest/v1/rpc/increment_ai_usage") else { return false }
         let payload: [String: Any] = ["p_user_id": auth.userId]
         guard let bodyData = try? JSONSerialization.data(withJSONObject: payload) else { return false }

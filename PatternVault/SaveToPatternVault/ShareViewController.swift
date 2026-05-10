@@ -1099,6 +1099,8 @@ class ShareViewController: UIViewController {
                     switch e {
                     case .notAuthenticated:
                         message = "Open Pattern Vault, sign in, and try sharing again."
+                    case .sessionExpired:
+                        message = "Your sign-in session expired. Open Pattern Vault to refresh it, then try sharing again."
                     case .missingConfig:
                         message = "App config is missing. Open Pattern Vault once and try again."
                     case .saveFailed:

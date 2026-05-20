@@ -13,7 +13,7 @@ struct WidgetOnboardingSheet: View {
     private let steps: [(number: Int, text: String)] = [
         (1, "Long press your Home Screen"),
         (2, "Tap the + button in the corner"),
-        (3, "Search for Pattern Vault and add \"Row Tracker\"")
+        (3, "Search for Corvid Craft and add \"Row Tracker\"")
     ]
 
     var body: some View {

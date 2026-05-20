@@ -4,6 +4,7 @@
 //
 
 import AuthenticationServices
+import StoreKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -18,6 +19,9 @@ struct SettingsView: View {
     @State private var showSignOutConfirm = false
     @State private var showDeleteConfirm = false
     @State private var showPaywall = false
+    /// The source passed to the paywall — defaults to Settings but callers
+    /// can override before flipping showPaywall so analytics + copy stay in sync.
+    @State private var paywallSource: GrowthOrchestrator.PaywallSource = .settings
     @State private var exportFileItem: ExportFileItem?
     @State private var isExporting = false
     @State private var isUserBackupExporting = false
@@ -63,7 +67,10 @@ struct SettingsView: View {
             } message: {
                 Text("You can sign in again anytime.")
             }
-            .confirmationDialog("Delete Account", isPresented: $showDeleteConfirm) {
+            // App Review (2.1(a)): use .alert instead of .confirmationDialog so the
+            // destructive Delete Account flow is presented as a centered modal on iPad
+            // (the popover-style confirmationDialog was clipping at the bottom edge).
+            .alert("Delete Account?", isPresented: $showDeleteConfirm) {
                 Button("Delete Account", role: .destructive) {
                     Task { await auth.deleteAccount() }
                 }
@@ -74,8 +81,8 @@ struct SettingsView: View {
             .sheet(item: $exportFileItem) { item in
                 exportReadySheet(fileURL: item.url, isUserBackup: item.isUserBackup)
             }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView(source: .settings)
+            .sheet(isPresented: $showPaywall, onDismiss: { paywallSource = .settings }) {
+                PaywallView(source: paywallSource)
             }
             .sheet(isPresented: $showMascotHelp) {
                 MascotHelpView()
@@ -89,7 +96,7 @@ struct SettingsView: View {
             }
             .onAppear {
                 if let userId = auth.currentUserId {
-                    let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+                    let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app")
                     if let urlString = defaults?.string(forKey: "pendingRavelryCallbackURL"),
                        let url = URL(string: urlString) {
                         defaults?.removeObject(forKey: "pendingRavelryCallbackURL")
@@ -100,7 +107,7 @@ struct SettingsView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .processPendingRavelryCallback)) { _ in
                 guard let userId = auth.currentUserId else { return }
-                let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+                let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app")
                 guard let urlString = defaults?.string(forKey: "pendingRavelryCallbackURL"),
                       let url = URL(string: urlString) else { return }
                 defaults?.removeObject(forKey: "pendingRavelryCallbackURL")
@@ -111,6 +118,13 @@ struct SettingsView: View {
                 Button("OK", role: .cancel) { ravelryOAuthError = nil }
             } message: {
                 if let msg = ravelryOAuthError { Text(msg) }
+            }
+            .alert("Account", isPresented: Binding(get: { auth.errorMessage != nil }, set: { if !$0 { auth.clearError() } })) {
+                Button("OK", role: .cancel) {
+                    auth.clearError()
+                }
+            } message: {
+                if let msg = auth.errorMessage { Text(msg) }
             }
             .task {
                 if let userId = auth.currentUserId, RavelryOAuthService.shared.isConnected(userId: userId) {
@@ -137,6 +151,7 @@ struct SettingsView: View {
 
             Button {
                 // Explicit user intent from Settings should never be suppressed.
+                paywallSource = .settings
                 showPaywall = true
             } label: {
                 HStack(spacing: Theme.Spacing.sm) {
@@ -154,12 +169,106 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, Theme.Spacing.md)
                 .padding(.horizontal, Theme.Spacing.lg)
+                .settingsRowHitArea()
             }
             .buttonStyle(.plain)
             .accessibilityLabel(SubscriptionStore.shared.isPremium ? "Manage Premium" : "Upgrade to Premium")
 
+            // Restore Purchases (App Store Review guideline 3.1.1 — must be
+            // available outside the paywall too).
+            Button {
+                Task {
+                    await SubscriptionStore.shared.restorePurchases()
+                }
+            } label: {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Theme.sageGreen)
+                        .frame(width: 22)
+                    Text("Restore purchases")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(Theme.deepPlum)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.deepPlum.opacity(0.2))
+                }
+                .padding(.vertical, Theme.Spacing.md)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .settingsRowHitArea()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Restore purchases")
+
+            if let restoreMessage = SubscriptionStore.shared.restoreNoResultMessage {
+                Text(restoreMessage)
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                    .padding(.horizontal, Theme.Spacing.lg)
+            }
+
+            // Manage Subscription (only visible to premium users).
+            if SubscriptionStore.shared.isPremium {
+                Link(destination: URL(string: "https://apps.apple.com/account/subscriptions")!) {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Theme.dustyBlue)
+                            .frame(width: 22)
+                        Text("Manage subscription")
+                            .font(Theme.Typography.body)
+                            .foregroundStyle(Theme.deepPlum)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Theme.deepPlum.opacity(0.3))
+                    }
+                    .padding(.vertical, Theme.Spacing.md)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .settingsRowHitArea()
+                }
+                .accessibilityLabel("Manage subscription in the App Store")
+            }
+
+            // Redeem promo code (Holiday promos, re-engagement offers).
+            // iOS presents the native App Store code-redemption sheet.
+            Button {
+                AnalyticsService.shared.track(
+                    .offerCodeRedeemed,
+                    properties: [AnalyticsService.Property.entrySurface: "settings"]
+                )
+                Task { @MainActor in
+                    guard let scene = UIApplication.shared.connectedScenes
+                        .compactMap({ $0 as? UIWindowScene })
+                        .first(where: { $0.activationState == .foregroundActive }) else {
+                        return
+                    }
+                    try? await AppStore.presentOfferCodeRedeemSheet(in: scene)
+                }
+            } label: {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: "gift.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Theme.softCoral)
+                        .frame(width: 22)
+                    Text("Redeem promo code")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(Theme.deepPlum)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.deepPlum.opacity(0.2))
+                }
+                .padding(.vertical, Theme.Spacing.md)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .settingsRowHitArea()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Redeem promo code")
+
             if !SubscriptionStore.shared.isPremium {
-                Text("Free: 30 patterns, 5 AI/month, 20 note photos; includes ads. \(Theme.Premium.tagline)")
+                Text("Free: 25 patterns, 5 AI/month, 20 note photos; includes ads. \(Theme.Premium.tagline)")
                     .font(Theme.Typography.caption2)
                     .foregroundStyle(Theme.deepPlum.opacity(0.5))
                     .padding(.horizontal, Theme.Spacing.lg)
@@ -197,6 +306,7 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, Theme.Spacing.md)
                 .padding(.horizontal, Theme.Spacing.lg)
+                .settingsRowHitArea()
             }
             .buttonStyle(.plain)
             .disabled(isUserBackupExporting)
@@ -219,6 +329,14 @@ struct SettingsView: View {
     /// Process Ravelry OAuth callback URL (from notification or pending store). Exchanges code for tokens and fetches username.
     @MainActor
     private func processRavelryCallback(url: URL, userId: UUID) async {
+        // Skip if already connected — another callback path may have succeeded first
+        if RavelryOAuthService.shared.isConnected(userId: userId) {
+            if ravelryImportStore.ravelryUsername == nil {
+                await ravelryImportStore.fetchUsername(userId: userId)
+            }
+            ravelryOAuthError = nil
+            return
+        }
         do {
             try await RavelryOAuthService.shared.handleCallback(url: url, userId: userId)
             await ravelryImportStore.fetchUsername(userId: userId)
@@ -236,7 +354,7 @@ struct SettingsView: View {
         let payload = DebugPatternExport.export(from: store.patterns)
         guard let data = try? JSONEncoder().encode(payload) else { return }
         let dateStr = ISO8601DateFormatter().string(from: Date()).prefix(10)
-        let fileName = "patternvault_backup_\(dateStr).json"
+        let fileName = "corvidcraft_backup_\(dateStr).json"
         let tempDir = FileManager.default.temporaryDirectory
         let fileURL = tempDir.appendingPathComponent(fileName)
         try? data.write(to: fileURL)
@@ -273,6 +391,7 @@ struct SettingsView: View {
                 }
                 .padding(.vertical, Theme.Spacing.md)
                 .padding(.horizontal, Theme.Spacing.lg)
+                .settingsRowHitArea()
             }
             .buttonStyle(.plain)
             .disabled(isExporting)
@@ -302,7 +421,7 @@ struct SettingsView: View {
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.deepPlum.opacity(0.6))
                     .multilineTextAlignment(.center)
-                ShareLink(item: fileURL, preview: SharePreview(isUserBackup ? "patternvault_backup.json" : "uploaded_patterns.json", image: Image(systemName: "doc"))) {
+                ShareLink(item: fileURL, preview: SharePreview(isUserBackup ? "corvidcraft_backup.json" : "uploaded_patterns.json", image: Image(systemName: "doc"))) {
                     Label("Share file", systemImage: "square.and.arrow.up")
                         .font(Theme.Typography.headline)
                         .foregroundStyle(.white)
@@ -400,10 +519,11 @@ struct SettingsView: View {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Theme.deepPlum.opacity(0.2))
-                    }
-                    .padding(.vertical, Theme.Spacing.md)
-                    .padding(.horizontal, Theme.Spacing.lg)
                 }
+                .padding(.vertical, Theme.Spacing.md)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .settingsRowHitArea()
+            }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Sign Out")
                 .accessibilityHint("Signs out of your account")
@@ -499,6 +619,7 @@ struct SettingsView: View {
                             }
                             .padding(.vertical, Theme.Spacing.md)
                             .padding(.horizontal, Theme.Spacing.lg)
+                            .settingsRowHitArea()
                         }
                         .buttonStyle(.plain)
                         .disabled(ravelryImportStore.isImporting)
@@ -546,11 +667,18 @@ struct SettingsView: View {
                             }
                             .padding(.vertical, Theme.Spacing.md)
                             .padding(.horizontal, Theme.Spacing.lg)
+                            .settingsRowHitArea()
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Disconnect Ravelry")
                     } else {
                         Button {
+                            // Premium gate: Ravelry OAuth + bulk library import is a Premium-only feature.
+                            if !SubscriptionStore.shared.isPremium {
+                                paywallSource = .ravelryConnect
+                                showPaywall = true
+                                return
+                            }
                             if !RavelryOAuthService.shared.isOAuthConfigured {
                                 ravelryOAuthError = "Ravelry connection isn't available in this version. Please update the app to the latest version, or contact support if the problem continues."
                             } else {
@@ -558,12 +686,17 @@ struct SettingsView: View {
                                     do {
                                         let url = try await startRavelryOAuthURL()
                                         guard let userId = auth.currentUserId else { return }
-                                        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "patternvault") { [self] callbackURL, error in
+                                        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "corvidcraft") { [self] callbackURL, error in
                                             Task { @MainActor in
-                                                if let error = error as? ASWebAuthenticationSessionError, error.code == .canceledLogin {
+                                                if let error = error as? ASWebAuthenticationSessionError,
+                                                   error.code == .canceledLogin || error.code == .presentationContextInvalid {
+                                                    // canceledLogin: user dismissed the sheet
+                                                    // presentationContextInvalid: onOpenURL already handled the callback
                                                     return
                                                 }
                                                 if let error = error {
+                                                    // Don't overwrite success if onOpenURL path already connected
+                                                    if RavelryOAuthService.shared.isConnected(userId: userId) { return }
                                                     ravelryOAuthError = error.localizedDescription
                                                     return
                                                 }
@@ -595,6 +728,7 @@ struct SettingsView: View {
                             }
                             .padding(.vertical, Theme.Spacing.md)
                             .padding(.horizontal, Theme.Spacing.lg)
+                            .settingsRowHitArea()
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Connect Ravelry")
@@ -639,6 +773,7 @@ struct SettingsView: View {
                 }
                 .padding(Theme.Spacing.md)
                 .borderedCard()
+                .settingsRowHitArea()
             }
             .buttonStyle(.plain)
         }
@@ -761,6 +896,7 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, Theme.Spacing.md)
                     .padding(.horizontal, Theme.Spacing.lg)
+                    .settingsRowHitArea()
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Show app tutorial")
@@ -793,6 +929,7 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, Theme.Spacing.md)
                     .padding(.horizontal, Theme.Spacing.lg)
+                    .settingsRowHitArea()
                 }
                 .buttonStyle(.plain)
 
@@ -809,7 +946,7 @@ struct SettingsView: View {
                             .foregroundStyle(Theme.sageGreen)
                             .frame(width: 22)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("How AI works in Pattern Vault")
+                            Text("How AI works in Corvid Craft")
                                 .font(Theme.Typography.body)
                                 .foregroundStyle(Theme.deepPlum)
                             Text("What the AI does — and doesn't — do")
@@ -823,9 +960,10 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, Theme.Spacing.md)
                     .padding(.horizontal, Theme.Spacing.lg)
+                    .settingsRowHitArea()
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("How AI works in Pattern Vault")
+                .accessibilityLabel("How AI works in Corvid Craft")
             }
             .borderedCard()
             .tutorialAnchor(.settingsTutorialRow, isActive: currentStepAnchor == .settingsTutorialRow)
@@ -893,6 +1031,7 @@ struct SettingsView: View {
             }
             .padding(.vertical, Theme.Spacing.md)
             .padding(.horizontal, Theme.Spacing.lg)
+            .settingsRowHitArea()
         }
         .buttonStyle(.plain)
     }
@@ -903,7 +1042,7 @@ struct SettingsView: View {
         VStack(spacing: Theme.Spacing.md) {
             TappableMascotView(size: 72)
 
-            Text("Pattern Vault")
+            Text("Corvid Craft")
                 .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.deepPlum.opacity(0.4))
 
@@ -963,6 +1102,13 @@ struct SettingsView: View {
             return true
         }
         return isValid(gemini)
+    }
+}
+
+private extension View {
+    func settingsRowHitArea() -> some View {
+        frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
     }
 }
 

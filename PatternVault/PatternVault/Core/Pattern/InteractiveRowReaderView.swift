@@ -54,7 +54,7 @@ struct InteractiveRowReaderView: View {
             RowCounterBarView(
                 currentRow: currentRow,
                 totalRows: rows.count,
-                secondaryCounters: currentState.secondaryCounters,
+                secondaryCounters: currentState.secondaryCounters.filter { $0.stepIndex == nil },
                 alertRows: currentState.alertRows,
                 onDecrement: {
                     rowCounterStore.decrementGlobal(patternId: patternId, makeId: makeId, patternTitle: patternTitle)

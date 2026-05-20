@@ -135,7 +135,7 @@ async function analyzeWithGemini(
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
       responseMimeType: "application/json",
-      maxOutputTokens: 8192,
+      maxOutputTokens: 65536,
       temperature: 0.1,
       thinkingConfig: { thinkingBudget: 1024 },
     },
@@ -154,10 +154,16 @@ async function analyzeWithGemini(
       }
     );
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error(`Gemini API error: ${res.status} ${res.statusText}`);
+      return null;
+    }
     const data = (await res.json()) as Record<string, unknown>;
     const candidates = data.candidates as Array<Record<string, unknown>>;
-    if (!candidates?.length) return null;
+    if (!candidates?.length) {
+      console.error("Gemini returned no candidates", JSON.stringify(data).slice(0, 500));
+      return null;
+    }
 
     const parts = (candidates[0].content as Record<string, unknown>)
       ?.parts as Array<Record<string, unknown>>;
@@ -350,6 +356,23 @@ serve(async (req) => {
       status: 404,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  // TikTok videos: skip AI enrichment — captions produce poor steps/descriptions
+  if ((pattern.source_platform as string)?.toLowerCase() === "tiktok") {
+    if (pattern.enrichment_status !== "complete") {
+      await supabase
+        .from("patterns")
+        .update({
+          enrichment_status: "complete",
+          enrichment_completed_at: new Date().toISOString(),
+        })
+        .eq("id", patternId);
+    }
+    return new Response(
+      JSON.stringify({ status: "complete", message: "TikTok — skipped enrichment" }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   // Skip if already enriched successfully

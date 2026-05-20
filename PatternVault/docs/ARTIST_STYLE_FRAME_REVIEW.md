@@ -4,7 +4,7 @@ Use this document to evaluate initial artist concepts and lock one direction bef
 
 ## Review Goal
 
-Select one style direction that best expresses Pattern Vault's emotional positioning and can scale across app, extension, and web surfaces.
+Select one style direction that best expresses Corvid Craft's emotional positioning and can scale across app, extension, and web surfaces.
 
 ## Submission Requirements (Artist)
 
@@ -22,7 +22,7 @@ Each direction must include:
 - Emotional clarity (25)
   - Can users read the feeling in under 1 second?
 - Brand fidelity (25)
-  - Does it feel like Pattern Vault's current palette and personality?
+  - Does it feel like Corvid Craft's current palette and personality?
 - Product fit (20)
   - Does it integrate cleanly with rounded UI and text-heavy surfaces?
 - Reusability (15)

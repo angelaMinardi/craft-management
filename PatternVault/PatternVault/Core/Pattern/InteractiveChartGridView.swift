@@ -20,10 +20,10 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
     func makeUIView(context: Context) -> UIScrollView {
         let scrollView = UIScrollView()
         scrollView.delegate = context.coordinator
-        scrollView.minimumZoomScale = 1.0
+        scrollView.minimumZoomScale = 0.5
         scrollView.maximumZoomScale = 5.0
-        scrollView.showsHorizontalScrollIndicator = true
-        scrollView.showsVerticalScrollIndicator = true
+        scrollView.showsHorizontalScrollIndicator = false
+        scrollView.showsVerticalScrollIndicator = false
         scrollView.bouncesZoom = true
         scrollView.backgroundColor = .clear
 
@@ -43,6 +43,11 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
         let doubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDoubleTap(_:)))
         doubleTap.numberOfTapsRequired = 2
         scrollView.addGestureRecognizer(doubleTap)
+
+        // Center after initial layout
+        DispatchQueue.main.async {
+            context.coordinator.centerContent(in: scrollView)
+        }
 
         return scrollView
     }
@@ -64,6 +69,23 @@ struct ZoomableScrollView<Content: View>: UIViewRepresentable {
         }
 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? { hostView }
+
+        // Center content when smaller than viewport at any zoom level
+        func scrollViewDidZoom(_ scrollView: UIScrollView) {
+            centerContent(in: scrollView)
+        }
+
+        func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
+            centerContent(in: scrollView)
+        }
+
+        func centerContent(in scrollView: UIScrollView) {
+            let contentSize = scrollView.contentSize
+            let boundsSize = scrollView.bounds.size
+            let xOffset = max(0, (boundsSize.width - contentSize.width) / 2)
+            let yOffset = max(0, (boundsSize.height - contentSize.height) / 2)
+            hostView.frame.origin = CGPoint(x: xOffset, y: yOffset)
+        }
 
         @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
             guard let scrollView = gesture.view as? UIScrollView else { return }
@@ -123,6 +145,7 @@ struct InteractiveChartGridView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var chartStore = ChartHighlightStore.shared
     @ObservedObject private var rowCounterStore = RowCounterStore.shared
+    @ObservedObject private var progressStore = PatternProgressStore.shared
     @State private var progress: ChartProgressState
     @State private var colorworkGrid: ColorworkGrid?
     @State private var showCleanGrid = false
@@ -166,6 +189,15 @@ struct InteractiveChartGridView: View {
     private var currentSideLabel: String {
         guard highlight.chartType == .workedFlat else { return "" }
         return progress.knittingModeRow % 2 == 1 ? "RS" : "WS"
+    }
+
+    /// The auto-created repeat cycle counter for this pattern, if an active repeat is in progress.
+    private var activeCycleCounter: SecondaryCounter? {
+        guard let activeRepeat = progressStore.progress(for: patternId, makeId: makeId)?.activeRepeat,
+              !activeRepeat.isComplete else { return nil }
+        return rowCounterStore.state(for: patternId, makeId: makeId)
+            .secondaryCounters
+            .first { $0.id == activeRepeat.cycleCounterId && $0.isActive }
     }
 
     var body: some View {
@@ -582,20 +614,38 @@ struct InteractiveChartGridView: View {
                             .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(Theme.deepPlum.opacity(0.5))
                     }
-                    Text("of \(totalRows) \u{00B7} \(Int(completionPercent))% done")
-                        .font(Theme.Typography.caption2)
-                        .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                    HStack(spacing: Theme.Spacing.xs) {
+                        Text("of \(totalRows) \u{00B7} \(Int(completionPercent))% done")
+                            .font(Theme.Typography.caption2)
+                            .foregroundStyle(Theme.deepPlum.opacity(0.5))
+                        if let cycleCounter = activeCycleCounter {
+                            let cycleNum = cycleCounter.totalResets + 1
+                            let cycleLabel = cycleCounter.maxResets.map { "Cycle \(cycleNum)/~\($0)" } ?? "Cycle \(cycleNum)"
+                            HStack(spacing: 3) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 9, weight: .semibold))
+                                Text(cycleLabel)
+                                    .font(Theme.Typography.caption2.weight(.semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(Theme.dustyBlue)
+                            .clipShape(Capsule())
+                        }
+                    }
                 }
 
                 // Next row
+                let canGoNext = progress.knittingModeRow < totalRows || activeCycleCounter != nil
                 Button {
                     nextRow()
                 } label: {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(progress.knittingModeRow < totalRows ? Theme.deepPlum : Theme.deepPlum.opacity(0.3))
+                        .foregroundStyle(canGoNext ? Theme.deepPlum : Theme.deepPlum.opacity(0.3))
                 }
-                .disabled(progress.knittingModeRow >= totalRows)
+                .disabled(!canGoNext)
             }
             .padding(.vertical, Theme.Spacing.sm)
             .padding(.horizontal, Theme.Spacing.md)
@@ -636,7 +686,22 @@ struct InteractiveChartGridView: View {
     // MARK: - Row Navigation
 
     private func nextRow() {
-        guard progress.knittingModeRow < totalRows else { return }
+        if progress.knittingModeRow >= totalRows {
+            // At end of chart — wrap to row 1 for next cycle if a cycle counter is active
+            if let cycleCounter = activeCycleCounter {
+                progress.completedRows.insert(progress.knittingModeRow)
+                rowCounterStore.incrementSecondary(
+                    patternId: patternId, makeId: makeId, counterId: cycleCounter.id
+                )
+                // Reset chart progress for the new cycle
+                progress.completedRows = []
+                progress.knittingModeRow = 1
+                syncRowCounter()
+                chartStore.saveProgress(progress, for: highlight.id)
+                HapticService.lightImpact()
+            }
+            return
+        }
         progress.completedRows.insert(progress.knittingModeRow)
         progress.knittingModeRow += 1
         syncRowCounter()

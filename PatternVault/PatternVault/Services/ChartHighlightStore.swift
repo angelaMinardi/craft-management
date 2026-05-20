@@ -22,7 +22,7 @@ final class ChartHighlightStore: ObservableObject {
     private init() {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         storageDir = appSupport.appendingPathComponent("ChartHighlights", isDirectory: true)
-        legacyDefaults = UserDefaults(suiteName: "group.com.patternvault.app")
+        legacyDefaults = UserDefaults(suiteName: "group.com.corvidcraft.app")
         ensureDirectory()
         migrateFromUserDefaultsIfNeeded()
         load()
@@ -138,6 +138,27 @@ final class ChartHighlightStore: ObservableObject {
         for h in toRemove { removeFiles(for: h.id) }
     }
 
+    // MARK: - No-Charts Markers
+
+    /// Returns true if chart detection already ran for this pattern and found nothing.
+    func hasNoChartsMarker(patternId: UUID) -> Bool {
+        FileManager.default.fileExists(atPath: noChartsMarkerURL(patternId).path)
+    }
+
+    /// Persists the fact that chart detection found no charts for this pattern.
+    func setNoChartsMarker(patternId: UUID) {
+        FileManager.default.createFile(atPath: noChartsMarkerURL(patternId).path, contents: nil)
+    }
+
+    /// Clears the marker (e.g., when the user triggers re-analysis).
+    func clearNoChartsMarker(patternId: UUID) {
+        try? FileManager.default.removeItem(at: noChartsMarkerURL(patternId))
+    }
+
+    private func noChartsMarkerURL(_ patternId: UUID) -> URL {
+        storageDir.appendingPathComponent("\(patternId.uuidString).nocharts")
+    }
+
     // MARK: - File-Based Persistence
 
     private func ensureDirectory() {
@@ -244,11 +265,6 @@ final class ChartHighlightStore: ObservableObject {
                 }
             }
 
-            #if DEBUG
-            if highlight.isAIExtracted {
-                print("[ChartHighlightStore] LOAD \(highlight.chartLabel ?? highlight.id.uuidString): insets L=\(String(format:"%.3f",highlight.gridInsetLeft)) T=\(String(format:"%.3f",highlight.gridInsetTop)) R=\(String(format:"%.3f",highlight.gridInsetRight)) B=\(String(format:"%.3f",highlight.gridInsetBottom))")
-            }
-            #endif
             let surfaceKey = storageSurfaceKey(for: highlight)
             if let existing = loadedBySurface[surfaceKey] {
                 removeFiles(for: existing.highlight.id)
@@ -268,9 +284,6 @@ final class ChartHighlightStore: ObservableObject {
     }
 
     private func persistHighlight(_ highlight: ChartHighlight) {
-        #if DEBUG
-        print("[ChartHighlightStore] PERSIST \(highlight.chartLabel ?? highlight.id.uuidString): insets L=\(String(format:"%.3f",highlight.gridInsetLeft)) T=\(String(format:"%.3f",highlight.gridInsetTop)) R=\(String(format:"%.3f",highlight.gridInsetRight)) B=\(String(format:"%.3f",highlight.gridInsetBottom))")
-        #endif
         // Write image data to separate file, strip from JSON
         var stripped = highlight
         let imageData = stripped.extractedChartPNGData

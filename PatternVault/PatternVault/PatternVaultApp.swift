@@ -2,7 +2,7 @@
 //  PatternVaultApp.swift
 //  PatternVault
 //
-//  Pattern Vault — personal craft library (iOS).
+//  Corvid Craft — personal craft library (iOS).
 //  Freemium: AdMob (banner for free users), optional Firebase (Analytics + Crashlytics) when GoogleService-Info.plist is present.
 //
 
@@ -33,22 +33,27 @@ struct PatternVaultApp: App {
             RootView(sharedURL: $sharedURL, savedPatternId: $savedPatternId)
                 .environmentObject(auth)
                 .onOpenURL { url in
-                    if url.scheme == "patternvault", url.path.contains("ravelry") || url.host == "oauth" {
-                        let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+                    if url.scheme == "corvidcraft", url.path.contains("ravelry") || url.host == "oauth" {
+                        let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app")
                         defaults?.set(url.absoluteString, forKey: "pendingRavelryCallbackURL")
                         defaults?.synchronize()
                         NotificationCenter.default.post(name: .ravelryOAuthCallback, object: url)
-                    } else if (url.scheme == "patternvault" || url.scheme == "com.patternvault.app") && url.host == "pattern" {
+                    } else if (url.scheme == "corvidcraft" || url.scheme == "com.corvidcraft.app") && url.host == "pattern" {
                         let uuidString = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                         if let id = UUID(uuidString: uuidString) {
                             savedPatternId = id
                         }
-                    } else if url.scheme == "com.patternvault.app" && url.host == "share" {
+                    } else if url.scheme == "com.corvidcraft.app" && url.host == "share" {
                         if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                            let urlParam = components.queryItems?.first(where: { $0.name == "url" })?.value {
                             sharedURL = urlParam
                         }
                     } else {
+                        // Catches OAuth (Google) callbacks AND password-recovery
+                        // callbacks — both use the com.corvidcraft.app://auth/callback
+                        // scheme. AuthService.session(from:) inspects the URL for
+                        // `type=recovery` and flips isRecoveringPassword so RootView
+                        // can present the "set new password" cover.
                         Task { await auth.session(from: url) }
                     }
                 }
@@ -56,7 +61,7 @@ struct PatternVaultApp: App {
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         NotificationCenter.default.post(name: .patternListShouldRefresh, object: nil)
-                        let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+                        let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app")
                         if let idString = defaults?.string(forKey: "savedPatternId"), let id = UUID(uuidString: idString) {
                             savedPatternId = id
                             defaults?.removeObject(forKey: "savedPatternId")
@@ -69,7 +74,7 @@ struct PatternVaultApp: App {
     }
 
     private func checkForSharedURL() {
-        let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+        let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app")
         if let url = defaults?.string(forKey: "sharedURL") {
             sharedURL = url
             defaults?.removeObject(forKey: "sharedURL")

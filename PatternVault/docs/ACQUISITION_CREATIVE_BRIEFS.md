@@ -26,7 +26,7 @@ Every brief must map to one intent cluster, one creative family, and one first-s
 
 - Audience segment:
 - Core problem statement:
-- Emotional state before using Pattern Vault:
+- Emotional state before using Corvid Craft:
 - Emotional state after first win:
 
 ### Message Stack

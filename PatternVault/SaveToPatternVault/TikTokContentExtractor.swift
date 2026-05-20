@@ -63,14 +63,15 @@ struct TikTokContentExtractor {
                     return nil
                 }
                 let authorName = json["author_name"] as? String
+                let authorUrl = json["author_url"] as? String
+                let thumbnailUrl = json["thumbnail_url"] as? String
                 let displayTitle = authorName.map { "\($0): \(title)" } ?? title
-                let pageText = "Caption / description:\n\(title)"
                 return ExtractedContent(
                     ogTitle: displayTitle,
-                    ogDescription: title,
-                    ogImageUrl: nil,
+                    ogDescription: authorUrl,
+                    ogImageUrl: thumbnailUrl,
                     additionalImageUrls: [],
-                    pageText: pageText,
+                    pageText: nil,
                     sourceUrl: canonicalUrlString,
                     videoUrls: [canonicalUrlString],
                     patternPdfUrl: nil
@@ -99,19 +100,14 @@ struct TikTokContentExtractor {
 
             let ogTitle = extractMetaContent(from: html, property: "og:title")
                 ?? extractMetaContent(from: html, name: "title")
-            let ogDescription = extractMetaContent(from: html, property: "og:description")
-                ?? extractMetaContent(from: html, name: "description")
             let ogImage = extractMetaContent(from: html, property: "og:image")
-
-            let caption = ogDescription ?? extractCaptionFromScript(in: html) ?? ogTitle ?? ""
-            let pageText = caption.isEmpty ? nil : "Caption / description:\n\(caption)"
 
             return ExtractedContent(
                 ogTitle: ogTitle ?? "TikTok pattern",
-                ogDescription: ogDescription,
+                ogDescription: nil,
                 ogImageUrl: ogImage,
                 additionalImageUrls: [],
-                pageText: pageText,
+                pageText: nil,
                 sourceUrl: canonicalUrlString,
                 videoUrls: [canonicalUrlString],
                 patternPdfUrl: nil

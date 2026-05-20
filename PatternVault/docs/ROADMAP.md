@@ -1,4 +1,4 @@
-# Pattern Vault Roadmap
+# Corvid Craft Roadmap
 
 Canonical roadmap for what is shipped now, what is next, and what is later.
 Keep this updated when feature status changes.

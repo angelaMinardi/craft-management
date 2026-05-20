@@ -1,4 +1,4 @@
--- Pattern Vault Migration 006: Add PDF URL and extended website metadata
+-- Corvid Craft Migration 006: Add PDF URL and extended website metadata
 -- Run this in Supabase Dashboard -> SQL Editor -> New query -> paste -> Run
 --
 -- pdf_url: storage URL when user attaches a PDF to the pattern

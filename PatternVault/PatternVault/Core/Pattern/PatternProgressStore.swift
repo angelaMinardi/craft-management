@@ -246,7 +246,7 @@ final class PatternProgressStore: ObservableObject {
     }
 
     private var defaults: UserDefaults {
-        UserDefaults(suiteName: "group.com.patternvault.app") ?? .standard
+        UserDefaults(suiteName: "group.com.corvidcraft.app") ?? .standard
     }
 
     private func loadFromDefaults() {
@@ -321,7 +321,7 @@ final class RowCounterStore: ObservableObject {
     private static let defaultMakeSuffix = "default"
 
     private init() {
-        defaults = UserDefaults(suiteName: "group.com.patternvault.app") ?? .standard
+        defaults = UserDefaults(suiteName: "group.com.corvidcraft.app") ?? .standard
         loadFromDefaults()
     }
 
@@ -378,7 +378,8 @@ final class RowCounterStore: ObservableObject {
         resetAfter: Int,
         maxResets: Int?,
         linkMode: SecondaryCounter.LinkMode,
-        color: String
+        color: String,
+        stepIndex: Int? = nil
     ) {
         var current = state(for: patternId, makeId: makeId)
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -388,7 +389,8 @@ final class RowCounterStore: ObservableObject {
             resetAfter: max(1, resetAfter),
             maxResets: maxResets,
             linkMode: linkMode,
-            color: color
+            color: color,
+            stepIndex: stepIndex
         )
         current.secondaryCounters.append(counter)
         setState(current, patternId: patternId, makeId: makeId)
@@ -607,7 +609,7 @@ final class RowCounterStore: ObservableObject {
 
     private func checkRowAlerts(row: Int, state: RowCounterState, patternTitle: String?) {
         guard state.alertRows.contains(row) else { return }
-        let title = patternTitle ?? "Pattern Vault"
+        let title = patternTitle ?? "Corvid Craft"
         RowReminderService.fireAlert(patternTitle: title, row: row)
     }
 

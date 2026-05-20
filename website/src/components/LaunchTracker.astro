@@ -3,29 +3,37 @@ interface Props {
   class?: string;
 }
 const { class: className = '' } = Astro.props;
+
+const TESTFLIGHT_URL = 'https://testflight.apple.com/join/37Nj2UCG';
+const SPOTS = 100;
+const EGGS = 10;
+const SPOTS_PER_EGG = SPOTS / EGGS;
 ---
 
 <div class:list={['launch-tracker', className]} id="launch-tracker">
   <div class="tracker-header">
-    <h3 class="tracker-title">Beta Launch Tracker</h3>
-    <p class="tracker-subtitle">12 spots. First testers get to break things and tell us what to fix.</p>
+    <h3 class="tracker-title">TestFlight beta is open</h3>
+    <p class="tracker-subtitle">100 tester spots available — first come, first served. Install in a couple of taps.</p>
   </div>
-  <div class="tracker-eggs" aria-label="12 beta tester spots">
-    {Array.from({ length: 12 }).map((_, i) => (
-      <div class="tracker-egg" data-egg-index={i} aria-label={`Spot ${i + 1}`}>
+  <div class="tracker-eggs" aria-label={`${SPOTS} TestFlight tester spots, ${EGGS} milestone markers`}>
+    {Array.from({ length: EGGS }).map((_, i) => (
+      <div class="tracker-egg" data-egg-index={i} aria-label={`Spots ${i * SPOTS_PER_EGG + 1}–${(i + 1) * SPOTS_PER_EGG}`}>
         <svg viewBox="0 0 40 52" fill="none" class="egg-svg" aria-hidden="true">
           <path d="M20 2C10 2 2 18 2 32C2 42.5 10 50 20 50C30 50 38 42.5 38 32C38 18 30 2 20 2Z"
                 stroke="currentColor" stroke-width="2" fill="currentColor" fill-opacity="0.15"/>
         </svg>
-        <span class="egg-number">{i + 1}</span>
+        <span class="egg-number">{(i + 1) * SPOTS_PER_EGG}</span>
       </div>
     ))}
   </div>
   <p class="tracker-label" id="tracker-label"></p>
   <p class="tracker-urgency" id="tracker-urgency"></p>
+  <a class="pv-button-primary tracker-cta" href={TESTFLIGHT_URL} target="_blank" rel="noopener" id="tracker-cta">
+    Join on TestFlight
+  </a>
 </div>
 
-<script>
+<script define:vars={{ SPOTS, EGGS, SPOTS_PER_EGG }}>
   const SUPABASE_URL = 'https://fbzbnztvanuiijzymckn.supabase.co';
 
   async function updateTracker() {
@@ -33,36 +41,40 @@ const { class: className = '' } = Astro.props;
       const res = await fetch(`${SUPABASE_URL}/functions/v1/waitlist-signup`);
       if (!res.ok) return;
       const data = await res.json();
-      const filled = Math.min(data.total || 0, 12);
-      const remaining = 12 - filled;
+      const total = Math.min(data.total || 0, SPOTS);
+      const filledEggs = Math.floor(total / SPOTS_PER_EGG);
 
       document.querySelectorAll('.tracker-egg').forEach((egg, i) => {
-        if (i < filled) {
+        if (i < filledEggs) {
           egg.classList.add('filled');
-          (egg as HTMLElement).style.animationDelay = `${i * 0.1}s`;
+          egg.style.animationDelay = `${i * 0.1}s`;
         }
       });
 
       const label = document.getElementById('tracker-label');
       const urgency = document.getElementById('tracker-urgency');
+      const cta = document.getElementById('tracker-cta');
 
       if (label) {
-        if (remaining === 0) {
-          label.textContent = 'All 12 spots have been claimed!';
-        } else if (remaining <= 3) {
-          label.textContent = `Only ${remaining} spot${remaining !== 1 ? 's' : ''} left!`;
-          label.classList.add('tracker-urgent');
+        if (total >= SPOTS) {
+          label.textContent = `All ${SPOTS} spots claimed — beta is full!`;
         } else {
-          label.textContent = `${filled} of 12 spots claimed`;
+          label.textContent = `${total} of ${SPOTS} spots claimed`;
         }
       }
 
       if (urgency) {
-        if (remaining > 0 && remaining <= 5) {
-          urgency.textContent = 'These spots are going fast — claim yours now.';
+        if (total >= SPOTS) {
+          urgency.textContent = 'The TestFlight is at capacity. Sign up for the waitlist for the next batch.';
           urgency.style.display = 'block';
-        } else if (remaining === 0) {
-          urgency.textContent = 'Sign up to be notified when more spots open.';
+          if (cta) {
+            cta.textContent = 'Join the waitlist';
+            cta.setAttribute('href', '/waitlist');
+            cta.removeAttribute('target');
+            cta.removeAttribute('rel');
+          }
+        } else {
+          urgency.textContent = `${SPOTS - total} spots left — beta apps install in minutes via TestFlight.`;
           urgency.style.display = 'block';
         }
       }

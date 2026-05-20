@@ -10,7 +10,7 @@ import Security
 
 enum KeychainHelper {
 
-    private static let serviceName = "com.patternvault.app.ravelry"
+    private static let serviceName = "com.corvidcraft.app.ravelry"
 
     /// OAuth 2.0: pass accessToken and "" for accessTokenSecret.
     static func saveRavelryTokens(userId: UUID, accessToken: String, accessTokenSecret: String = "") throws {

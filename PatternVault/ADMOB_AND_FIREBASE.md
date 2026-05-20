@@ -29,7 +29,7 @@ Freemium setup: banner ads for free users, optional free analytics and crash rep
 
 **To enable:**
 
-1. In [Firebase Console](https://console.firebase.google.com), create a project (or use existing) and add an iOS app with bundle ID `com.patternvault.app`.
+1. In [Firebase Console](https://console.firebase.google.com), create a project (or use existing) and add an iOS app with bundle ID `com.corvidcraft.app`.
 2. Download **GoogleService-Info.plist** and add it to the **PatternVault** target (drag into Xcode, ensure “Copy items” and PatternVault target are checked).
 3. Build and run. On launch, `FirebaseApp.configure()` runs and Crashlytics/Analytics start automatically.
 

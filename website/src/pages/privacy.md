@@ -1,6 +1,6 @@
 ---
-title: Privacy Policy — Pattern Vault
-description: Pattern Vault privacy policy. What we collect, how we use it, and your rights.
+title: Privacy Policy — Corvid Craft
+description: Corvid Craft privacy policy. What we collect, how we use it, and your rights.
 layout: ../layouts/BaseLayout.astro
 ---
 
@@ -8,7 +8,7 @@ layout: ../layouts/BaseLayout.astro
 
 # Privacy Policy
 
-Pattern Vault ("Application") is operated by Angela Minardi ("Service Provider") as a freemium mobile service.
+Corvid Craft ("Application") is operated by Angela Minardi ("Service Provider") as a freemium mobile service.
 
 ## Information Collection and Use
 

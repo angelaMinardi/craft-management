@@ -1,4 +1,4 @@
--- Pattern Vault Migration 013: App config (AI kill switch)
+-- Corvid Craft Migration 013: App config (AI kill switch)
 -- Run in Supabase Dashboard → SQL Editor → New query → paste → Run
 --
 -- Single-row table for app-wide settings. Used to disable AI (Share Extension + main app)

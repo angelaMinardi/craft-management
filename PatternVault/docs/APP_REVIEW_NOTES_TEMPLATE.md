@@ -6,7 +6,7 @@ Copy/paste this into **Notes for Review** and fill in bracketed fields before ea
 
 Hello App Review Team,
 
-Thank you for reviewing **Pattern Vault**.
+Thank you for reviewing **Corvid Craft**.
 
 ## Build and Access
 
@@ -27,7 +27,7 @@ Thank you for reviewing **Pattern Vault**.
 ## Non-Obvious Features
 
 - **Share Extension (`SaveToPatternVault`)**  
-  Share any supported URL/PDF from Safari (or another app) to Pattern Vault.
+  Share any supported URL/PDF from Safari (or another app) to Corvid Craft.
 - **AI behavior**  
   AI step parsing/import can be disabled centrally via backend kill switch (`app_config.ai_enabled`).  
   If disabled, app shows a clear unavailable message and continues non-AI flows.

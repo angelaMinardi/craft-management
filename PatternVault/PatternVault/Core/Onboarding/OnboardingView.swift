@@ -6,10 +6,12 @@
 //  stash & goals, personalized summary, and premium paywall.
 //
 
+import StoreKit
 import SwiftUI
 import UserNotifications
 
 struct OnboardingView: View {
+    @ObservedObject private var subscriptionStore = SubscriptionStore.shared
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @AppStorage("onboarding_companion_name") private var companionName = ""
     @AppStorage("onboarding_selected_crafts") private var selectedCraftsRaw = ""
@@ -28,6 +30,7 @@ struct OnboardingView: View {
     @State private var showPaywall = false
     @State private var showDiscountOffer = false
     @State private var notificationStatus: String?
+    @State private var onboardingPurchaseError: String?
     @FocusState private var focusedField: Field?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -57,10 +60,6 @@ struct OnboardingView: View {
         selectedCraftsRaw = crafts.sorted().joined(separator: ",")
     }
 
-    private var isEditingField: Bool {
-        focusedField != nil
-    }
-
     // MARK: - Body
 
     var body: some View {
@@ -82,8 +81,6 @@ struct OnboardingView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(reduceMotion ? .none : .spring(response: 0.45, dampingFraction: 0.82), value: currentPage)
-                .offset(y: isEditingField ? -56 : 0)
-                .animation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.82), value: isEditingField)
 
                 // Page dots
                 HStack(spacing: 6) {
@@ -108,14 +105,30 @@ struct OnboardingView: View {
             }
         }
         .sheet(isPresented: $showPaywall, onDismiss: {
-            if !SubscriptionStore.shared.isPremium {
+            // Only chase with the discount sheet if (a) the user didn't already
+            // subscribe and (b) the intro offer is actually configured and
+            // they're eligible for it. Otherwise the sheet would advertise a
+            // discount StoreKit won't honor.
+            if !SubscriptionStore.shared.isPremium && SubscriptionStore.shared.yearlyIntroEligible {
                 showDiscountOffer = true
+            } else if !SubscriptionStore.shared.isPremium {
+                // No intro offer to chase with — just finish onboarding.
+                finishOnboarding()
             }
         }) {
             onboardingPaywallView
         }
         .sheet(isPresented: $showDiscountOffer) {
             discountOfferView
+        }
+        .alert("Subscription", isPresented: Binding(get: { onboardingPurchaseError != nil }, set: { if !$0 { onboardingPurchaseError = nil } })) {
+            Button("OK", role: .cancel) {
+                onboardingPurchaseError = nil
+            }
+        } message: {
+            if let message = onboardingPurchaseError {
+                Text(message)
+            }
         }
         .onAppear {
             triggerPageAnimations()
@@ -142,7 +155,7 @@ struct OnboardingView: View {
 
     private var topBar: some View {
         HStack {
-            Text("Pattern Vault")
+            Text("Corvid Craft")
                 .font(Theme.Typography.headline)
                 .foregroundStyle(Theme.deepPlum.opacity(0.8))
 
@@ -163,8 +176,9 @@ struct OnboardingView: View {
 
             Button("Skip") {
                 withAnimation(reduceMotion ? .none : .easeOut(duration: 0.25)) {
-                    GrowthOrchestrator.shared.markOnboardingCompleted()
-                    GrowthOrchestrator.shared.registerFrictionEvent(.interruptionHeavyFlow)
+                    // Don't mark onboarding "completed" until the user is signed in —
+                    // that's tracked in RootView. Skip is also not a friction event;
+                    // it just means the user wants to see the app now.
                     AnalyticsService.shared.track(.onboardingSkipped, properties: [
                         AnalyticsService.Property.stepIndex: "\(currentPage)"
                     ])
@@ -249,53 +263,54 @@ struct OnboardingView: View {
     // MARK: - Page 0: Meet Your Crafting Companion
 
     private var companionPage: some View {
-        VStack(spacing: 0) {
-            Spacer().frame(maxHeight: 16)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                Spacer().frame(height: 16)
 
-            // Mascot in nest
-            mascotHero(size: 176, style: .waving)
-                .frame(height: 200)
+                // Mascot in nest
+                mascotHero(size: 176, style: .waving)
+                    .frame(height: 200)
 
-            Spacer().frame(height: Theme.Spacing.lg)
+                Spacer().frame(height: Theme.Spacing.lg)
 
-            VStack(spacing: Theme.Spacing.md) {
-                Text("Meet Your Crafting\nCompanion.")
-                    .font(Theme.Typography.largeTitle)
+                VStack(spacing: Theme.Spacing.md) {
+                    Text("Meet Your Crafting\nCompanion.")
+                        .font(Theme.Typography.largeTitle)
+                        .foregroundStyle(Theme.deepPlum)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(2)
+                        .offset(y: titleAppeared ? 0 : 16)
+                        .opacity(titleAppeared ? 1 : 0)
+
+                    Text("Hello! I'm here to help you get organized. What should we name me?")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.65))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .padding(.horizontal, Theme.Spacing.xl)
+                        .offset(y: subtitleAppeared ? 0 : 12)
+                        .opacity(subtitleAppeared ? 1 : 0)
+                }
+
+                TextField("Your Companion's Name", text: $companionName)
+                    .textInputAutocapitalization(.words)
+                    .submitLabel(.done)
+                    .focused($focusedField, equals: .companionName)
+                    .onSubmit { focusedField = nil }
                     .foregroundStyle(Theme.deepPlum)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(2)
-                    .offset(y: titleAppeared ? 0 : 16)
-                    .opacity(titleAppeared ? 1 : 0)
-
-                Text("Hello! I'm here to help you get organized. What should we name me?")
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.65))
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
+                    .tint(Theme.deepPlum)
+                    .padding(14)
+                    .background(Theme.cardBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                            .stroke(Theme.deepPlum.opacity(0.1), lineWidth: 1)
+                    )
                     .padding(.horizontal, Theme.Spacing.xl)
-                    .offset(y: subtitleAppeared ? 0 : 12)
-                    .opacity(subtitleAppeared ? 1 : 0)
+                    .padding(.top, Theme.Spacing.lg)
             }
-
-            TextField("Your Companion's Name", text: $companionName)
-                .textInputAutocapitalization(.words)
-                .submitLabel(.done)
-                .focused($focusedField, equals: .companionName)
-                .onSubmit { focusedField = nil }
-                .foregroundStyle(Theme.deepPlum)
-                .tint(Theme.deepPlum)
-                .padding(14)
-                .background(Theme.cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                        .stroke(Theme.deepPlum.opacity(0.1), lineWidth: 1)
-                )
-                .padding(.horizontal, Theme.Spacing.xl)
-                .padding(.top, Theme.Spacing.lg)
-
-            Spacer()
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 
     // MARK: - Page 1: Companion Named + Notifications
@@ -438,89 +453,90 @@ struct OnboardingView: View {
     // MARK: - Page 3: Your Stash & Goals
 
     private var stashGoalsPage: some View {
-        VStack(spacing: 0) {
-            Spacer().frame(maxHeight: 16)
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                Spacer().frame(height: 16)
 
-            mascotHero(size: 140, style: .knitting)
-                .frame(height: 170)
+                mascotHero(size: 140, style: .knitting)
+                    .frame(height: 170)
 
-            VStack(spacing: Theme.Spacing.md) {
-                Text("Your Stash & Goals.")
-                    .font(Theme.Typography.largeTitle)
-                    .foregroundStyle(Theme.deepPlum)
-                    .offset(y: titleAppeared ? 0 : 16)
-                    .opacity(titleAppeared ? 1 : 0)
+                VStack(spacing: Theme.Spacing.md) {
+                    Text("Your Stash & Goals.")
+                        .font(Theme.Typography.largeTitle)
+                        .foregroundStyle(Theme.deepPlum)
+                        .offset(y: titleAppeared ? 0 : 16)
+                        .opacity(titleAppeared ? 1 : 0)
 
-                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("How many patterns do you have?")
-                            .font(Theme.Typography.body)
-                            .foregroundStyle(Theme.deepPlum)
-                        TextField("1", text: $patternCountText)
-                            .keyboardType(.numberPad)
-                            .focused($focusedField, equals: .patternCount)
-                            .foregroundStyle(Theme.deepPlum)
-                            .tint(Theme.deepPlum)
-                            .padding(14)
-                            .background(Theme.cardBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                                    .stroke(Theme.deepPlum.opacity(0.1), lineWidth: 1)
-                            )
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("How many patterns do you have?")
+                                .font(Theme.Typography.body)
+                                .foregroundStyle(Theme.deepPlum)
+                            TextField("1", text: $patternCountText)
+                                .keyboardType(.numberPad)
+                                .focused($focusedField, equals: .patternCount)
+                                .foregroundStyle(Theme.deepPlum)
+                                .tint(Theme.deepPlum)
+                                .padding(14)
+                                .background(Theme.cardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                        .stroke(Theme.deepPlum.opacity(0.1), lineWidth: 1)
+                                )
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Your organizing goal?")
+                                .font(Theme.Typography.body)
+                                .foregroundStyle(Theme.deepPlum)
+                            TextField("Get my yarn under control", text: $organizingGoal)
+                                .textInputAutocapitalization(.sentences)
+                                .submitLabel(.done)
+                                .focused($focusedField, equals: .organizingGoal)
+                                .onSubmit { focusedField = nil }
+                                .foregroundStyle(Theme.deepPlum)
+                                .tint(Theme.deepPlum)
+                                .padding(14)
+                                .background(Theme.cardBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                                        .stroke(Theme.deepPlum.opacity(0.1), lineWidth: 1)
+                                )
+                        }
                     }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Your organizing goal?")
-                            .font(Theme.Typography.body)
-                            .foregroundStyle(Theme.deepPlum)
-                        TextField("Get my yarn under control", text: $organizingGoal)
-                            .textInputAutocapitalization(.sentences)
-                            .submitLabel(.done)
-                            .focused($focusedField, equals: .organizingGoal)
-                            .onSubmit { focusedField = nil }
-                            .foregroundStyle(Theme.deepPlum)
-                            .tint(Theme.deepPlum)
-                            .padding(14)
-                            .background(Theme.cardBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                                    .stroke(Theme.deepPlum.opacity(0.1), lineWidth: 1)
-                            )
-                    }
-                }
-                .padding(.horizontal, Theme.Spacing.xl)
-                .offset(y: subtitleAppeared ? 0 : 12)
-                .opacity(subtitleAppeared ? 1 : 0)
-
-                Text("Knowing your stash helps us personalize your vault.")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.45))
-                    .multilineTextAlignment(.center)
                     .padding(.horizontal, Theme.Spacing.xl)
+                    .offset(y: subtitleAppeared ? 0 : 12)
+                    .opacity(subtitleAppeared ? 1 : 0)
 
-                // Trust callout
-                HStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(Theme.sageGreen)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Your patterns are yours")
-                            .font(Theme.Typography.bodySemibold)
-                            .foregroundStyle(Theme.deepPlum)
-                        Text("Everything you save is private and encrypted. Export your full library anytime. We never lock patterns behind a subscription.")
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                    Text("Knowing your stash helps us personalize your vault.")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.deepPlum.opacity(0.45))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Theme.Spacing.xl)
+
+                    // Trust callout
+                    HStack(spacing: Theme.Spacing.md) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(Theme.sageGreen)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Your patterns are yours")
+                                .font(Theme.Typography.bodySemibold)
+                                .foregroundStyle(Theme.deepPlum)
+                            Text("Everything you save is private and encrypted. Export your full library anytime. We never lock patterns behind a subscription.")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                        }
                     }
+                    .padding(Theme.Spacing.md)
+                    .borderedCard()
+                    .padding(.horizontal, Theme.Spacing.xl)
                 }
-                .padding(Theme.Spacing.md)
-                .borderedCard()
-                .padding(.horizontal, Theme.Spacing.xl)
             }
-
-            Spacer()
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 
     // MARK: - Page 4: Summary / Almost Ready
@@ -629,7 +645,7 @@ struct OnboardingView: View {
                     VStack(spacing: Theme.Spacing.md) {
                         mascotHero(size: 120, style: .idle)
 
-                        Text("Unlock Pattern\nVault Premium.")
+                        Text("Unlock Corvid Craft\nPremium.")
                             .font(Theme.Typography.largeTitle)
                             .foregroundStyle(Theme.deepPlum)
                             .multilineTextAlignment(.center)
@@ -637,17 +653,18 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, Theme.Spacing.lg)
 
-                    // Annual plan card
+                    // Annual plan card — price pulled from StoreKit product when loaded
+                    // so the copy can't drift from the actual App Store Connect price.
                     VStack(spacing: Theme.Spacing.md) {
                         Text("Annual Plan")
                             .font(Theme.Typography.headline)
                             .foregroundStyle(Theme.deepPlum)
 
-                        Text("Full access to Pattern Vault Premium")
+                        Text("Full access to Corvid Craft Premium")
                             .font(Theme.Typography.caption)
                             .foregroundStyle(Theme.deepPlum.opacity(0.6))
 
-                        Text("$19.99/year")
+                        Text(onboardingYearlyDisplayPrice)
                             .font(Theme.Typography.titleBold)
                             .foregroundStyle(Theme.deepPlum)
                     }
@@ -678,27 +695,46 @@ struct OnboardingView: View {
                     // Subscribe button
                     Button {
                         Task {
-                            let yearly = SubscriptionStore.shared.products.first { $0.id == SubscriptionStore.yearlyProductId }
-                            if let product = yearly {
-                                let success = await SubscriptionStore.shared.purchase(product)
-                                if success {
-                                    showPaywall = false
-                                    finishOnboarding()
-                                }
+                            let success = await purchaseOnboardingYearlyPlan()
+                            if success {
+                                showPaywall = false
+                                finishOnboarding()
                             }
                         }
                     } label: {
-                        Text("Subscribe")
-                            .font(Theme.Typography.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(Theme.softCoral)
-                            .clipShape(Capsule())
+                        HStack(spacing: Theme.Spacing.sm) {
+                            if subscriptionStore.productsLoading || subscriptionStore.isLoading {
+                                ProgressView()
+                                    .tint(.white)
+                            }
+                            Text(onboardingSubscribeLabel)
+                                .font(Theme.Typography.headline)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Theme.softCoral)
+                        .clipShape(Capsule())
                     }
                     .buttonStyle(OnboardingButtonStyle())
                     .padding(.horizontal, Theme.Spacing.xl)
                     .padding(.top, Theme.Spacing.md)
+                    .disabled(subscriptionStore.productsLoading || subscriptionStore.isLoading)
+
+                    if let err = subscriptionStore.productsLoadError {
+                        VStack(spacing: Theme.Spacing.sm) {
+                            Text(err)
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.softCoral)
+                                .multilineTextAlignment(.center)
+                            Button("Try again") {
+                                Task { await subscriptionStore.refreshProducts() }
+                            }
+                            .font(Theme.Typography.body)
+                            .foregroundStyle(Theme.softCoral)
+                        }
+                        .padding(.horizontal, Theme.Spacing.xl)
+                    }
                 }
                 .padding(.bottom, 40)
             }
@@ -720,7 +756,7 @@ struct OnboardingView: View {
             }
         }
         .task {
-            await SubscriptionStore.shared.refreshProducts()
+            await subscriptionStore.refreshProducts()
         }
     }
 
@@ -738,42 +774,67 @@ struct OnboardingView: View {
                     .foregroundStyle(Theme.deepPlum)
                     .multilineTextAlignment(.center)
 
-                // Discount badge
-                Text("60% OFF")
-                    .font(Theme.Typography.titleBold)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 12)
-                    .background(Theme.softCoral)
-                    .clipShape(Capsule())
-
-                Text("$7.99 for your first year")
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.7))
-
-                Button {
-                    // Attempt yearly purchase (discounted via intro offer in StoreKit config)
-                    Task {
-                        let yearly = SubscriptionStore.shared.products.first { $0.id == SubscriptionStore.yearlyProductId }
-                        if let product = yearly {
-                            let success = await SubscriptionStore.shared.purchase(product)
-                            if success {
-                                showDiscountOffer = false
-                                finishOnboarding()
-                            }
-                        }
-                    }
-                } label: {
-                    Text("Redeem Offer")
-                        .font(Theme.Typography.headline)
+                // Discount badge — only shown when StoreKit reports a savings %.
+                if let savings = discountSavingsLabel {
+                    Text(savings)
+                        .font(Theme.Typography.titleBold)
                         .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 12)
                         .background(Theme.softCoral)
                         .clipShape(Capsule())
                 }
+
+                Text(introOfferDescription)
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Theme.Spacing.xl)
+
+                Button {
+                    // Attempt yearly purchase. The intro offer is fetched from
+                    // StoreKit so the price tier matches whatever is configured
+                    // in App Store Connect.
+                    Task {
+                        let success = await purchaseOnboardingYearlyPlan()
+                        if success {
+                            showDiscountOffer = false
+                            finishOnboarding()
+                        }
+                    }
+                } label: {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        if subscriptionStore.productsLoading || subscriptionStore.isLoading {
+                            ProgressView()
+                                .tint(.white)
+                        }
+                        Text(discountRedeemLabel)
+                            .font(Theme.Typography.headline)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Theme.softCoral)
+                    .clipShape(Capsule())
+                }
                 .buttonStyle(OnboardingButtonStyle())
                 .padding(.horizontal, Theme.Spacing.xxl)
+                .disabled(subscriptionStore.productsLoading || subscriptionStore.isLoading)
+
+                if let err = subscriptionStore.productsLoadError {
+                    VStack(spacing: Theme.Spacing.sm) {
+                        Text(err)
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.softCoral)
+                            .multilineTextAlignment(.center)
+                        Button("Try again") {
+                            Task { await subscriptionStore.refreshProducts() }
+                        }
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(Theme.softCoral)
+                    }
+                    .padding(.horizontal, Theme.Spacing.xxl)
+                }
 
                 Button {
                     showDiscountOffer = false
@@ -787,6 +848,9 @@ struct OnboardingView: View {
                 Spacer()
             }
             .background(Theme.screenGradient.ignoresSafeArea())
+        }
+        .task {
+            await subscriptionStore.refreshProducts()
         }
         .interactiveDismissDisabled()
     }
@@ -877,9 +941,18 @@ struct OnboardingView: View {
     }
 
     private func requestNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            #if DEBUG
+            if let error {
+                NSLog("[Onboarding] notification authorization error: %@", error.localizedDescription)
+            }
+            #endif
             DispatchQueue.main.async {
-                notificationStatus = granted ? "Notifications enabled ✓" : "You can enable later in Settings"
+                if let error {
+                    notificationStatus = "Couldn't update notification settings (\(error.localizedDescription))."
+                } else {
+                    notificationStatus = granted ? "Notifications enabled ✓" : "You can enable later in Settings"
+                }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     advanceToNextPage()
                 }
@@ -908,10 +981,80 @@ struct OnboardingView: View {
         }
     }
 
+    /// Yearly price string sourced from StoreKit when the product is loaded,
+    /// so the onboarding card never drifts from the actual App Store price.
+    /// While the product is loading we show a neutral placeholder rather than
+    /// a hardcoded price, which would silently drift if pricing ever changes.
+    private var onboardingYearlyDisplayPrice: String {
+        if let yearly = subscriptionStore.products.first(where: { $0.id == SubscriptionStore.yearlyProductId }) {
+            return "\(yearly.displayPrice)/year"
+        }
+        return "—/year"
+    }
+
+    private var yearlyProduct: Product? {
+        subscriptionStore.products.first(where: { $0.id == SubscriptionStore.yearlyProductId })
+    }
+
+    /// Copy describing the intro offer; pulled from StoreKit so it never lies.
+    private var introOfferDescription: String {
+        guard let product = yearlyProduct,
+              let intro = product.subscription?.introductoryOffer,
+              subscriptionStore.yearlyIntroEligible else {
+            return "Start your first year of Premium."
+        }
+        return "\(intro.displayPrice) for your first year, then \(product.displayPrice)/year."
+    }
+
+    /// "X% OFF" label, only when we can compute a real savings against the
+    /// regular price. Returns nil otherwise so the badge isn't shown.
+    private var discountSavingsLabel: String? {
+        guard let product = yearlyProduct,
+              let intro = product.subscription?.introductoryOffer,
+              subscriptionStore.yearlyIntroEligible,
+              product.price > 0 else {
+            return nil
+        }
+        let savings = Double(truncating: ((product.price - intro.price) / product.price * 100) as NSNumber)
+        guard savings > 0 else { return nil }
+        return "\(Int(savings.rounded())) % OFF"
+    }
+
+    /// Subscribe button label that distinguishes "still fetching products" from "purchase in flight".
+    private var onboardingSubscribeLabel: String {
+        if subscriptionStore.isLoading { return "Purchasing…" }
+        if subscriptionStore.productsLoading { return "Loading subscription…" }
+        return "Subscribe"
+    }
+
+    private var discountRedeemLabel: String {
+        if subscriptionStore.isLoading { return "Purchasing…" }
+        if subscriptionStore.productsLoading { return "Loading subscription…" }
+        return "Redeem Offer"
+    }
+
+    @MainActor
+    private func purchaseOnboardingYearlyPlan() async -> Bool {
+        onboardingPurchaseError = nil
+        if subscriptionStore.products.isEmpty && !subscriptionStore.productsLoading {
+            await subscriptionStore.refreshProducts()
+        }
+        guard let product = subscriptionStore.products.first(where: { $0.id == SubscriptionStore.yearlyProductId }) else {
+            onboardingPurchaseError = subscriptionStore.productsLoadError ?? "Subscription options are still loading. Please try again."
+            return false
+        }
+        let success = await subscriptionStore.purchase(product)
+        if !success, let error = subscriptionStore.purchaseError {
+            onboardingPurchaseError = error
+        }
+        return success
+    }
+
     private func finishOnboarding() {
+        // Only the UI flag gets flipped here; the "onboarding completed" analytics
+        // event and the GrowthOrchestrator state are flipped post-auth from RootView,
+        // so they reflect users who actually finish the funnel.
         authRequiredShown = true
-        GrowthOrchestrator.shared.markOnboardingCompleted()
-        GrowthOrchestrator.shared.registerPositiveEvent(.onboardingComplete)
         hasSeenOnboarding = true
     }
 

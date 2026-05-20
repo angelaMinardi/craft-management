@@ -2,7 +2,7 @@
 //  RavelryImportStore.swift
 //  PatternVault
 //
-//  Coordinates fetching Ravelry library and importing into Pattern Vault with dedupe and progress.
+//  Coordinates fetching Ravelry library and importing into Corvid Craft with dedupe and progress.
 //
 
 import Foundation
@@ -47,7 +47,7 @@ final class RavelryImportStore: ObservableObject {
         }
     }
 
-    /// Import Ravelry library, favorites, projects, and queue into Pattern Vault. Also imports stash into yarn stash.
+    /// Import Ravelry library, favorites, projects, and queue into Corvid Craft. Also imports stash into yarn stash.
     func importLibrary(userId: UUID, patternStore: PatternStore, yarnStashStore: YarnStashStore? = nil) async {
         let username: String
         if let existing = ravelryUsername {

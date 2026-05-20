@@ -6,9 +6,14 @@ GEMINI_API_KEY = your-gemini-api-key-here
 // Optional: for Ravelry PDF / API in Share Extension
 RAVELRY_ACCESS_KEY = placeholder
 RAVELRY_PERSONAL_KEY = placeholder
-// Optional: for Ravelry account connect + import (OAuth 2.0 app at ravelry.com/pro/developer). Redirect URI: patternvault://oauth/ravelry. Set both for the Settings "Connect Ravelry" button.
+// Optional: for Ravelry account connect + import (OAuth 2.0 app at ravelry.com/pro/developer). Redirect URI: corvidcraft://oauth/ravelry. Set both for the Settings "Connect Ravelry" button.
 RAVELRY_OAUTH2_CLIENT_ID = placeholder
 RAVELRY_OAUTH2_CLIENT_SECRET = placeholder
-// Optional: for production ads (free tier). Replace test IDs in Info.plist with your AdMob app ID and banner ad unit ID, or set here if plist uses $(GAD_APPLICATION_ID).
-// GAD_APPLICATION_ID = ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX
-// GAD_BANNER_AD_UNIT_ID = ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX
+// AdMob (Google Mobile Ads SDK). In DEBUG builds, AdService.swift uses Google's test
+// ad unit IDs so you can develop without a live AdMob account. For TestFlight /
+// App Store you MUST replace these with your own IDs from admob.google.com.
+// Default below is Google's TEST App ID — safe for development, but will never
+// serve real ads.
+GAD_APPLICATION_ID = ca-app-pub-3940256099942544~1458002511
+GAD_BANNER_AD_UNIT_ID = ca-app-pub-3940256099942544/2934735716
+GAD_NATIVE_AD_UNIT_ID = ca-app-pub-3940256099942544/3986624511

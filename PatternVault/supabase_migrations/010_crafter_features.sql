@@ -1,4 +1,4 @@
--- Pattern Vault Migration 010: Crafter features
+-- Corvid Craft Migration 010: Crafter features
 -- Run in Supabase Dashboard → SQL Editor → New query → paste → Run
 --
 -- Tables: yarn_stash, needle_hook_inventory, pattern_makes, pattern_reminders

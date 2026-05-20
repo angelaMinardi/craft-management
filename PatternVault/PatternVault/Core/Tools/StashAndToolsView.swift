@@ -24,6 +24,7 @@ struct StashAndToolsView: View {
                     VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                         stashCard
                         toolsCard
+                        swatchesCard
                         findPatternsCard
                         glossaryCard
                     }
@@ -84,6 +85,42 @@ struct StashAndToolsView: View {
             .background(Theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            .fullRowTapTarget()
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var swatchesCard: some View {
+        NavigationLink {
+            SwatchListView()
+        } label: {
+            HStack(spacing: Theme.Spacing.lg) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                        .fill(Theme.honey.opacity(0.14))
+                        .frame(width: 56, height: 56)
+                    Image(systemName: "square.grid.3x3.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Theme.honey)
+                }
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Swatches")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.deepPlum)
+                    Text("Log gauge swatches with photos, needles, and yarn")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Semantic.textMuted)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.Semantic.iconFaint)
+            }
+            .padding(Theme.Spacing.lg)
+            .background(Theme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
+            .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            .fullRowTapTarget()
         }
         .buttonStyle(.plain)
     }
@@ -120,6 +157,7 @@ struct StashAndToolsView: View {
             .background(Theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            .fullRowTapTarget()
         }
         .buttonStyle(.plain)
     }
@@ -154,6 +192,7 @@ struct StashAndToolsView: View {
             .background(Theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            .fullRowTapTarget()
         }
         .buttonStyle(.plain)
     }
@@ -188,6 +227,7 @@ struct StashAndToolsView: View {
             .background(Theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.large))
             .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            .fullRowTapTarget()
         }
         .buttonStyle(.plain)
     }

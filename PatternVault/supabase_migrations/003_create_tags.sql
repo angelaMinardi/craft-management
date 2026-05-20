@@ -1,4 +1,4 @@
--- Pattern Vault: tags + pattern_tags tables
+-- Corvid Craft: tags + pattern_tags tables
 -- Run this in Supabase Dashboard → SQL Editor → New query → paste → Run
 
 -- Tags table (shared across all users — built-in tags)

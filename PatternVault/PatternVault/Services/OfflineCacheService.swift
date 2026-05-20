@@ -9,7 +9,7 @@
 import Foundation
 
 enum OfflineCacheService {
-    private static let suiteName = "group.com.patternvault.app"
+    private static let suiteName = "group.com.corvidcraft.app"
 
     private static func fileURL(key: String) -> URL? {
         FileManager.default

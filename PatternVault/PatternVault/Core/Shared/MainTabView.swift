@@ -94,6 +94,11 @@ struct MainTabView: View {
                 Task {
                     await AIKillSwitchService.refresh()
                 }
+                Task {
+                    await AdsKillSwitchService.refresh()
+                    await AdService.shared.initialize()
+                    await SubscriptionStore.shared.refreshLifetimeOffer()
+                }
                 if let userId = auth.currentUserId {
                     Task {
                         await store.load(userId: userId)
@@ -104,7 +109,7 @@ struct MainTabView: View {
                         syncBackFromRowTrackerWidget()
                     }
                 }
-                let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+                let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app")
                 if defaults?.string(forKey: "pendingRavelryCallbackURL") != nil {
                     NotificationCenter.default.post(name: .processPendingRavelryCallback, object: nil)
                 }
@@ -219,7 +224,7 @@ final class CurrentProjectStore: ObservableObject {
     private let defaultsKey = "current_primary_pattern_id"
 
     private init() {
-        defaults = UserDefaults(suiteName: "group.com.patternvault.app") ?? .standard
+        defaults = UserDefaults(suiteName: "group.com.corvidcraft.app") ?? .standard
         if let raw = defaults.string(forKey: defaultsKey) {
             currentPatternId = UUID(uuidString: raw)
         }
@@ -322,14 +327,7 @@ private struct CurrentProjectTabView: View {
                 onClear: { currentProjectStore.clearCurrentPattern() }
             )
         }
-        .sheet(item: $workspaceHighlight) { highlight in
-            ExtractedChartWorkspaceView(
-                highlight: highlight,
-                patternId: highlight.patternId,
-                makeId: highlight.makeId,
-                onSave: { chartStore.save($0) }
-            )
-        }
+        // Chart workspace removed — annotations are now in the PDF viewer
     }
 
     private var currentPattern: Pattern? {
@@ -675,6 +673,7 @@ private struct CurrentProjectTabView: View {
             RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
                 .stroke(Theme.deepPlum.opacity(0.06), lineWidth: 1)
         )
+        .fullRowTapTarget()
     }
 
     // MARK: - Chart Workspaces
@@ -754,6 +753,7 @@ private struct CurrentProjectTabView: View {
                             RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
                                 .stroke(Theme.deepPlum.opacity(0.06), lineWidth: 1)
                         )
+                        .fullRowTapTarget()
                     }
                     .buttonStyle(.plain)
                     .staggeredAppear(index: min(4 + index, 10))

@@ -288,14 +288,14 @@ struct PatternListView: View {
     }
 
     private func loadDismissedContinueIds() {
-        let defaults = UserDefaults(suiteName: "group.com.patternvault.app") ?? .standard
+        let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app") ?? .standard
         let raw = defaults.stringArray(forKey: Self.dismissedContinueKey) ?? []
         dismissedContinuePatternIds = Set(raw.compactMap { UUID(uuidString: $0) })
     }
 
     private func dismissContinueCard(for patternId: UUID) {
         dismissedContinuePatternIds.insert(patternId)
-        let defaults = UserDefaults(suiteName: "group.com.patternvault.app") ?? .standard
+        let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app") ?? .standard
         defaults.set(dismissedContinuePatternIds.map { $0.uuidString }, forKey: Self.dismissedContinueKey)
     }
 
@@ -686,6 +686,7 @@ struct PatternListView: View {
                     .foregroundStyle(Theme.deepPlum.opacity(0.45))
             }
         }
+        .fullRowTapTarget()
     }
 
     @ViewBuilder
@@ -914,6 +915,14 @@ struct PatternListView: View {
                 }
             }
             .padding(.horizontal, Theme.Spacing.lg)
+
+            // Free-tier sponsored card. Self-hides for Premium users and when
+            // ads are disabled remotely. The card is clearly labeled "SPONSORED".
+            if !SubscriptionStore.shared.isPremium && !filteredPatterns.isEmpty {
+                NativeAdCardView()
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.top, Theme.Spacing.sm)
+            }
         }
     }
 

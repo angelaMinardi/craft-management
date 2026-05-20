@@ -41,6 +41,24 @@ struct PatternDetailView: View {
         store.patterns.first(where: { $0.id == pattern.id }) ?? pattern
     }
 
+    /// Size labels for the pattern's multi-size repeat instructions (e.g. ["Small", "Medium", "Large"]).
+    /// Returns empty array if the pattern has no multi-size data.
+    private var patternSizeOptions: [String] {
+        guard let instructions = current.decodedParsedInstructions else { return [] }
+        for instruction in instructions {
+            guard let counts = instruction.repeatInfo?.targetStitchCounts, counts.count > 1 else { continue }
+            switch counts.count {
+            case 2: return ["Small", "Large"]
+            case 3: return ["Small", "Medium", "Large"]
+            case 4: return ["XS", "S", "M", "L"]
+            case 5: return ["XS", "S", "M", "L", "XL"]
+            case 6: return ["XS", "S", "M", "L", "XL", "XXL"]
+            default: return (0..<counts.count).map { "Size \($0 + 1)" }
+            }
+        }
+        return []
+    }
+
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             GeometryReader { geo in
@@ -73,6 +91,12 @@ struct PatternDetailView: View {
                                 progressStore: progressStore,
                                 selectedMakeId: $selectedMakeId
                             )
+
+                            // MARK: - PDF Workspace
+                            if let pdfUrlString = current.pdfUrl, !pdfUrlString.isEmpty,
+                               URL(string: pdfUrlString) != nil {
+                                pdfWorkspaceCard
+                            }
 
                             PatternChartsSectionView(pattern: current)
 
@@ -191,8 +215,7 @@ struct PatternDetailView: View {
                     PDFViewerView(
                         url: pdfURL,
                         patternId: current.id,
-                        makeId: selectedMakeId,
-                        onDetectCharts: { store.extractChartsFromPDF(patternId: current.id) }
+                        makeId: selectedMakeId
                     )
                         .navigationTitle("Pattern PDF")
                         .navigationBarTitleDisplayMode(.inline)
@@ -205,7 +228,11 @@ struct PatternDetailView: View {
             }
         }
         .sheet(isPresented: $showAddMakeSheet) {
-            AddPatternMakeView(patternId: current.id, existingCount: makes.count) { newMake in
+            AddPatternMakeView(
+                patternId: current.id,
+                existingCount: makes.count,
+                sizeOptions: patternSizeOptions
+            ) { newMake in
                 makes.append(newMake)
                 selectedMakeId = newMake.id
             }
@@ -726,6 +753,40 @@ struct PatternDetailView: View {
         }
     }
 
+    // MARK: - PDF Workspace Card
+
+    private var pdfWorkspaceCard: some View {
+        Button {
+            showPdfViewer = true
+        } label: {
+            HStack(spacing: Theme.Spacing.lg) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                        .fill(Theme.softCoral.opacity(0.12))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "pencil.and.ruler.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Theme.softCoral)
+                }
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Pattern PDF")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.deepPlum)
+                    Text("View, highlight, and annotate")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Semantic.textMuted)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.Semantic.iconFaint)
+            }
+            .padding(Theme.Spacing.lg)
+            .borderedCard(borderColor: Theme.softCoral.opacity(0.25))
+        }
+        .buttonStyle(CardPressStyle())
+    }
+
     // MARK: - Pattern Info (bordered card with rows + dividers)
 
     private struct InfoItem: Identifiable {
@@ -839,6 +900,28 @@ struct PatternDetailView: View {
                     }
                     .padding(.vertical, Theme.Spacing.md)
                     .padding(.horizontal, Theme.Spacing.lg)
+
+                    // TikTok creator link
+                    if current.sourcePlatform?.lowercased() == "tiktok",
+                       let handle = tiktokHandle(from: current.sourceUrl),
+                       let profileUrl = URL(string: "https://www.tiktok.com/@\(handle)") {
+                        infoDivider
+                        HStack(spacing: Theme.Spacing.sm) {
+                            Image(systemName: "person.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Theme.dustyBlue)
+                                .frame(width: 22)
+                            Link("View @\(handle) on TikTok", destination: profileUrl)
+                                .font(Theme.Typography.body)
+                                .foregroundStyle(Theme.dustyBlue)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Theme.dustyBlue.opacity(0.4))
+                        }
+                        .padding(.vertical, Theme.Spacing.md)
+                        .padding(.horizontal, Theme.Spacing.lg)
+                    }
                 }
             }
             .borderedCard()
@@ -939,14 +1022,6 @@ struct PatternDetailView: View {
             SectionHeaderView(title: "Source")
 
             VStack(spacing: 0) {
-                if let pdfUrlString = current.pdfUrl, !pdfUrlString.isEmpty,
-                   URL(string: pdfUrlString) != nil {
-                    actionRow(icon: "doc.fill", label: "View PDF", color: Theme.softCoral) {
-                        showPdfViewer = true
-                    }
-                    infoDivider
-                }
-
                 if let src = current.sourceContent, !src.isEmpty, !PatternStepParser.looksLikeRavelryChrome(src) {
                     NavigationLink {
                         PatternContentView(pattern: current, store: store)
@@ -1200,6 +1275,17 @@ struct PatternDetailView: View {
               let host = url.host else { return nil }
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }
+
+    /// Extracts the TikTok handle (without @) from a URL like `tiktok.com/@username/video/...`
+    func tiktokHandle(from urlString: String) -> String? {
+        guard let url = URL(string: urlString),
+              let host = url.host?.lowercased(), host.contains("tiktok") else { return nil }
+        let path = url.path
+        guard let atRange = path.range(of: "@") else { return nil }
+        let afterAt = path[atRange.upperBound...]
+        let handle = afterAt.prefix(while: { $0 != "/" })
+        return handle.isEmpty ? nil : String(handle)
+    }
 }
 
 // MARK: - PatternDetailToolbar
@@ -1388,14 +1474,6 @@ private struct PatternChartsSectionView: View {
                 ForEach(interactive) { highlight in
                     interactiveChartCard(highlight)
                 }
-            }
-            .sheet(item: $selectedWorkspaceHighlight) { highlight in
-                ExtractedChartWorkspaceView(
-                    highlight: highlight,
-                    patternId: pattern.id,
-                    makeId: nil,
-                    onSave: { chartStore.save($0) }
-                )
             }
             .fullScreenCover(item: $knittingModeHighlight) { highlight in
                 InteractiveChartGridView(
@@ -1587,9 +1665,14 @@ private struct PatternStepSectionView: View {
     @State private var updateRowsCompleted = ""
     @State private var updateTotalRows = ""
     @State private var showPaywall = false
+    /// Source passed to the paywall — set by the caller before flipping showPaywall.
+    @State private var paywallSource: GrowthOrchestrator.PaywallSource = .aiLimit
     @State private var aiStepErrorIsEntitlement = false
     @State private var showStepNoteSheet = false
     @State private var stepNoteIndex: Int?
+    @State private var showStepCounterSheet = false
+    @State private var editingStepCounterId: UUID?
+    @State private var stepCounterTargetIndex: Int?
 
     private static let hasSeenWandTipKey = "PatternVaultHasSeenWandTip"
 
@@ -1961,6 +2044,9 @@ private struct PatternStepSectionView: View {
                             FormattedStepBodyView(stepBody: steps[index].body, craftType: pattern.craftType)
                         }
 
+                        // Per-step counters
+                        stepCounterBar(stepIndex: index)
+
                         HStack(spacing: Theme.Spacing.sm) {
                             Text("\(Int(stepProgressFraction * 100))%")
                                 .font(Theme.Typography.captionSemibold)
@@ -2049,8 +2135,11 @@ private struct PatternStepSectionView: View {
         .sheet(isPresented: $showStepEditor) {
             StepEditorView(pattern: pattern, progressStore: progressStore, isPresented: $showStepEditor)
         }
-        .sheet(isPresented: $showPaywall) {
-            PaywallView(source: .aiLimit)
+        .sheet(isPresented: $showPaywall, onDismiss: { paywallSource = .aiLimit }) {
+            PaywallView(source: paywallSource)
+        }
+        .sheet(isPresented: $showStepCounterSheet) {
+            stepCounterConfigSheet
         }
         .alert("Analyze steps", isPresented: Binding(get: { aiStepErrorMessage != nil }, set: { if !$0 { aiStepErrorMessage = nil } })) {
             Button("OK") { aiStepErrorMessage = nil }
@@ -2134,6 +2223,116 @@ private struct PatternStepSectionView: View {
                 AddNoteView(noteStore: noteStore, patternId: pattern.id, stepIndex: idx)
             }
         }
+    }
+
+    // MARK: - Per-Step Counters
+
+    private func countersForStep(_ stepIndex: Int) -> [SecondaryCounter] {
+        rowCounterStore.state(for: pattern.id, makeId: selectedMakeId)
+            .secondaryCounters
+            .filter { $0.stepIndex == stepIndex && $0.isActive }
+    }
+
+    @ViewBuilder
+    private func stepCounterBar(stepIndex: Int) -> some View {
+        let counters = countersForStep(stepIndex)
+        HStack(spacing: Theme.Spacing.xs) {
+            ForEach(counters.prefix(4)) { counter in
+                stepCounterChip(counter)
+            }
+            Button {
+                stepCounterTargetIndex = stepIndex
+                editingStepCounterId = nil
+                showStepCounterSheet = true
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "plus.circle")
+                        .font(.system(size: 11))
+                    if counters.isEmpty {
+                        Text("Add counter")
+                            .font(Theme.Typography.caption2)
+                    }
+                }
+                .foregroundStyle(Theme.dustyBlue)
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func stepCounterChip(_ counter: SecondaryCounter) -> some View {
+        let title = counter.title.isEmpty ? "Counter" : counter.title
+        let chipColor = stepCounterColor(counter.color)
+        HStack(spacing: 4) {
+            if counter.linkMode == .unlinked && counter.color == "dustyBlue" {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 10, weight: .semibold))
+                let cycleNum = counter.totalResets + 1
+                Text(counter.maxResets != nil ? "Cycle \(cycleNum)/~\(counter.maxResets!)" : "Cycle \(cycleNum)")
+                    .font(Theme.Typography.caption2.weight(.semibold))
+            } else {
+                Text("\(title): \(counter.currentCount)/\(counter.resetAfter)")
+                    .font(Theme.Typography.caption2.weight(.semibold))
+            }
+        }
+        .foregroundStyle(chipColor)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(chipColor.opacity(0.12))
+        .clipShape(Capsule())
+        .onTapGesture {
+            rowCounterStore.incrementSecondary(patternId: pattern.id, makeId: selectedMakeId, counterId: counter.id)
+        }
+        .onLongPressGesture {
+            stepCounterTargetIndex = counter.stepIndex
+            editingStepCounterId = counter.id
+            showStepCounterSheet = true
+        }
+    }
+
+    private func stepCounterColor(_ name: String) -> Color {
+        switch name {
+        case "sageGreen": return Theme.sageGreen
+        case "dustyBlue": return Theme.dustyBlue
+        case "honey": return Theme.honey
+        case "deepPlum": return Theme.deepPlum
+        default: return Theme.softCoral
+        }
+    }
+
+    private var editingStepCounter: SecondaryCounter? {
+        guard let id = editingStepCounterId else { return nil }
+        return rowCounterStore.state(for: pattern.id, makeId: selectedMakeId)
+            .secondaryCounters.first { $0.id == id }
+    }
+
+    private var stepCounterConfigSheet: some View {
+        SecondaryCounterConfigSheet(
+            existing: editingStepCounter,
+            onSave: { counter in
+                if editingStepCounter != nil {
+                    var updated = counter
+                    updated.stepIndex = stepCounterTargetIndex
+                    rowCounterStore.updateSecondaryCounter(patternId: pattern.id, makeId: selectedMakeId, counter: updated)
+                } else {
+                    rowCounterStore.addSecondaryCounter(
+                        patternId: pattern.id,
+                        makeId: selectedMakeId,
+                        title: counter.title,
+                        resetAfter: counter.resetAfter,
+                        maxResets: counter.maxResets,
+                        linkMode: counter.linkMode,
+                        color: counter.color,
+                        stepIndex: stepCounterTargetIndex
+                    )
+                }
+            },
+            onDelete: editingStepCounter == nil ? nil : {
+                guard let id = editingStepCounterId else { return }
+                rowCounterStore.removeSecondaryCounter(patternId: pattern.id, makeId: selectedMakeId, counterId: id)
+            }
+        )
     }
 
     // MARK: - Step Section Helpers
@@ -2622,6 +2821,8 @@ private struct FloatingToolPaletteView: View {
     @State private var showVoiceRowSheet = false
     @State private var voiceRowSuccessMessage: String?
     @StateObject private var voiceRowService = VoiceRowService()
+    @State private var showPaywall = false
+    @State private var paywallSource: GrowthOrchestrator.PaywallSource = .voiceRowCounter
 
     private static let yarnColorOptions = ["Warm", "DUSTY BLUE", "Sage", "Coral", "Plum", "Honey", "Clear"]
     private static let logMinuteOptions = Array(stride(from: 0, through: 55, by: 5))
@@ -2640,8 +2841,19 @@ private struct FloatingToolPaletteView: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    Button { showVoiceRowSheet = true } label: {
-                        toolPaletteChip(icon: "mic.fill", label: "Progress")
+                    Button {
+                        // Premium gate: hands-free voice row counting is a Premium perk.
+                        if SubscriptionStore.shared.isPremium {
+                            showVoiceRowSheet = true
+                        } else {
+                            paywallSource = .voiceRowCounter
+                            showPaywall = true
+                        }
+                    } label: {
+                        toolPaletteChip(
+                            icon: SubscriptionStore.shared.isPremium ? "mic.fill" : "mic.fill.badge.plus",
+                            label: "Progress"
+                        )
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Log progress by voice")
@@ -2687,6 +2899,9 @@ private struct FloatingToolPaletteView: View {
             }
         }
         .sheet(isPresented: $showVoiceRowSheet) { voiceRowSheet }
+        .sheet(isPresented: $showPaywall, onDismiss: { paywallSource = .voiceRowCounter }) {
+            PaywallView(source: paywallSource)
+        }
     }
 
     private func toolPaletteChip(icon: String, label: String, tint: Color? = nil) -> some View {

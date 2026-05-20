@@ -1,4 +1,4 @@
--- Pattern Vault Migration 016: Harden pattern-pdfs Storage RLS
+-- Corvid Craft Migration 016: Harden pattern-pdfs Storage RLS
 -- Ensures a single, deterministic policy set for PDF upload/read/update/delete.
 -- Path format is enforced: <auth.uid()>/<pattern_id>/<file>.pdf
 

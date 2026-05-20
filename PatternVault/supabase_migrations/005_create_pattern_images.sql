@@ -1,4 +1,4 @@
--- Pattern Vault Migration 005: Create pattern_images table
+-- Corvid Craft Migration 005: Create pattern_images table
 -- Run this in Supabase Dashboard -> SQL Editor -> New query -> paste -> Run
 --
 -- ALSO: Create storage bucket 'pattern-images' in Supabase Dashboard -> Storage

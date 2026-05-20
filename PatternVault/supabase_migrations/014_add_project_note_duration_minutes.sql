@@ -1,4 +1,4 @@
--- Pattern Vault: add structured duration tracking for project notes
+-- Corvid Craft: add structured duration tracking for project notes
 -- Run this after 013_app_config.sql
 
 alter table if exists public.project_notes

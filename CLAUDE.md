@@ -1,4 +1,4 @@
-# Pattern Vault
+# Corvid Craft
 
 ## Project Overview
 
@@ -17,7 +17,7 @@ Repo also includes a separate static marketing/legal site in `website/`.
   - `Core/Settings/` — Settings, paywall
   - `Core/Onboarding/` — Onboarding, tutorials, widget onboarding
   - `Core/Mascot/` — Mascot views, story, animations
-  - `Core/Rewards/` — Achievements, celebrations, daily rewards
+  - `Core/Rewards/` — Celebrations
   - `Core/Shared/` — Tab bar, layout helpers, web view, ads
 - `PatternVault/SaveToPatternVault/` — iOS Share Extension (target: SaveToPatternVault)
 - `PatternVault/supabase_migrations/` — SQL migrations (run manually in Supabase SQL Editor)
@@ -95,7 +95,7 @@ Repo also includes a separate static marketing/legal site in `website/`.
 - **Hands-free row counting (done):** VoiceRowService; tap Row in pattern detail, say row/round number; updates progress + note, speaks confirmation.
 - **AI step parsing (done):** Two modes: (1) At import time — AIPatternAnalyzer prompt includes `steps` field, saved as `parsed_steps` JSON column in DB. (2) On-demand in main app — “Analyze Steps” wand button calls AIStepParserService (Gemini 2.5 Flash) to parse existing patterns. Step priority chain: CustomStepLayout (user-edited) > AI parsed_steps > PatternStepParser (heuristic). Migration: 009_add_parsed_steps. New file: AIStepParserService.swift (main app Services).
 - **Smart pattern search (done):** Stash & Tools → Find patterns. User enters or selects materials (yarn weight, needle/hook size, craft) from stash/tools or freeform; searches Ravelry via RavelryPatternSearchService; results can be opened in Safari or saved to vault (AddPatternView). Requires Ravelry API keys in Config.xcconfig for search; graceful message if not configured.
-- **Ravelry account connect and import (done):** Settings → Ravelry. Users can connect their Ravelry account via OAuth 2.0 authorization code flow (RavelryOAuthService, KeychainHelper). Tokens stored in Keychain per app user. After connecting, “Import my Ravelry library” fetches the user’s pattern library (RavelryUserService), dedupes by source_url, and adds patterns via PatternStore. Requires a Ravelry OAuth app configured with redirect URI `patternvault://oauth/ravelry`. Config: `RAVELRY_OAUTH2_CLIENT_ID`, `RAVELRY_OAUTH2_CLIENT_SECRET`.
+- **Ravelry account connect and import (done):** Settings → Ravelry. Users can connect their Ravelry account via OAuth 2.0 authorization code flow (RavelryOAuthService, KeychainHelper). Tokens stored in Keychain per app user. After connecting, “Import my Ravelry library” fetches the user’s pattern library (RavelryUserService), dedupes by source_url, and adds patterns via PatternStore. Requires a Ravelry OAuth app configured with redirect URI `corvidcraft://oauth/ravelry`. Config: `RAVELRY_OAUTH2_CLIENT_ID`, `RAVELRY_OAUTH2_CLIENT_SECRET`.
 - **Interactive chart knitting mode (done):** InteractiveChartGridView; row-by-row progress, zoom/pan (UIScrollView-backed ZoomableScrollView), row notes, size selector. Entry from ExtractedChartWorkspaceView bottom toolbar or PatternDetailView chart card context menu.
 - **CV-based grid border detection (done):** ChartGridDetector.detectBorderLines scans for contiguous pixel runs to find grid borders. Knitting charts have continuous gridlines; row/column numbers are discrete characters with gaps. Preferred over luminance-based density refinement for colorwork charts.
 - **Intelligent repeat tracking (done):** RepeatInfo model + heuristic detection from step body text (RepeatInfo.detect). RepeatStepView shows cycling UI for repeat instructions. Simple round counter for “work N rounds” steps. Size selector for multi-size patterns. ActiveRepeatState in PatternProgressData tracks cycle position. SecondaryCounter (color=dustyBlue, linkMode=unlinked) tracks cycles.
@@ -103,7 +103,7 @@ Repo also includes a separate static marketing/legal site in `website/`.
 
 ## Gotchas
 
-- Create `Config/Config.xcconfig` from `Config.xcconfig.example` (set `GEMINI_API_KEY` for AI pattern analysis, and optionally Supabase keys); file is gitignored. Required for main app AI step parsing and Share Extension. For Ravelry: `RAVELRY_ACCESS_KEY`/`RAVELRY_PERSONAL_KEY` for PDF and Find patterns; `RAVELRY_OAUTH2_CLIENT_ID`/`RAVELRY_OAUTH2_CLIENT_SECRET` for “Connect Ravelry” and import library (OAuth app redirect URI: `patternvault://oauth/ravelry`).
+- Create `Config/Config.xcconfig` from `Config.xcconfig.example` (set `GEMINI_API_KEY` for AI pattern analysis, and optionally Supabase keys); file is gitignored. Required for main app AI step parsing and Share Extension. For Ravelry: `RAVELRY_ACCESS_KEY`/`RAVELRY_PERSONAL_KEY` for PDF and Find patterns; `RAVELRY_OAUTH2_CLIENT_ID`/`RAVELRY_OAUTH2_CLIENT_SECRET` for “Connect Ravelry” and import library (OAuth app redirect URI: `corvidcraft://oauth/ravelry`).
 - Git repo: `https://github.com/angelaMinardi/craft-management` — API keys use xcconfig variables (e.g. `$(GEMINI_API_KEY)`); never hardcode secrets in pbxproj.
 - Share Extension and main app cannot share Swift files directly — types like `ExtractedContent` are defined in the extension target
 - `pbxproj` edits: new files need PBXFileReference + PBXBuildFile + PBXGroup membership + PBXSourcesBuildPhase entry. IDs must be unique — reusing IDs from other entries causes "Cannot find type in scope" errors. Always `grep` the pbxproj for candidate IDs before adding.

@@ -5,7 +5,7 @@
 ## Branding
 - **Name:** Purrl (cat pun)
 - **Mascot:** Pink/colorful cat character (top of screen)
-- **Visual style:** Soft pinks, whites, navy/deep blue text, rounded cards — similar warm aesthetic to Pattern Vault but pinker
+- **Visual style:** Soft pinks, whites, navy/deep blue text, rounded cards — similar warm aesthetic to Corvid Craft but pinker
 
 ## Navigation (Bottom Tab Bar)
 | Tab | Icon | Notes |
@@ -15,7 +15,7 @@
 | Archive | Books/shelves icon | Completed/stored projects |
 | Profile | Person icon | User settings |
 
-**Comparison to Pattern Vault:** PV uses a different tab structure. Purrl separates Counter as its own top-level tab, suggesting row counting is a primary use case they prioritize. Archive as a separate tab (vs. filtering) is notable.
+**Comparison to Corvid Craft:** PV uses a different tab structure. Purrl separates Counter as its own top-level tab, suggesting row counting is a primary use case they prioritize. Archive as a separate tab (vs. filtering) is notable.
 
 ---
 
@@ -60,7 +60,7 @@ Three entry paths presented as cards:
 - Empty state shows clipboard icon: "Your plan is empty!"
 - Separate "+" FAB (pink, bottom-right) for quick-add
 
-**Takeaway:** Purrl has dedicated tool cards (Visualizer, Gauge Calculator) that Pattern Vault lacks. The "Up Next" queue is a planning feature for organizing what to work on next.
+**Takeaway:** Purrl has dedicated tool cards (Visualizer, Gauge Calculator) that Corvid Craft lacks. The "Up Next" queue is a planning feature for organizing what to work on next.
 
 ---
 
@@ -168,7 +168,7 @@ AI successfully parsed a sock pattern into discrete steps:
 
 ## Key Capabilities Summary
 
-| Feature | Purrl | Pattern Vault |
+| Feature | Purrl | Corvid Craft |
 |---------|-------|---------------|
 | AI PDF parsing | Yes - Primary feature | Yes - Via Share Extension + Gemini |
 | Row counter | Yes - Dedicated tab | Yes - In pattern detail |

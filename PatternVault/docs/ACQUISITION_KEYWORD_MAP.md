@@ -1,6 +1,6 @@
 # Acquisition Keyword Map
 
-This is the canonical ASO keyword and intent-cluster map for Pattern Vault.
+This is the canonical ASO keyword and intent-cluster map for Corvid Craft.
 It ties acquisition intent to store messaging and first in-app value moments.
 
 ## Attribution Reality and Confidence

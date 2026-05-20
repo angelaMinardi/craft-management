@@ -7,41 +7,23 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		08C7720B2F5B374A00241E4E /* SaveToPatternVault.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 08C772012F5B374A00241E4E /* SaveToPatternVault.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		08C7720B2F5B374A00241E4E /* SaveToCorvidCraft.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 08C772012F5B374A00241E4E /* SaveToCorvidCraft.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B0010001 /* PatternVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010001 /* PatternVaultApp.swift */; };
 		B0010002 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010002 /* RootView.swift */; };
 		B0010003 /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010003 /* SupabaseManager.swift */; };
 		B0010004 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010004 /* AuthService.swift */; };
 		B0010005 /* AuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010005 /* AuthGateView.swift */; };
 		B0010006 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010006 /* LoginView.swift */; };
-		B0010007 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010007 /* SignUpView.swift */; };
+		B0010033 /* SignupFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010033 /* SignupFlowView.swift */; };
 		B0010008 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010008 /* MainTabView.swift */; };
 		B0010009 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010009 /* DashboardView.swift */; };
 		B001000A /* PatternListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001000A /* PatternListView.swift */; };
 		B001000B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F001000B /* SettingsView.swift */; };
-		B0010026 /* AIInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010026 /* AIInfoView.swift */; };
-		B00E0001 /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0001 /* Collection.swift */; };
-		B00E0002 /* CollectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0002 /* CollectionRepository.swift */; };
-				B00E0011 /* RepeatStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0011 /* RepeatStepView.swift */; };
-				B00E0012 /* ProjectGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0012 /* ProjectGoal.swift */; };
-		B00E0010 /* RepeatInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0010 /* RepeatInfo.swift */; };
-		B00E0003 /* CollectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0003 /* CollectionStore.swift */; };
-		B00E0004 /* CollectionPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0004 /* CollectionPickerView.swift */; };
-		B00E0006 /* GoalSettingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0006 /* GoalSettingView.swift */; };
-		B00E0007 /* ProgressShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0007 /* ProgressShareCardView.swift */; };
-		B00F0001 /* OfflineCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0001 /* OfflineCacheService.swift */; };
-		B00F0002 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0002 /* NetworkMonitor.swift */; };
-		B00F0003 /* PDFCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0003 /* PDFCacheService.swift */; };
-		B00F0004 /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0004 /* BarcodeScannerView.swift */; };
-		B00F0005 /* StitchGlossary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0005 /* StitchGlossary.swift */; };
-		B00F0006 /* GlossaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0006 /* GlossaryView.swift */; };
 		B001000C /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = P0010001 /* Supabase */; };
 		B001000D /* QuickLook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F001000F /* QuickLook.framework */; };
 		B001000E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F001000E /* Assets.xcassets */; };
-		BVPRIV01 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PVPRIV01 /* PrivacyInfo.xcprivacy */; };
 		B001000F /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = P0010002 /* Lottie */; };
 		B0010010 /* VoiceRowService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010010 /* VoiceRowService.swift */; };
-		B0010027 /* RowReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010027 /* RowReminderService.swift */; };
 		B0010011 /* AIStepParserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010011 /* AIStepParserService.swift */; };
 		B0010012 /* ImageCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010012 /* ImageCacheService.swift */; };
 		B0010013 /* WidgetDataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010013 /* WidgetDataService.swift */; };
@@ -58,7 +40,12 @@
 		B0010023 /* MascotInteractionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010023 /* MascotInteractionStore.swift */; };
 		B0010024 /* PatternRowParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010024 /* PatternRowParser.swift */; };
 		B0010025 /* ChartHighlightStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010025 /* ChartHighlightStore.swift */; };
-		B0030025 /* ChartGridDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030025 /* ChartGridDetector.swift */; };
+		B0010026 /* AIInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010026 /* AIInfoView.swift */; };
+		B0010027 /* RowReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010027 /* RowReminderService.swift */; };
+		B0010029 /* LifetimeOfferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010029 /* LifetimeOfferService.swift */; };
+		B0010030 /* AdService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010030 /* AdService.swift */; };
+		B0010031 /* BannerAdView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010031 /* BannerAdView.swift */; };
+		B0010032 /* NativeAdCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010032 /* NativeAdCardView.swift */; };
 		B0020001 /* Pattern.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020001 /* Pattern.swift */; };
 		B0020002 /* ProjectNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020002 /* ProjectNote.swift */; };
 		B0020003 /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0020003 /* Tag.swift */; };
@@ -110,6 +97,7 @@
 		B0030022 /* SecondaryCounterConfigSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030022 /* SecondaryCounterConfigSheet.swift */; };
 		B0030023 /* ChartHighlighterOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030023 /* ChartHighlighterOverlayView.swift */; };
 		B0030024 /* GridAlignmentEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030024 /* GridAlignmentEditor.swift */; };
+		B0030025 /* ChartGridDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0030025 /* ChartGridDetector.swift */; };
 		B0040001 /* EmptyPatterns.json in Resources */ = {isa = PBXBuildFile; fileRef = F0040001 /* EmptyPatterns.json */; };
 		B0040002 /* LottieAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040002 /* LottieAnimationView.swift */; };
 		B0040003 /* AnimatedCrowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040003 /* AnimatedCrowView.swift */; };
@@ -162,12 +150,30 @@
 		B00C0003 /* MascotStoreSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0003 /* MascotStoreSheet.swift */; };
 		B00C0006 /* MascotHelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0006 /* MascotHelpView.swift */; };
 		B00C0008 /* NestDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0008 /* NestDecoration.swift */; };
-		B00C0009 /* DailyRewardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C0009 /* DailyRewardStore.swift */; };
-		B00C000A /* AchievementStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C000A /* AchievementStore.swift */; };
-		B00C000B /* AchievementBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C000B /* AchievementBadge.swift */; };
 		B00D0001 /* PDFPageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00D0001 /* PDFPageRenderer.swift */; };
 		B00D0002 /* GeminiMultimodalRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00D0002 /* GeminiMultimodalRequest.swift */; };
 		B00D0003 /* ChartImageProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00D0003 /* ChartImageProcessor.swift */; };
+		B00E0001 /* Collection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0001 /* Collection.swift */; };
+		B00E0002 /* CollectionRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0002 /* CollectionRepository.swift */; };
+		B00E0003 /* CollectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0003 /* CollectionStore.swift */; };
+		B00E0004 /* CollectionPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0004 /* CollectionPickerView.swift */; };
+		B00E0006 /* GoalSettingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0006 /* GoalSettingView.swift */; };
+		B00E0007 /* ProgressShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0007 /* ProgressShareCardView.swift */; };
+		B00E0010 /* RepeatInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0010 /* RepeatInfo.swift */; };
+		B00E0011 /* RepeatStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0011 /* RepeatStepView.swift */; };
+		B00E0012 /* ProjectGoal.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00E0012 /* ProjectGoal.swift */; };
+		B00F0001 /* OfflineCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0001 /* OfflineCacheService.swift */; };
+		B00F0002 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0002 /* NetworkMonitor.swift */; };
+		B00F0003 /* PDFCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0003 /* PDFCacheService.swift */; };
+		B00F0004 /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0004 /* BarcodeScannerView.swift */; };
+		B00F0005 /* StitchGlossary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0005 /* StitchGlossary.swift */; };
+		B00F0006 /* GlossaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0006 /* GlossaryView.swift */; };
+		B00F0030 /* PDFAnnotationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0030 /* PDFAnnotationStore.swift */; };
+		B0100001 /* Swatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0100001 /* Swatch.swift */; };
+		B0100002 /* SwatchRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0100002 /* SwatchRepository.swift */; };
+		B0100003 /* SwatchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0100003 /* SwatchStore.swift */; };
+		B0100004 /* SwatchListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0100004 /* SwatchListView.swift */; };
+		B0100005 /* AddSwatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0100005 /* AddSwatchView.swift */; };
 		B0TEST01 /* PatternStepParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST01 /* PatternStepParserTests.swift */; };
 		B0TEST02 /* ContentBlockParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST02 /* ContentBlockParserTests.swift */; };
 		B0TEST03 /* SourcePlatformHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST03 /* SourcePlatformHelperTests.swift */; };
@@ -175,7 +181,8 @@
 		B0TEST05 /* RavelryPatternDetailsParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST05 /* RavelryPatternDetailsParsingTests.swift */; };
 		B0TEST06 /* PDFTextExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST06 /* PDFTextExtractorTests.swift */; };
 		B0TEST07 /* ShareURLExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST07 /* ShareURLExtractorTests.swift */; };
-		WBF00001 /* PatternVaultWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = WFR00001 /* PatternVaultWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		BVPRIV01 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PVPRIV01 /* PrivacyInfo.xcprivacy */; };
+		WBF00001 /* CorvidCraftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = WFR00001 /* CorvidCraftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		WBF10001 /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00002 /* AppIntent.swift */; };
 		WBF10002 /* PatternVaultWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00003 /* PatternVaultWidgetBundle.swift */; };
 		WBF10003 /* PatternVaultWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00004 /* PatternVaultWidget.swift */; };
@@ -215,8 +222,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				08C7720B2F5B374A00241E4E /* SaveToPatternVault.appex in Embed Foundation Extensions */,
-				WBF00001 /* PatternVaultWidgetExtension.appex in Embed Foundation Extensions */,
+				08C7720B2F5B374A00241E4E /* SaveToCorvidCraft.appex in Embed Foundation Extensions */,
+				WBF00001 /* CorvidCraftWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -225,43 +232,25 @@
 
 /* Begin PBXFileReference section */
 		089B9C6A2F72DE6D00C49CF0 /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = Configuration.storekit; path = PatternVault/Configuration.storekit; sourceTree = "<group>"; };
-		08C772012F5B374A00241E4E /* SaveToPatternVault.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SaveToPatternVault.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		08C772012F5B374A00241E4E /* SaveToCorvidCraft.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SaveToCorvidCraft.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		08C7E5B72F58EE8100DCDC30 /* PatternVault.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PatternVault.entitlements; sourceTree = "<group>"; };
 		C00100CC /* Config/Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Config.xcconfig; sourceTree = "<group>"; };
-		E0010000 /* PatternVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PatternVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E0010000 /* CorvidCraft.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CorvidCraft.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F0010001 /* PatternVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternVaultApp.swift; sourceTree = "<group>"; };
 		F0010002 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		F0010003 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
 		F0010004 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		F0010005 /* AuthGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthGateView.swift; sourceTree = "<group>"; };
 		F0010006 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
-		F0010007 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		F0010033 /* SignupFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupFlowView.swift; sourceTree = "<group>"; };
 		F0010008 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		F0010009 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		F001000A /* PatternListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternListView.swift; sourceTree = "<group>"; };
 		F001000B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		F0010026 /* AIInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIInfoView.swift; sourceTree = "<group>"; };
-		F00E0001 /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
-		F00E0002 /* CollectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionRepository.swift; sourceTree = "<group>"; };
-				F00E0011 /* RepeatStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatStepView.swift; sourceTree = "<group>"; };
-				F00E0012 /* ProjectGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectGoal.swift; sourceTree = "<group>"; };
-		F00E0010 /* RepeatInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatInfo.swift; sourceTree = "<group>"; };
-		F00E0003 /* CollectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionStore.swift; sourceTree = "<group>"; };
-		F00E0004 /* CollectionPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionPickerView.swift; sourceTree = "<group>"; };
-		F00E0006 /* GoalSettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalSettingView.swift; sourceTree = "<group>"; };
-		F00E0007 /* ProgressShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressShareCardView.swift; sourceTree = "<group>"; };
 		F001000D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		PVPRIV01 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F001000E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F001000F /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
 		F0010010 /* VoiceRowService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRowService.swift; sourceTree = "<group>"; };
-		F0010027 /* RowReminderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowReminderService.swift; sourceTree = "<group>"; };
-		F00F0001 /* OfflineCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCacheService.swift; sourceTree = "<group>"; };
-		F00F0002 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
-		F00F0003 /* PDFCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFCacheService.swift; sourceTree = "<group>"; };
-		F00F0004 /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
-		F00F0005 /* StitchGlossary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchGlossary.swift; sourceTree = "<group>"; };
-		F00F0006 /* GlossaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlossaryView.swift; sourceTree = "<group>"; };
 		F0010011 /* AIStepParserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIStepParserService.swift; sourceTree = "<group>"; };
 		F0010012 /* ImageCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheService.swift; sourceTree = "<group>"; };
 		F0010013 /* WidgetDataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataService.swift; sourceTree = "<group>"; };
@@ -274,7 +263,12 @@
 		F0010023 /* MascotInteractionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotInteractionStore.swift; sourceTree = "<group>"; };
 		F0010024 /* PatternRowParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternRowParser.swift; sourceTree = "<group>"; };
 		F0010025 /* ChartHighlightStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHighlightStore.swift; sourceTree = "<group>"; };
-		F0030025 /* ChartGridDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartGridDetector.swift; sourceTree = "<group>"; };
+		F0010026 /* AIInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIInfoView.swift; sourceTree = "<group>"; };
+		F0010027 /* RowReminderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowReminderService.swift; sourceTree = "<group>"; };
+		F0010029 /* LifetimeOfferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifetimeOfferService.swift; sourceTree = "<group>"; };
+		F0010030 /* AdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdService.swift; sourceTree = "<group>"; };
+		F0010031 /* BannerAdView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BannerAdView.swift; sourceTree = "<group>"; };
+		F0010032 /* NativeAdCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAdCardView.swift; sourceTree = "<group>"; };
 		F0020001 /* Pattern.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pattern.swift; sourceTree = "<group>"; };
 		F0020002 /* ProjectNote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectNote.swift; sourceTree = "<group>"; };
 		F0020003 /* Tag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
@@ -326,6 +320,7 @@
 		F0030022 /* SecondaryCounterConfigSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecondaryCounterConfigSheet.swift; sourceTree = "<group>"; };
 		F0030023 /* ChartHighlighterOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHighlighterOverlayView.swift; sourceTree = "<group>"; };
 		F0030024 /* GridAlignmentEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridAlignmentEditor.swift; sourceTree = "<group>"; };
+		F0030025 /* ChartGridDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartGridDetector.swift; sourceTree = "<group>"; };
 		F0040001 /* EmptyPatterns.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = EmptyPatterns.json; sourceTree = "<group>"; };
 		F0040002 /* LottieAnimationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieAnimationView.swift; sourceTree = "<group>"; };
 		F0040003 /* AnimatedCrowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedCrowView.swift; sourceTree = "<group>"; };
@@ -378,12 +373,30 @@
 		F00C0003 /* MascotStoreSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotStoreSheet.swift; sourceTree = "<group>"; };
 		F00C0006 /* MascotHelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MascotHelpView.swift; sourceTree = "<group>"; };
 		F00C0008 /* NestDecoration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestDecoration.swift; sourceTree = "<group>"; };
-		F00C0009 /* DailyRewardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyRewardStore.swift; sourceTree = "<group>"; };
-		F00C000A /* AchievementStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementStore.swift; sourceTree = "<group>"; };
-		F00C000B /* AchievementBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AchievementBadge.swift; sourceTree = "<group>"; };
 		F00D0001 /* PDFPageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageRenderer.swift; sourceTree = "<group>"; };
 		F00D0002 /* GeminiMultimodalRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiMultimodalRequest.swift; sourceTree = "<group>"; };
 		F00D0003 /* ChartImageProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartImageProcessor.swift; sourceTree = "<group>"; };
+		F00E0001 /* Collection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Collection.swift; sourceTree = "<group>"; };
+		F00E0002 /* CollectionRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionRepository.swift; sourceTree = "<group>"; };
+		F00E0003 /* CollectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionStore.swift; sourceTree = "<group>"; };
+		F00E0004 /* CollectionPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionPickerView.swift; sourceTree = "<group>"; };
+		F00E0006 /* GoalSettingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalSettingView.swift; sourceTree = "<group>"; };
+		F00E0007 /* ProgressShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressShareCardView.swift; sourceTree = "<group>"; };
+		F00E0010 /* RepeatInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatInfo.swift; sourceTree = "<group>"; };
+		F00E0011 /* RepeatStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatStepView.swift; sourceTree = "<group>"; };
+		F00E0012 /* ProjectGoal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectGoal.swift; sourceTree = "<group>"; };
+		F00F0001 /* OfflineCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineCacheService.swift; sourceTree = "<group>"; };
+		F00F0002 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		F00F0003 /* PDFCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFCacheService.swift; sourceTree = "<group>"; };
+		F00F0004 /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
+		F00F0005 /* StitchGlossary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchGlossary.swift; sourceTree = "<group>"; };
+		F00F0006 /* GlossaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlossaryView.swift; sourceTree = "<group>"; };
+		F00F0030 /* PDFAnnotationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFAnnotationStore.swift; sourceTree = "<group>"; };
+		F0100001 /* Swatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Swatch.swift; sourceTree = "<group>"; };
+		F0100002 /* SwatchRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwatchRepository.swift; sourceTree = "<group>"; };
+		F0100003 /* SwatchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwatchStore.swift; sourceTree = "<group>"; };
+		F0100004 /* SwatchListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwatchListView.swift; sourceTree = "<group>"; };
+		F0100005 /* AddSwatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSwatchView.swift; sourceTree = "<group>"; };
 		F0TEST01 /* PatternStepParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStepParserTests.swift; sourceTree = "<group>"; };
 		F0TEST02 /* ContentBlockParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlockParserTests.swift; sourceTree = "<group>"; };
 		F0TEST03 /* SourcePlatformHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcePlatformHelperTests.swift; sourceTree = "<group>"; };
@@ -391,8 +404,9 @@
 		F0TEST05 /* RavelryPatternDetailsParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryPatternDetailsParsingTests.swift; sourceTree = "<group>"; };
 		F0TEST06 /* PDFTextExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTextExtractorTests.swift; sourceTree = "<group>"; };
 		F0TEST07 /* ShareURLExtractorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareURLExtractorTests.swift; sourceTree = "<group>"; };
-		TST0002 /* PatternVaultTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PatternVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		WFR00001 /* PatternVaultWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PatternVaultWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		PVPRIV01 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		TST0002 /* CorvidCraftTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CorvidCraftTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		WFR00001 /* CorvidCraftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CorvidCraftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		WFR00002 /* AppIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntent.swift; sourceTree = "<group>"; };
 		WFR00003 /* PatternVaultWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternVaultWidgetBundle.swift; sourceTree = "<group>"; };
 		WFR00004 /* PatternVaultWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternVaultWidget.swift; sourceTree = "<group>"; };
@@ -409,7 +423,7 @@
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 08C772002F5B374A00241E4E /* SaveToPatternVault */;
+			target = 08C772002F5B374A00241E4E /* SaveToCorvidCraft */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -510,10 +524,10 @@
 		G0010002 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E0010000 /* PatternVault.app */,
-				WFR00001 /* PatternVaultWidgetExtension.appex */,
-				08C772012F5B374A00241E4E /* SaveToPatternVault.appex */,
-				TST0002 /* PatternVaultTests.xctest */,
+				E0010000 /* CorvidCraft.app */,
+				WFR00001 /* CorvidCraftWidgetExtension.appex */,
+				08C772012F5B374A00241E4E /* SaveToCorvidCraft.appex */,
+				TST0002 /* CorvidCraftTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -523,7 +537,7 @@
 			children = (
 				F0010005 /* AuthGateView.swift */,
 				F0010006 /* LoginView.swift */,
-				F0010007 /* SignUpView.swift */,
+				F0010033 /* SignupFlowView.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -544,6 +558,171 @@
 				GC_SHARED /* Shared */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		G0010005 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F0010003 /* SupabaseManager.swift */,
+				F0010004 /* AuthService.swift */,
+				F0010010 /* VoiceRowService.swift */,
+				F0010027 /* RowReminderService.swift */,
+				F00F0001 /* OfflineCacheService.swift */,
+				F00F0002 /* NetworkMonitor.swift */,
+				F00F0003 /* PDFCacheService.swift */,
+				F00F0030 /* PDFAnnotationStore.swift */,
+				F0010011 /* AIStepParserService.swift */,
+				F0010020 /* AIKillSwitchService.swift */,
+				F0010029 /* LifetimeOfferService.swift */,
+				F0010030 /* AdService.swift */,
+				F0010012 /* ImageCacheService.swift */,
+				F0010013 /* WidgetDataService.swift */,
+				F0010021 /* YardageHelper.swift */,
+				F0010022 /* PatternDuplicateHelper.swift */,
+				F0010014 /* PatternListCacheService.swift */,
+				F0010015 /* CelebrationStore.swift */,
+				F0010016 /* HapticService.swift */,
+				F0010023 /* MascotInteractionStore.swift */,
+				F0010024 /* PatternRowParser.swift */,
+				F0010025 /* ChartHighlightStore.swift */,
+				F0030025 /* ChartGridDetector.swift */,
+				F0040032 /* ColorworkGridDetector.swift */,
+				F0020005 /* SourcePlatformHelper.swift */,
+				F0020013 /* MetadataService.swift */,
+				F0090002 /* SubscriptionStore.swift */,
+				F00A0002 /* RavelryPatternSearchService.swift */,
+				F00B0001 /* KeychainHelper.swift */,
+				F00B0002 /* OAuth1Signer.swift */,
+				F00B0003 /* RavelryOAuthService.swift */,
+				F00B0004 /* RavelryUserService.swift */,
+				F00B0005 /* RavelryImportStore.swift */,
+				F00B0006 /* PDFTextExtractor.swift */,
+				F00D0001 /* PDFPageRenderer.swift */,
+				F00D0002 /* GeminiMultimodalRequest.swift */,
+				F00D0003 /* ChartImageProcessor.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		G0020001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F0020001 /* Pattern.swift */,
+				F0020002 /* ProjectNote.swift */,
+				F0020003 /* Tag.swift */,
+				F0020015 /* RowCounter.swift */,
+				F0020016 /* ChartHighlight.swift */,
+				F0040030 /* ColorworkGrid.swift */,
+				F0040031 /* ChartProgressState.swift */,
+				F0030004 /* PatternImage.swift */,
+				F0030009 /* PatternYarnLink.swift */,
+				F0060001 /* YarnStashItem.swift */,
+				F0070001 /* NeedleHookItem.swift */,
+				F0080001 /* PatternMake.swift */,
+				F00A0001 /* PatternDiscoveryResult.swift */,
+				F00C0001 /* MascotEconomyState.swift */,
+				F00C0008 /* NestDecoration.swift */,
+				F00E0001 /* Collection.swift */,
+				F00E0010 /* RepeatInfo.swift */,
+				F00E0012 /* ProjectGoal.swift */,
+				F0100001 /* Swatch.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		G0020002 /* Repositories */ = {
+			isa = PBXGroup;
+			children = (
+				F0020004 /* PatternRepository.swift */,
+				F0020011 /* ProjectNoteRepository.swift */,
+				F0020012 /* TagRepository.swift */,
+				F0030005 /* PatternImageRepository.swift */,
+				F0020014 /* PatternYarnLinkRepository.swift */,
+				F0060002 /* YarnStashRepository.swift */,
+				F0070002 /* NeedleHookRepository.swift */,
+				F0080002 /* PatternMakeRepository.swift */,
+				F0090001 /* EntitlementRepository.swift */,
+				F00E0002 /* CollectionRepository.swift */,
+				F0100002 /* SwatchRepository.swift */,
+			);
+			path = Repositories;
+			sourceTree = "<group>";
+		};
+		G0040001 /* Animations */ = {
+			isa = PBXGroup;
+			children = (
+				F0040001 /* EmptyPatterns.json */,
+			);
+			path = Animations;
+			sourceTree = "<group>";
+		};
+		G0TEST01 /* PatternVaultTests */ = {
+			isa = PBXGroup;
+			children = (
+				F0TEST01 /* PatternStepParserTests.swift */,
+				F0TEST02 /* ContentBlockParserTests.swift */,
+				F0TEST03 /* SourcePlatformHelperTests.swift */,
+				F0TEST04 /* PatternModelTests.swift */,
+				F0TEST05 /* RavelryPatternDetailsParsingTests.swift */,
+				F0TEST06 /* PDFTextExtractorTests.swift */,
+				F0TEST07 /* ShareURLExtractorTests.swift */,
+			);
+			path = PatternVaultTests;
+			sourceTree = "<group>";
+		};
+		GC_DASHBOARD /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				F0010009 /* DashboardView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		GC_DISCOVERY /* Discovery */ = {
+			isa = PBXGroup;
+			children = (
+				F00A0003 /* FindPatternsView.swift */,
+				F0030018 /* DuplicatesListView.swift */,
+			);
+			path = Discovery;
+			sourceTree = "<group>";
+		};
+		GC_MASCOT /* Mascot */ = {
+			isa = PBXGroup;
+			children = (
+				F0050002 /* SpriteMascotView.swift */,
+				F0050010 /* TappableMascotView.swift */,
+				F0040003 /* AnimatedCrowView.swift */,
+				F0050011 /* MascotDashboardPanelView.swift */,
+				F00C0006 /* MascotHelpView.swift */,
+				F00C0003 /* MascotStoreSheet.swift */,
+				F00A0005 /* FinishedProjectShareCardView.swift */,
+				F00E0007 /* ProgressShareCardView.swift */,
+			);
+			path = Mascot;
+			sourceTree = "<group>";
+		};
+		GC_NOTES /* ProjectNotes */ = {
+			isa = PBXGroup;
+			children = (
+				F002000A /* ProjectNoteStore.swift */,
+				F002000D /* NoteDetailView.swift */,
+				F002000F /* AddNoteView.swift */,
+				F002000E /* NoteRowView.swift */,
+			);
+			path = ProjectNotes;
+			sourceTree = "<group>";
+		};
+		GC_ONBOARD /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				F0030003 /* OnboardingView.swift */,
+				F0030013 /* AppTutorialStore.swift */,
+				F0030014 /* AppTutorialOverlayView.swift */,
+				F0030016 /* WidgetOnboardingStore.swift */,
+				F0030017 /* WidgetOnboardingSheet.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		GC_PATTERN /* Pattern */ = {
@@ -579,58 +758,12 @@
 			path = Pattern;
 			sourceTree = "<group>";
 		};
-		GC_DASHBOARD /* Dashboard */ = {
+		GC_REWARDS /* Rewards */ = {
 			isa = PBXGroup;
 			children = (
-				F0010009 /* DashboardView.swift */,
+				F0030012 /* CelebrationOverlayView.swift */,
 			);
-			path = Dashboard;
-			sourceTree = "<group>";
-		};
-		GC_TOOLS /* Tools */ = {
-			isa = PBXGroup;
-			children = (
-				F0080004 /* StashAndToolsView.swift */,
-				F0070003 /* NeedleHookStore.swift */,
-				F0070004 /* NeedleHookListView.swift */,
-				F0070005 /* AddNeedleHookView.swift */,
-				F0060003 /* YarnStashStore.swift */,
-				F0060004 /* YarnStashListView.swift */,
-				F0060005 /* AddYarnStashView.swift */,
-				F00A0004 /* StashMatchPatternsView.swift */,
-				F00F0004 /* BarcodeScannerView.swift */,
-				F00F0006 /* GlossaryView.swift */,
-			);
-			path = Tools;
-			sourceTree = "<group>";
-		};
-		GC_NOTES /* ProjectNotes */ = {
-			isa = PBXGroup;
-			children = (
-				F002000A /* ProjectNoteStore.swift */,
-				F002000D /* NoteDetailView.swift */,
-				F002000F /* AddNoteView.swift */,
-				F002000E /* NoteRowView.swift */,
-			);
-			path = ProjectNotes;
-			sourceTree = "<group>";
-		};
-		GC_TAGS /* Tags */ = {
-			isa = PBXGroup;
-			children = (
-				F002000B /* TagStore.swift */,
-				F002000C /* TagPickerView.swift */,
-			);
-			path = Tags;
-			sourceTree = "<group>";
-		};
-		GC_DISCOVERY /* Discovery */ = {
-			isa = PBXGroup;
-			children = (
-				F00A0003 /* FindPatternsView.swift */,
-				F0030018 /* DuplicatesListView.swift */,
-			);
-			path = Discovery;
+			path = Rewards;
 			sourceTree = "<group>";
 		};
 		GC_SETTINGS /* Settings */ = {
@@ -643,45 +776,12 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
-		GC_ONBOARD /* Onboarding */ = {
-			isa = PBXGroup;
-			children = (
-				F0030003 /* OnboardingView.swift */,
-				F0030013 /* AppTutorialStore.swift */,
-				F0030014 /* AppTutorialOverlayView.swift */,
-				F0030016 /* WidgetOnboardingStore.swift */,
-				F0030017 /* WidgetOnboardingSheet.swift */,
-			);
-			path = Onboarding;
-			sourceTree = "<group>";
-		};
-		GC_MASCOT /* Mascot */ = {
-			isa = PBXGroup;
-			children = (
-				F0050002 /* SpriteMascotView.swift */,
-				F0050010 /* TappableMascotView.swift */,
-				F0040003 /* AnimatedCrowView.swift */,
-				F0050011 /* MascotDashboardPanelView.swift */,
-				F00C0006 /* MascotHelpView.swift */,
-				F00C0003 /* MascotStoreSheet.swift */,
-				F00A0005 /* FinishedProjectShareCardView.swift */,
-				F00E0007 /* ProgressShareCardView.swift */,
-			);
-			path = Mascot;
-			sourceTree = "<group>";
-		};
-		GC_REWARDS /* Rewards */ = {
-			isa = PBXGroup;
-			children = (
-				F0030012 /* CelebrationOverlayView.swift */,
-			);
-			path = Rewards;
-			sourceTree = "<group>";
-		};
 		GC_SHARED /* Shared */ = {
 			isa = PBXGroup;
 			children = (
 				F0010008 /* MainTabView.swift */,
+				F0010031 /* BannerAdView.swift */,
+				F0010032 /* NativeAdCardView.swift */,
 				F0020010 /* FlowLayout.swift */,
 				F0030015 /* TutorialAnchorPreferenceKey.swift */,
 				F0030007 /* InAppWebView.swift */,
@@ -693,112 +793,33 @@
 			path = Shared;
 			sourceTree = "<group>";
 		};
-		G0010005 /* Services */ = {
+		GC_TAGS /* Tags */ = {
 			isa = PBXGroup;
 			children = (
-				F0010003 /* SupabaseManager.swift */,
-				F0010004 /* AuthService.swift */,
-				F0010010 /* VoiceRowService.swift */,
-				F0010027 /* RowReminderService.swift */,
-				F00F0001 /* OfflineCacheService.swift */,
-				F00F0002 /* NetworkMonitor.swift */,
-				F00F0003 /* PDFCacheService.swift */,
-				F0010011 /* AIStepParserService.swift */,
-				F0010020 /* AIKillSwitchService.swift */,
-				F0010012 /* ImageCacheService.swift */,
-				F0010013 /* WidgetDataService.swift */,
-				F0010021 /* YardageHelper.swift */,
-				F0010022 /* PatternDuplicateHelper.swift */,
-				F0010014 /* PatternListCacheService.swift */,
-				F0010015 /* CelebrationStore.swift */,
-				F0010016 /* HapticService.swift */,
-				F0010023 /* MascotInteractionStore.swift */,
-				F0010024 /* PatternRowParser.swift */,
-				F0010025 /* ChartHighlightStore.swift */,
-				F0030025 /* ChartGridDetector.swift */,
-				F0040032 /* ColorworkGridDetector.swift */,
-				F0020005 /* SourcePlatformHelper.swift */,
-				F0020013 /* MetadataService.swift */,
-				F0090002 /* SubscriptionStore.swift */,
-				F00A0002 /* RavelryPatternSearchService.swift */,
-				F00B0001 /* KeychainHelper.swift */,
-				F00B0002 /* OAuth1Signer.swift */,
-				F00B0003 /* RavelryOAuthService.swift */,
-				F00B0004 /* RavelryUserService.swift */,
-				F00B0005 /* RavelryImportStore.swift */,
-				F00B0006 /* PDFTextExtractor.swift */,
-				F00D0001 /* PDFPageRenderer.swift */,
-				F00D0002 /* GeminiMultimodalRequest.swift */,
-				F00D0003 /* ChartImageProcessor.swift */,
-				F00C0009 /* DailyRewardStore.swift */,
-				F00C000A /* AchievementStore.swift */,
+				F002000B /* TagStore.swift */,
+				F002000C /* TagPickerView.swift */,
 			);
-			path = Services;
+			path = Tags;
 			sourceTree = "<group>";
 		};
-		G0020001 /* Models */ = {
+		GC_TOOLS /* Tools */ = {
 			isa = PBXGroup;
 			children = (
-				F0020001 /* Pattern.swift */,
-				F0020002 /* ProjectNote.swift */,
-				F0020003 /* Tag.swift */,
-				F0020015 /* RowCounter.swift */,
-				F0020016 /* ChartHighlight.swift */,
-				F0040030 /* ColorworkGrid.swift */,
-				F0040031 /* ChartProgressState.swift */,
-				F0030004 /* PatternImage.swift */,
-				F0030009 /* PatternYarnLink.swift */,
-				F0060001 /* YarnStashItem.swift */,
-				F0070001 /* NeedleHookItem.swift */,
-				F0080001 /* PatternMake.swift */,
-				F00A0001 /* PatternDiscoveryResult.swift */,
-				F00C0001 /* MascotEconomyState.swift */,
-				F00C0008 /* NestDecoration.swift */,
-				F00C000B /* AchievementBadge.swift */,
-				F00E0001 /* Collection.swift */,
-				F00E0010 /* RepeatInfo.swift */,
-				F00E0012 /* ProjectGoal.swift */,
+				F0080004 /* StashAndToolsView.swift */,
+				F0070003 /* NeedleHookStore.swift */,
+				F0070004 /* NeedleHookListView.swift */,
+				F0070005 /* AddNeedleHookView.swift */,
+				F0060003 /* YarnStashStore.swift */,
+				F0060004 /* YarnStashListView.swift */,
+				F0060005 /* AddYarnStashView.swift */,
+				F0100003 /* SwatchStore.swift */,
+				F0100004 /* SwatchListView.swift */,
+				F0100005 /* AddSwatchView.swift */,
+				F00A0004 /* StashMatchPatternsView.swift */,
+				F00F0004 /* BarcodeScannerView.swift */,
+				F00F0006 /* GlossaryView.swift */,
 			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		G0020002 /* Repositories */ = {
-			isa = PBXGroup;
-			children = (
-				F0020004 /* PatternRepository.swift */,
-				F0020011 /* ProjectNoteRepository.swift */,
-				F0020012 /* TagRepository.swift */,
-				F0030005 /* PatternImageRepository.swift */,
-				F0020014 /* PatternYarnLinkRepository.swift */,
-				F0060002 /* YarnStashRepository.swift */,
-				F0070002 /* NeedleHookRepository.swift */,
-				F0080002 /* PatternMakeRepository.swift */,
-				F0090001 /* EntitlementRepository.swift */,
-				F00E0002 /* CollectionRepository.swift */,
-			);
-			path = Repositories;
-			sourceTree = "<group>";
-		};
-		G0040001 /* Animations */ = {
-			isa = PBXGroup;
-			children = (
-				F0040001 /* EmptyPatterns.json */,
-			);
-			path = Animations;
-			sourceTree = "<group>";
-		};
-		G0TEST01 /* PatternVaultTests */ = {
-			isa = PBXGroup;
-			children = (
-				F0TEST01 /* PatternStepParserTests.swift */,
-				F0TEST02 /* ContentBlockParserTests.swift */,
-				F0TEST03 /* SourcePlatformHelperTests.swift */,
-				F0TEST04 /* PatternModelTests.swift */,
-				F0TEST05 /* RavelryPatternDetailsParsingTests.swift */,
-				F0TEST06 /* PDFTextExtractorTests.swift */,
-				F0TEST07 /* ShareURLExtractorTests.swift */,
-			);
-			path = PatternVaultTests;
+			path = Tools;
 			sourceTree = "<group>";
 		};
 		WG000001 /* PatternVaultWidget */ = {
@@ -819,9 +840,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		08C772002F5B374A00241E4E /* SaveToPatternVault */ = {
+		08C772002F5B374A00241E4E /* SaveToCorvidCraft */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 08C7720D2F5B374A00241E4E /* Build configuration list for PBXNativeTarget "SaveToPatternVault" */;
+			buildConfigurationList = 08C7720D2F5B374A00241E4E /* Build configuration list for PBXNativeTarget "SaveToCorvidCraft" */;
 			buildPhases = (
 				08C771FD2F5B374A00241E4E /* Sources */,
 				08C771FE2F5B374A00241E4E /* Frameworks */,
@@ -834,16 +855,16 @@
 			fileSystemSynchronizedGroups = (
 				08C772022F5B374A00241E4E /* SaveToPatternVault */,
 			);
-			name = SaveToPatternVault;
+			name = SaveToCorvidCraft;
 			packageProductDependencies = (
 			);
 			productName = SaveToPatternVault;
-			productReference = 08C772012F5B374A00241E4E /* SaveToPatternVault.appex */;
+			productReference = 08C772012F5B374A00241E4E /* SaveToCorvidCraft.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		T0010001 /* PatternVault */ = {
+		T0010001 /* CorvidCraft */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C0010003 /* Build configuration list for PBXNativeTarget "PatternVault" */;
+			buildConfigurationList = C0010003 /* Build configuration list for PBXNativeTarget "CorvidCraft" */;
 			buildPhases = (
 				C0010004 /* Sources */,
 				C0010001 /* Frameworks */,
@@ -856,7 +877,7 @@
 				08C7720A2F5B374A00241E4E /* PBXTargetDependency */,
 				WDEP0001 /* PBXTargetDependency */,
 			);
-			name = PatternVault;
+			name = CorvidCraft;
 			packageProductDependencies = (
 				P0010001 /* Supabase */,
 				P0010002 /* Lottie */,
@@ -866,12 +887,12 @@
 				P0010006 /* FirebaseCore */,
 			);
 			productName = PatternVault;
-			productReference = E0010000 /* PatternVault.app */;
+			productReference = E0010000 /* CorvidCraft.app */;
 			productType = "com.apple.product-type.application";
 		};
-		TST0001 /* PatternVaultTests */ = {
+		TST0001 /* CorvidCraftTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = TSTCL1 /* Build configuration list for PBXNativeTarget "PatternVaultTests" */;
+			buildConfigurationList = TSTCL1 /* Build configuration list for PBXNativeTarget "CorvidCraftTests" */;
 			buildPhases = (
 				TSTSRC /* Sources */,
 				TSTFRM /* Frameworks */,
@@ -882,14 +903,14 @@
 			dependencies = (
 				TSTDP2 /* PBXTargetDependency */,
 			);
-			name = PatternVaultTests;
+			name = CorvidCraftTests;
 			productName = PatternVaultTests;
-			productReference = TST0002 /* PatternVaultTests.xctest */;
+			productReference = TST0002 /* CorvidCraftTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		WT000001 /* PatternVaultWidgetExtension */ = {
+		WT000001 /* CorvidCraftWidgetExtension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = WCL00001 /* Build configuration list for PBXNativeTarget "PatternVaultWidgetExtension" */;
+			buildConfigurationList = WCL00001 /* Build configuration list for PBXNativeTarget "CorvidCraftWidgetExtension" */;
 			buildPhases = (
 				WPH00001 /* Sources */,
 				WPH00002 /* Frameworks */,
@@ -899,11 +920,11 @@
 			);
 			dependencies = (
 			);
-			name = PatternVaultWidgetExtension;
+			name = CorvidCraftWidgetExtension;
 			packageProductDependencies = (
 			);
 			productName = PatternVaultWidgetExtension;
-			productReference = WFR00001 /* PatternVaultWidgetExtension.appex */;
+			productReference = WFR00001 /* CorvidCraftWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -947,10 +968,10 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				T0010001 /* PatternVault */,
-				WT000001 /* PatternVaultWidgetExtension */,
-				08C772002F5B374A00241E4E /* SaveToPatternVault */,
-				TST0001 /* PatternVaultTests */,
+				T0010001 /* CorvidCraft */,
+				WT000001 /* CorvidCraftWidgetExtension */,
+				08C772002F5B374A00241E4E /* SaveToCorvidCraft */,
+				TST0001 /* CorvidCraftTests */,
 			);
 		};
 /* End PBXProject section */
@@ -1021,11 +1042,21 @@
 				B00F0001 /* OfflineCacheService.swift in Sources */,
 				B00F0002 /* NetworkMonitor.swift in Sources */,
 				B00F0003 /* PDFCacheService.swift in Sources */,
+				B00F0030 /* PDFAnnotationStore.swift in Sources */,
 				B00F0004 /* BarcodeScannerView.swift in Sources */,
 				B00F0005 /* StitchGlossary.swift in Sources */,
 				B00F0006 /* GlossaryView.swift in Sources */,
+				B0100001 /* Swatch.swift in Sources */,
+				B0100002 /* SwatchRepository.swift in Sources */,
+				B0100003 /* SwatchStore.swift in Sources */,
+				B0100004 /* SwatchListView.swift in Sources */,
+				B0100005 /* AddSwatchView.swift in Sources */,
 				B0010011 /* AIStepParserService.swift in Sources */,
 				B0010020 /* AIKillSwitchService.swift in Sources */,
+				B0010029 /* LifetimeOfferService.swift in Sources */,
+				B0010030 /* AdService.swift in Sources */,
+				B0010031 /* BannerAdView.swift in Sources */,
+				B0010032 /* NativeAdCardView.swift in Sources */,
 				B0010012 /* ImageCacheService.swift in Sources */,
 				B0010013 /* WidgetDataService.swift in Sources */,
 				B0010021 /* YardageHelper.swift in Sources */,
@@ -1039,7 +1070,7 @@
 				B0030025 /* ChartGridDetector.swift in Sources */,
 				B0010005 /* AuthGateView.swift in Sources */,
 				B0010006 /* LoginView.swift in Sources */,
-				B0010007 /* SignUpView.swift in Sources */,
+				B0010033 /* SignupFlowView.swift in Sources */,
 				B0030005 /* PatternImageRepository.swift in Sources */,
 				B0010008 /* MainTabView.swift in Sources */,
 				B0010009 /* DashboardView.swift in Sources */,
@@ -1149,9 +1180,6 @@
 				B00D0003 /* ChartImageProcessor.swift in Sources */,
 				B00C0001 /* MascotEconomyState.swift in Sources */,
 				B00C0008 /* NestDecoration.swift in Sources */,
-				B00C0009 /* DailyRewardStore.swift in Sources */,
-				B00C000A /* AchievementStore.swift in Sources */,
-				B00C000B /* AchievementBadge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1186,17 +1214,17 @@
 /* Begin PBXTargetDependency section */
 		08C7720A2F5B374A00241E4E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 08C772002F5B374A00241E4E /* SaveToPatternVault */;
+			target = 08C772002F5B374A00241E4E /* SaveToCorvidCraft */;
 			targetProxy = 08C772092F5B374A00241E4E /* PBXContainerItemProxy */;
 		};
 		TSTDP2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = T0010001 /* PatternVault */;
+			target = T0010001 /* CorvidCraft */;
 			targetProxy = TSTDP1 /* PBXContainerItemProxy */;
 		};
 		WDEP0001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = WT000001 /* PatternVaultWidgetExtension */;
+			target = WT000001 /* CorvidCraftWidgetExtension */;
 			targetProxy = WPRX0001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -1214,13 +1242,13 @@
 				CODE_SIGN_ENTITLEMENTS = SaveToPatternVault/SaveToPatternVault.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SaveToPatternVault/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Save to Pattern Vault";
+				INFOPLIST_KEY_CFBundleDisplayName = "Save to Corvid Craft";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1229,7 +1257,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.share;
+				PRODUCT_BUNDLE_IDENTIFIER = com.corvidcraft.app.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
@@ -1260,13 +1288,13 @@
 				CODE_SIGN_ENTITLEMENTS = SaveToPatternVault/SaveToPatternVault.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = SaveToPatternVault/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Save to Pattern Vault";
+				INFOPLIST_KEY_CFBundleDisplayName = "Save to Corvid Craft";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1275,7 +1303,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.share;
+				PRODUCT_BUNDLE_IDENTIFIER = com.corvidcraft.app.share;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
@@ -1298,7 +1326,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1307,7 +1335,7 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.PatternVaultTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.corvidcraft.app.PatternVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -1321,7 +1349,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1330,7 +1358,7 @@
 					"@loader_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.PatternVaultTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.corvidcraft.app.PatternVaultTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -1346,7 +1374,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = PatternVaultWidget/PatternVaultWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PatternVaultWidget/Info.plist;
@@ -1358,7 +1386,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.corvidcraft.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1374,7 +1402,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = PatternVaultWidget/PatternVaultWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PatternVaultWidget/Info.plist;
@@ -1386,7 +1414,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.corvidcraft.app.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1518,7 +1546,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PatternVault/PatternVault.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				ENABLE_PREVIEWS = YES;
@@ -1534,7 +1562,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.corvidcraft.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
 				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
@@ -1554,7 +1582,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PatternVault/PatternVault.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				ENABLE_PREVIEWS = YES;
@@ -1570,7 +1598,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.patternvault.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.corvidcraft.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				RAVELRY_ACCESS_KEY = "$(RAVELRY_ACCESS_KEY)";
 				RAVELRY_PERSONAL_KEY = "$(RAVELRY_PERSONAL_KEY)";
@@ -1585,7 +1613,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		08C7720D2F5B374A00241E4E /* Build configuration list for PBXNativeTarget "SaveToPatternVault" */ = {
+		08C7720D2F5B374A00241E4E /* Build configuration list for PBXNativeTarget "SaveToCorvidCraft" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				08C7720E2F5B374A00241E4E /* Debug */,
@@ -1603,7 +1631,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C0010003 /* Build configuration list for PBXNativeTarget "PatternVault" */ = {
+		C0010003 /* Build configuration list for PBXNativeTarget "CorvidCraft" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				X0010003 /* Debug */,
@@ -1612,7 +1640,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		TSTCL1 /* Build configuration list for PBXNativeTarget "PatternVaultTests" */ = {
+		TSTCL1 /* Build configuration list for PBXNativeTarget "CorvidCraftTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				TSTCFG1 /* Debug */,
@@ -1621,7 +1649,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		WCL00001 /* Build configuration list for PBXNativeTarget "PatternVaultWidgetExtension" */ = {
+		WCL00001 /* Build configuration list for PBXNativeTarget "CorvidCraftWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				WCFG0001 /* Debug */,

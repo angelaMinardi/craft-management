@@ -168,15 +168,43 @@ struct RowCounterBarView: View {
 
     @ViewBuilder
     private func secondaryChip(_ counter: SecondaryCounter) -> some View {
-        let title = counter.title.isEmpty ? "Counter" : counter.title
-        Text("\(title): \(counter.currentCount)/\(counter.resetAfter)")
-            .font(Theme.Typography.caption2.weight(.semibold))
-            .foregroundStyle(Theme.deepPlum)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(Theme.cardBackground)
-            .clipShape(Capsule())
-            .onTapGesture { onTapSecondary(counter.id) }
-            .onLongPressGesture { onLongPressSecondary(counter.id) }
+        if counter.linkMode == .unlinked && counter.color == "dustyBlue" {
+            repeatCycleChip(counter)
+        } else {
+            let title = counter.title.isEmpty ? "Counter" : counter.title
+            Text("\(title): \(counter.currentCount)/\(counter.resetAfter)")
+                .font(Theme.Typography.caption2.weight(.semibold))
+                .foregroundStyle(Theme.deepPlum)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Theme.cardBackground)
+                .clipShape(Capsule())
+                .onTapGesture { onTapSecondary(counter.id) }
+                .onLongPressGesture { onLongPressSecondary(counter.id) }
+        }
+    }
+
+    @ViewBuilder
+    private func repeatCycleChip(_ counter: SecondaryCounter) -> some View {
+        let cycleNum = counter.totalResets + 1
+        let label: String = {
+            if let max = counter.maxResets {
+                return "Cycle \(cycleNum) of ~\(max)"
+            }
+            return "Cycle \(cycleNum)"
+        }()
+        HStack(spacing: 4) {
+            Image(systemName: "arrow.clockwise")
+                .font(.system(size: 10, weight: .semibold))
+            Text(label)
+                .font(Theme.Typography.caption2.weight(.semibold))
+        }
+        .foregroundStyle(Theme.dustyBlue)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Theme.dustyBlue.opacity(0.12))
+        .clipShape(Capsule())
+        .onTapGesture { onTapSecondary(counter.id) }
+        .onLongPressGesture { onLongPressSecondary(counter.id) }
     }
 }

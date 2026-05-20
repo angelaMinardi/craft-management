@@ -1,4 +1,4 @@
--- Pattern Vault Migration 011: Tools craft-agnostic
+-- Corvid Craft Migration 011: Tools craft-agnostic
 -- Run in Supabase Dashboard → SQL Editor after 010.
 -- Allows any tool type (e.g. needle, hook, leather cutter) instead of only needle/hook.
 

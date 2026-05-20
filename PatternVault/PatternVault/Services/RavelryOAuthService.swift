@@ -17,12 +17,12 @@ final class RavelryOAuthService: ObservableObject {
     private let authorizeURLBase = URL(string: "https://www.ravelry.com/oauth2/auth")!
     private let tokenURL = URL(string: "https://www.ravelry.com/oauth2/token")!
 
-    /// Callback URL (patternvault://oauth/ravelry). Must match Ravelry app "Authorized Redirect URIs".
-    var callbackURLScheme: String { "patternvault" }
+    /// Callback URL (corvidcraft://oauth/ravelry). Must match Ravelry app "Authorized Redirect URIs".
+    var callbackURLScheme: String { "corvidcraft" }
     var callbackPath: String { "oauth/ravelry" }
     var redirectURI: String { "\(callbackURLScheme)://\(callbackPath)" }
 
-    private static let appGroupId = "group.com.patternvault.app"
+    private static let appGroupId = "group.com.corvidcraft.app"
     private static let oauth2StateKey = "ravelry_oauth2_state"
     private static let oauth2VerifierKey = "ravelry_oauth2_code_verifier"
 
@@ -43,6 +43,9 @@ final class RavelryOAuthService: ObservableObject {
     func isConnected(userId: UUID) -> Bool {
         KeychainHelper.loadRavelryTokens(userId: userId) != nil
     }
+
+    /// Prevents double callback processing when both onOpenURL and ASWebAuthenticationSession fire.
+    private var isProcessingCallback = false
 
     /// Start OAuth 2.0: build authorize URL with PKCE and cryptographic state.
     func startOAuth() async throws -> URL {
@@ -73,6 +76,11 @@ final class RavelryOAuthService: ObservableObject {
 
     /// Call after user returns to app with callback URL. Exchanges code for access token and stores in Keychain.
     func handleCallback(url: URL, userId: UUID) async throws {
+        // Prevent double processing when both onOpenURL and ASWebAuthenticationSession fire
+        guard !isProcessingCallback else { return }
+        isProcessingCallback = true
+        defer { isProcessingCallback = false }
+
         guard url.scheme == callbackURLScheme else { return }
         let path = url.path
         guard path.hasPrefix("/oauth/ravelry") || path == "/oauth/ravelry" || url.host == "oauth" else { return }

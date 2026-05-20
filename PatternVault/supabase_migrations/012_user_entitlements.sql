@@ -1,4 +1,4 @@
--- Pattern Vault Migration 012: User entitlements and usage (freemium)
+-- Corvid Craft Migration 012: User entitlements and usage (freemium)
 -- Run in Supabase Dashboard → SQL Editor → New query → paste → Run
 --
 -- Tracks subscription status and monthly usage for free-tier limits.

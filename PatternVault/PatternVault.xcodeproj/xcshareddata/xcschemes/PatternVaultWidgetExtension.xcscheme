@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "T0010001"
-               BuildableName = "PatternVault.app"
-               BlueprintName = "PatternVault"
+               BuildableName = "CorvidCraft.app"
+               BlueprintName = "CorvidCraft"
                ReferencedContainer = "container:PatternVault.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -30,8 +30,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "WT000001"
-               BuildableName = "PatternVaultWidgetExtension.appex"
-               BlueprintName = "PatternVaultWidgetExtension"
+               BuildableName = "CorvidCraftWidgetExtension.appex"
+               BlueprintName = "CorvidCraftWidgetExtension"
                ReferencedContainer = "container:PatternVault.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -68,8 +68,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "T0010001"
-            BuildableName = "PatternVault.app"
-            BlueprintName = "PatternVault"
+            BuildableName = "CorvidCraft.app"
+            BlueprintName = "CorvidCraft"
             ReferencedContainer = "container:PatternVault.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -92,8 +92,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "T0010001"
-            BuildableName = "PatternVault.app"
-            BlueprintName = "PatternVault"
+            BuildableName = "CorvidCraft.app"
+            BlueprintName = "CorvidCraft"
             ReferencedContainer = "container:PatternVault.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

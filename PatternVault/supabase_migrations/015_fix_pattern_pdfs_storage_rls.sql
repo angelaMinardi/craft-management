@@ -1,4 +1,4 @@
--- Pattern Vault Migration 015: Fix Storage RLS for pattern-pdfs uploads
+-- Corvid Craft Migration 015: Fix Storage RLS for pattern-pdfs uploads
 -- Ensures authenticated users can upload PDFs into their own folder:
 --   <auth.uid()>/<pattern_id>/<file>.pdf
 

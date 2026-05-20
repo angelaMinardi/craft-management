@@ -192,9 +192,62 @@ final class PatternStore: ObservableObject {
             }
         }
 
-        // After adoption, skip any pattern that now has charts OR that has a PDF URL matching
-        // any existing highlight's pattern (prevents re-extraction for duplicate imports)
+        // After orphan adoption, rebuild which pattern IDs now have charts.
         let patternsWithCharts = Set(chartStore.highlights.filter(\.isAIExtracted).map(\.patternId))
+
+        // Map pdfUrl → patternId for patterns that already have charts.
+        // Used to adopt charts to duplicate records (same PDF re-imported → new UUID)
+        // rather than re-extracting and potentially producing different insets.
+        var pdfUrlToSourcePatternId: [String: UUID] = [:]
+        for pattern in patterns where patternsWithCharts.contains(pattern.id) {
+            if let url = pattern.pdfUrl, !url.isEmpty {
+                pdfUrlToSourcePatternId[url] = pattern.id
+            }
+        }
+
+        // For patterns that have the same pdfUrl as a pattern with charts but a different UUID
+        // (duplicate Supabase records from re-import), adopt the existing charts instead of
+        // running a fresh extraction that could produce different insets.
+        for pattern in patterns {
+            guard chartStore.aiExtractedHighlights(patternId: pattern.id).isEmpty,
+                  !patternsWithCharts.contains(pattern.id),
+                  let url = pattern.pdfUrl, !url.isEmpty,
+                  let sourceId = pdfUrlToSourcePatternId[url],
+                  sourceId != pattern.id else { continue }
+
+            let sourceHighlights = chartStore.aiExtractedHighlights(patternId: sourceId)
+            guard !sourceHighlights.isEmpty else { continue }
+            for h in sourceHighlights {
+                guard let pageIndex = h.pdfPageIndex else { continue }
+                let copy = ChartHighlight(
+                    patternId: pattern.id,
+                    makeId: h.makeId,
+                    pdfPageIndex: pageIndex,
+                    minX: h.minX, minY: h.minY, maxX: h.maxX, maxY: h.maxY,
+                    rows: h.rows, columns: h.columns,
+                    chartType: h.chartType,
+                    isSideways: h.isSideways,
+                    isC2C: h.isC2C,
+                    rowCounterLink: h.rowCounterLink,
+                    columnCounterLink: h.columnCounterLink,
+                    rowColorName: h.rowColorName,
+                    columnColorName: h.columnColorName,
+                    extractedChartPNGData: h.extractedChartPNGData,
+                    gridInsetLeft: h.gridInsetLeft,
+                    gridInsetTop: h.gridInsetTop,
+                    gridInsetRight: h.gridInsetRight,
+                    gridInsetBottom: h.gridInsetBottom,
+                    chartLabel: h.chartLabel,
+                    isAIExtracted: true,
+                    isColorwork: h.isColorwork
+                )
+                chartStore.save(copy)
+            }
+            #if DEBUG
+            print("[ChartExtraction] Copied \(sourceHighlights.count) chart(s) from duplicate source (\(sourceId)) to \(pattern.title) (\(pattern.id))")
+            #endif
+        }
+
         let candidates = patterns.filter { pattern in
             !pattern.isEnriching
             && !pattern.enrichmentFailed
@@ -202,23 +255,12 @@ final class PatternStore: ObservableObject {
             && pattern.decodedParsedInstructions?.isEmpty == false
             && chartStore.aiExtractedHighlights(patternId: pattern.id).isEmpty
             && !patternsWithCharts.contains(pattern.id)
+            && !chartExtractionFailed.contains(pattern.id)
+            && !chartStore.hasNoChartsMarker(patternId: pattern.id)
+            && pdfUrlToSourcePatternId[pattern.pdfUrl!] == nil
         }
-
-        // Extra safety: if there are ANY orphaned highlights still on disk, don't extract.
-        // The user can always manually trigger extraction via "Re-detect Charts".
-        let hasOrphanedHighlights = chartStore.highlights.contains { h in
-            h.isAIExtracted && !ownedPatternIds.contains(h.patternId)
-        }
-        guard !candidates.isEmpty, !hasOrphanedHighlights else { return }
 
         guard !candidates.isEmpty else { return }
-        #if DEBUG
-        for c in candidates {
-            let existing = chartStore.aiExtractedHighlights(patternId: c.id)
-            let allHighlights = chartStore.highlights.filter { $0.patternId == c.id }
-            print("[ChartExtraction] Candidate: \(c.title), aiExtracted=\(existing.count), allHighlights=\(allHighlights.count), isAIExtracted flags: \(allHighlights.map(\.isAIExtracted))")
-        }
-        #endif
         #if DEBUG
         print("[ChartExtraction] Found \(candidates.count) pattern(s) needing chart detection")
         #endif
@@ -272,7 +314,12 @@ final class PatternStore: ObservableObject {
                 #if DEBUG
                 print("[ChartExtraction] Detected \(detected.count) chart(s)")
                 #endif
-                guard !detected.isEmpty else { return }
+                guard !detected.isEmpty else {
+                    // Mark as "attempted but no charts found" so we don't re-scan every launch
+                    self.chartExtractionFailed.insert(patternId)
+                    ChartHighlightStore.shared.setNoChartsMarker(patternId: patternId)
+                    return
+                }
 
                 await Self.createChartHighlights(
                     from: detected,
@@ -299,6 +346,7 @@ final class PatternStore: ObservableObject {
         guard !chartExtractionInFlight.contains(patternId) else { return }
         chartExtractionInFlight.insert(patternId)
         chartExtractionFailed.remove(patternId)
+        ChartHighlightStore.shared.clearNoChartsMarker(patternId: patternId)
 
         let sectionNames: [String]
         if let instructions = pattern.decodedParsedInstructions, !instructions.isEmpty {

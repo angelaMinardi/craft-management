@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "T0010001"
-               BuildableName = "PatternVault.app"
-               BlueprintName = "PatternVault"
+               BuildableName = "CorvidCraft.app"
+               BlueprintName = "CorvidCraft"
                ReferencedContainer = "container:PatternVault.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -30,8 +30,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "08C772002F5B374A00241E4E"
-               BuildableName = "SaveToPatternVault.appex"
-               BlueprintName = "SaveToPatternVault"
+               BuildableName = "SaveToCorvidCraft.appex"
+               BlueprintName = "SaveToCorvidCraft"
                ReferencedContainer = "container:PatternVault.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -44,8 +44,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "TST0001"
-               BuildableName = "PatternVaultTests.xctest"
-               BlueprintName = "PatternVaultTests"
+               BuildableName = "CorvidCraftTests.xctest"
+               BlueprintName = "CorvidCraftTests"
                ReferencedContainer = "container:PatternVault.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -63,8 +63,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "TST0001"
-               BuildableName = "PatternVaultTests.xctest"
-               BlueprintName = "PatternVaultTests"
+               BuildableName = "CorvidCraftTests.xctest"
+               BlueprintName = "CorvidCraftTests"
                ReferencedContainer = "container:PatternVault.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -85,8 +85,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "T0010001"
-            BuildableName = "PatternVault.app"
-            BlueprintName = "PatternVault"
+            BuildableName = "CorvidCraft.app"
+            BlueprintName = "CorvidCraft"
             ReferencedContainer = "container:PatternVault.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -118,8 +118,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "T0010001"
-            BuildableName = "PatternVault.app"
-            BlueprintName = "PatternVault"
+            BuildableName = "CorvidCraft.app"
+            BlueprintName = "CorvidCraft"
             ReferencedContainer = "container:PatternVault.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

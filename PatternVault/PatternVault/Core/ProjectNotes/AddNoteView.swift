@@ -178,7 +178,7 @@ struct AddNoteView: View {
                     HapticService.success()
                     CelebrationStore.shared.unlock("first_note")
                     UserDefaults.standard.set(true, forKey: "mascot_has_any_note")
-                    UserDefaults(suiteName: "group.com.patternvault.app")?.set(true, forKey: "mascot_has_any_note")
+                    UserDefaults(suiteName: "group.com.corvidcraft.app")?.set(true, forKey: "mascot_has_any_note")
                     dismiss()
                 }
             }

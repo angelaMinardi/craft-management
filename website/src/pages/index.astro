@@ -14,26 +14,26 @@ const features = [
   {
     eyebrow: 'Step 1',
     title: 'Spot a pattern you love',
-    description: 'Share from Ravelry, Etsy, TikTok, YouTube, or blogs. Pattern Vault grabs it before it disappears into your bookmarks forever.',
+    description: 'Share from Ravelry, Etsy, TikTok, YouTube, or blogs. Corvid Craft grabs it before it disappears into your bookmarks forever.',
     icon: '🔗',
   },
   {
     eyebrow: 'Step 2',
     title: 'Actually keep track of it',
-    description: 'Move patterns from Want to Make to In Progress to Completed. No more losing that perfect sweater pattern in 47 open tabs.',
+    description: 'Want to Make, In Progress, Completed — your patterns move with you instead of disappearing into a bookmark graveyard.',
     icon: '✓',
   },
   {
     eyebrow: 'Step 3',
     title: 'Make the thing',
-    description: 'Add notes, materials, and progress details. Row counter, voice mode, and all the tools to get from "casting on" to "finished object."',
+    description: 'Row counter with voice mode, project notes, yarn matching — everything you need to go from casting on to weaving in ends.',
     icon: '🧶',
   },
 ];
 ---
 
 <BaseLayout
-  title="Pattern Vault — Your craft library, in your pocket"
+  title="Corvid Craft — Your craft library, in your pocket"
   description="Save patterns from Ravelry, Etsy, TikTok, and anywhere else. Track projects, add notes, and stop losing that pattern you saved three months ago. For crafters who collect more patterns than they can make."
 >
   <div class="home gradient-mesh">
@@ -45,10 +45,10 @@ const features = [
         Your craft library,<br /><span class="hero-title-accent">in your pocket</span>
       </h1>
       <p class="hero-subtitle">
-        Pattern Vault is the one place where every pattern, tutorial, and project idea — no matter where you found it — gets saved, organized, and tracked from "I want to make this" to "I finished it."
+        Save any pattern you find — Ravelry, TikTok, Etsy, wherever — and actually track it from "ooh I want to make this" to done.
       </p>
       <p class="hero-tagline">
-        Save from Ravelry, Etsy, TikTok, YouTube, blogs. Track your projects. Add notes. Everything in one place instead of everywhere.
+        No more losing patterns in your bookmarks. No more 47 open tabs. Just your projects, organized.
       </p>
       <div class="hero-cta-stack">
         <div class="hero-cta">
@@ -77,12 +77,12 @@ const features = [
         </div>
       </div>
       <p class="hero-note">
-        {ctaConfig.mode === 'liveFirst' ? 'iOS only. Designed for crafters who save patterns from everywhere.' : 'Only 12 beta testing spots available. Help shape Pattern Vault before public launch.'}
+        {ctaConfig.mode === 'liveFirst' ? 'iOS only. Designed for crafters who save patterns from everywhere.' : 'TestFlight beta is open — 100 spots available. iOS only.'}
       </p>
     </section>
 
     <section class="trust-row" aria-label="Trust signals">
-      <p class="trust-chip reveal">Built by crafters</p>
+      <p class="trust-chip reveal">Built by a crafter who kept losing patterns</p>
       <p class="trust-chip reveal">Privacy-first by default</p>
       <p class="trust-chip reveal">No tracking, ever</p>
     </section>
@@ -95,6 +95,93 @@ const features = [
             <FeatureCard title={f.title} description={f.description} icon={f.icon} eyebrow={f.eyebrow} />
           </div>
         ))}
+      </div>
+    </section>
+
+    <section class="showcase" aria-labelledby="showcase-heading" id="showcase">
+      <h2 id="showcase-heading" class="section-title reveal">See it in action</h2>
+      <p class="showcase-subtitle reveal">Share a pattern PDF and Corvid Craft does the rest.</p>
+
+      <div class="demo-container reveal" id="demo">
+        <!-- State 1: PDF with action button -->
+        <div class="demo-initial" id="demo-initial">
+          <div class="demo-pdf-wrap">
+            <div class="phone-frame">
+              <div class="phone-notch" aria-hidden="true"></div>
+              <img src="/images/showcase/pdf-charts.png" alt="Page 1 of the Pompomhat with Star Pattern PDF" width="554" height="1200" loading="lazy" class="demo-pdf" id="demo-pdf" />
+            </div>
+          </div>
+          <button class="demo-organize-btn" id="demo-btn" type="button">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            Organize this pattern
+          </button>
+        </div>
+
+        <!-- State 2: Processing animation -->
+        <div class="demo-processing" id="demo-processing" style="display:none;">
+          <img src="/images/pip/thinking.png" alt="Pip thinking" width="120" height="120" class="demo-pip" />
+          <div class="demo-status" id="demo-status">Reading PDF...</div>
+          <div class="demo-progress-bar"><div class="demo-progress-fill" id="demo-progress"></div></div>
+        </div>
+
+        <!-- State 3: Results -->
+        <div class="demo-results" id="demo-results" style="display:none;">
+          <img src="/images/pip/happy.png" alt="Pip happy" width="80" height="80" class="demo-pip-done" />
+          <div class="demo-cards">
+            <div class="demo-card" style="--i:0">
+              <div class="demo-card-icon">
+                <div class="phone-frame phone-frame-mini">
+                  <div class="phone-notch" aria-hidden="true"></div>
+                  <img src="/images/showcase/step-tracking.png" alt="Step-by-step tracking view showing Step 1 of 6 with row counter" width="554" height="1200" loading="lazy" class="demo-card-screenshot" />
+                </div>
+              </div>
+              <div class="demo-card-body">
+                <h4 class="demo-card-title">6 steps parsed</h4>
+                <p class="demo-card-desc">Each instruction broken out with repeat tracking, round counters, and size selectors.</p>
+              </div>
+            </div>
+            <div class="demo-card" style="--i:1">
+              <div class="demo-card-icon">
+                <div class="phone-frame phone-frame-mini">
+                  <div class="phone-notch" aria-hidden="true"></div>
+                  <img src="/images/showcase/knitting-mode.png" alt="Interactive knitting mode showing the star chart at Row 7" width="554" height="1200" loading="lazy" class="demo-card-screenshot" />
+                </div>
+              </div>
+              <div class="demo-card-body">
+                <h4 class="demo-card-title">1 chart extracted</h4>
+                <p class="demo-card-desc">Colorwork charts detected and ready for row-by-row knitting mode.</p>
+              </div>
+            </div>
+            <div class="demo-card" style="--i:2">
+              <div class="demo-card-icon">
+                <div class="phone-frame phone-frame-mini">
+                  <div class="phone-notch" aria-hidden="true"></div>
+                  <img src="/images/showcase/knitting-materials.png" alt="Pattern Info view showing extracted materials, gauge, needle sizes, and techniques" width="554" height="1200" loading="lazy" class="demo-card-screenshot" />
+                </div>
+              </div>
+              <div class="demo-card-body">
+                <h4 class="demo-card-title">Materials saved</h4>
+                <p class="demo-card-desc">Yarn weight, needle sizes, and gauge pulled from the PDF automatically.</p>
+              </div>
+            </div>
+          </div>
+          <button class="demo-reset-btn" id="demo-reset" type="button">Try again</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="maker-story" aria-labelledby="maker-heading">
+      <div class="maker-inner reveal">
+        <div class="maker-photos">
+          <img src="/images/maker/sunflower-blanket.jpg" alt="A crocheted sunflower granny square blanket in green and yellow" class="maker-photo maker-photo-main" width="400" height="400" loading="lazy" />
+          <img src="/images/maker/cat-hat.jpg" alt="A black cat wearing a handmade crocheted hat with pom-poms" class="maker-photo maker-photo-accent" width="300" height="300" loading="lazy" />
+        </div>
+        <div class="maker-text">
+          <h2 id="maker-heading" class="maker-title">Why I built this</h2>
+          <p>I am a pattern hoarder. I love making gifts for friends (and their pets), new items for myself, and learning new techniques. But after a year of accumulating TikTok videos, Etsy patterns, and bookmarked blog posts, I kept losing them. I tried some commonly recommended apps only to find them clunky and not very inspirational.</p>
+          <p>So I built this app for myself — and hopefully the rest of the crafting community can find some use from it too! I'm getting into leatherworking and beading, so this is meant to be a tool for <em>all</em> crafters as it expands, not just fiber artists. I'm looking forward to connecting with all of you and building this out together.</p>
+          <p class="maker-sign-off">— Angela</p>
+        </div>
       </div>
     </section>
 
@@ -169,6 +256,60 @@ const features = [
   } else {
     initReveals();
   }
+
+  // Interactive demo
+  (function initDemo() {
+    const btn = document.getElementById('demo-btn');
+    const resetBtn = document.getElementById('demo-reset');
+    const initial = document.getElementById('demo-initial');
+    const processing = document.getElementById('demo-processing');
+    const results = document.getElementById('demo-results');
+    const status = document.getElementById('demo-status');
+    const progress = document.getElementById('demo-progress');
+    if (!btn) return;
+
+    const steps = [
+      { text: 'Reading PDF...', pct: 20 },
+      { text: 'Parsing instructions...', pct: 45 },
+      { text: 'Extracting charts...', pct: 70 },
+      { text: 'Organizing steps...', pct: 90 },
+      { text: 'Done!', pct: 100 },
+    ];
+
+    function runDemo() {
+      initial.style.display = 'none';
+      processing.style.display = 'flex';
+      results.style.display = 'none';
+
+      let i = 0;
+      function next() {
+        if (i >= steps.length) {
+          setTimeout(showResults, 400);
+          return;
+        }
+        status.textContent = steps[i].text;
+        progress.style.width = steps[i].pct + '%';
+        i++;
+        setTimeout(next, 700);
+      }
+      next();
+    }
+
+    function showResults() {
+      processing.style.display = 'none';
+      results.style.display = 'flex';
+    }
+
+    function resetDemo() {
+      results.style.display = 'none';
+      processing.style.display = 'none';
+      progress.style.width = '0%';
+      initial.style.display = 'flex';
+    }
+
+    btn.addEventListener('click', runDemo);
+    resetBtn.addEventListener('click', resetDemo);
+  })();
 </script>
 
 <style>
@@ -257,14 +398,16 @@ const features = [
     font-size: var(--text-subtitle);
     line-height: var(--line-height-relaxed);
     color: var(--deep-plum);
-    margin: 0 0 var(--space-md);
+    margin-top: 0;
+    margin-bottom: var(--space-md);
     animation: fade-in-up var(--duration-slow) var(--ease-out-expo) 0.4s both;
   }
 
   .hero-tagline {
     font-size: var(--text-body);
     color: var(--text-muted);
-    margin: 0 0 var(--space-xl);
+    margin-top: 0;
+    margin-bottom: var(--space-xl);
     line-height: var(--line-height-relaxed);
     animation: fade-in-up var(--duration-slow) var(--ease-out-expo) 0.5s both;
   }
@@ -331,11 +474,14 @@ const features = [
   .trust-chip {
     margin: 0;
     font-size: var(--text-small);
-    color: var(--deep-plum);
-    background: rgba(168, 197, 160, 0.18);
-    border: 1px solid rgba(74, 32, 64, 0.08);
-    border-radius: var(--radius-full);
-    padding: 0.45rem 0.85rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .trust-chip::before {
+    content: '✓ ';
+    color: var(--sage-green);
+    font-style: normal;
   }
 
   .features-grid {
@@ -349,6 +495,71 @@ const features = [
       grid-template-columns: repeat(3, 1fr);
       gap: var(--space-2xl);
     }
+  }
+
+  .maker-story {
+    padding: var(--space-3xl) var(--space-lg);
+    max-width: var(--content-wide);
+    margin: 0 auto;
+  }
+
+  .maker-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+    align-items: center;
+  }
+
+  .maker-photos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  @media (min-width: 768px) {
+    .maker-inner {
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .maker-photos {
+      width: 280px;
+      max-width: 280px;
+    }
+  }
+
+  .maker-photo {
+    border-radius: 12px;
+    object-fit: cover;
+    width: 100%;
+    aspect-ratio: 1;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .maker-text {
+    flex: 1;
+  }
+
+  .maker-title {
+    font-size: var(--text-title);
+    font-weight: 700;
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-md);
+  }
+
+  .maker-text p {
+    color: var(--text-body);
+    line-height: var(--line-height-body);
+    margin: 0 0 var(--space-sm);
+  }
+
+  .maker-sign-off {
+    font-style: italic;
+    color: var(--text-muted);
+    margin-top: var(--space-md);
   }
 
   .cta-section {
@@ -422,6 +633,304 @@ const features = [
       flex-direction: column;
       text-align: center;
     }
+  }
+
+  /* Interactive demo showcase */
+  .showcase {
+    padding: var(--space-4xl) var(--space-lg);
+    max-width: var(--content-wide);
+    margin: 0 auto;
+  }
+
+  .showcase-subtitle {
+    text-align: center;
+    font-size: var(--text-subtitle);
+    color: var(--text-muted);
+    max-width: 36rem;
+    margin: 0 auto var(--space-2xl);
+    line-height: var(--line-height-relaxed);
+  }
+
+  .demo-container {
+    max-width: 52rem;
+    margin: 0 auto;
+    min-height: 420px;
+    position: relative;
+  }
+
+  /* State 1: PDF + button */
+  .demo-initial {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+
+  .demo-pdf-wrap {
+    position: relative;
+    width: 240px;
+  }
+
+  .demo-pdf {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 0;
+    border: none;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+  }
+
+  /* iPhone frame */
+  .phone-frame {
+    background: #1a1a1e;
+    border-radius: 36px;
+    padding: 10px;
+    position: relative;
+    box-shadow:
+      0 8px 30px rgba(0, 0, 0, 0.18),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  .phone-frame img {
+    border-radius: 26px;
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .phone-notch {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 72px;
+    height: 22px;
+    background: #1a1a1e;
+    border-radius: 14px;
+    z-index: 2;
+  }
+
+  /* Mini phone frame for result cards */
+  .phone-frame-mini {
+    border-radius: 20px;
+    padding: 5px;
+  }
+
+  .phone-frame-mini img {
+    border-radius: 15px;
+  }
+
+  .phone-frame-mini .phone-notch {
+    top: 8px;
+    width: 40px;
+    height: 12px;
+    border-radius: 8px;
+  }
+
+  .demo-organize-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.85rem 1.75rem;
+    font-size: var(--text-body);
+    font-weight: 700;
+    color: white;
+    background: var(--sage-green);
+    border: none;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: transform var(--duration-fast), box-shadow var(--duration-fast), background var(--duration-fast);
+    box-shadow: 0 4px 14px rgba(168, 197, 160, 0.4);
+  }
+
+  .demo-organize-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(168, 197, 160, 0.5);
+    background: color-mix(in srgb, var(--sage-green) 85%, black);
+  }
+
+  .demo-organize-btn:active {
+    transform: translateY(0);
+  }
+
+  .demo-organize-btn svg {
+    animation: spin 3s linear infinite;
+    animation-play-state: paused;
+  }
+
+  .demo-organize-btn:hover svg {
+    animation-play-state: running;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* State 2: Processing */
+  .demo-processing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-2xl) 0;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .demo-pip {
+    animation: float 2s ease-in-out infinite;
+  }
+
+  .demo-status {
+    font-size: var(--text-subtitle);
+    font-weight: 600;
+    color: var(--deep-plum);
+    min-height: 2rem;
+    transition: opacity 0.2s;
+  }
+
+  .demo-progress-bar {
+    width: 240px;
+    height: 6px;
+    background: color-mix(in srgb, var(--sage-green) 20%, transparent);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .demo-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--sage-green);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+
+  /* State 3: Results */
+  .demo-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-lg);
+    animation: fadeUp 0.4s ease;
+  }
+
+  .demo-pip-done {
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .demo-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    width: 100%;
+    max-width: 48rem;
+  }
+
+  @media (min-width: 768px) {
+    .demo-cards {
+      flex-direction: row;
+      gap: var(--space-lg);
+    }
+  }
+
+  .demo-card {
+    flex: 1;
+    background: white;
+    border: 1.5px solid var(--card-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: cardReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation-delay: calc(var(--i) * 0.15s);
+    cursor: default;
+    transition: transform var(--duration-fast), box-shadow var(--duration-fast);
+  }
+
+  .demo-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-card);
+  }
+
+  @keyframes cardReveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .demo-card-icon {
+    padding: var(--space-md) var(--space-md) 0;
+    display: flex;
+    justify-content: center;
+    background: color-mix(in srgb, var(--warm-cream) 60%, white);
+  }
+
+  .demo-card-icon .phone-frame-mini {
+    width: 120px;
+    flex-shrink: 0;
+  }
+
+  .demo-card-screenshot {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 200px;
+    object-fit: cover;
+    object-position: top center;
+  }
+
+  .demo-card-icon-emoji {
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    background: color-mix(in srgb, var(--warm-cream) 60%, white);
+  }
+
+  .demo-card-body {
+    padding: var(--space-md);
+  }
+
+  .demo-card-title {
+    font-size: var(--text-body);
+    font-weight: 700;
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-xs);
+  }
+
+  .demo-card-desc {
+    font-size: var(--text-small);
+    color: var(--text-muted);
+    line-height: var(--line-height-relaxed);
+    margin: 0;
+  }
+
+  .demo-reset-btn {
+    padding: 0.5rem 1.25rem;
+    font-size: var(--text-small);
+    font-weight: 600;
+    color: var(--text-muted);
+    background: transparent;
+    border: 1.5px solid var(--card-border);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: color var(--duration-fast), border-color var(--duration-fast);
+    margin-top: var(--space-sm);
+  }
+
+  .demo-reset-btn:hover {
+    color: var(--deep-plum);
+    border-color: var(--deep-plum);
   }
 
   .beta-tracker-section {

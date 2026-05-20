@@ -25,6 +25,8 @@ struct SecondaryCounter: Codable, Identifiable, Equatable {
     var linkMode: LinkMode = .oneWay
     var color: String = "softCoral"
     var isActive: Bool = true
+    /// When set, this counter is shown only within the given step card (0-based step index).
+    var stepIndex: Int?
 
     enum LinkMode: String, Codable, CaseIterable {
         case oneWay     // global increments this
@@ -32,7 +34,7 @@ struct SecondaryCounter: Codable, Identifiable, Equatable {
         case unlinked   // independent
     }
 
-    init(id: UUID = UUID(), title: String, resetAfter: Int, maxResets: Int? = nil, linkMode: LinkMode = .oneWay, color: String = "softCoral") {
+    init(id: UUID = UUID(), title: String, resetAfter: Int, maxResets: Int? = nil, linkMode: LinkMode = .oneWay, color: String = "softCoral", stepIndex: Int? = nil) {
         self.id = id
         self.title = title
         self.resetAfter = resetAfter
@@ -40,5 +42,6 @@ struct SecondaryCounter: Codable, Identifiable, Equatable {
         self.isLinkedToGlobal = linkMode != .unlinked
         self.linkMode = linkMode
         self.color = color
+        self.stepIndex = stepIndex
     }
 }

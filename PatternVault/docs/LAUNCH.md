@@ -1,4 +1,4 @@
-# Pattern Vault Launch Guide
+# Corvid Craft Launch Guide
 
 Single source of truth for release readiness and launch execution.
 

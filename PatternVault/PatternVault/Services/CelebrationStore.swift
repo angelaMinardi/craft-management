@@ -19,7 +19,7 @@ struct PendingMilestone: Identifiable {
 final class CelebrationStore: ObservableObject {
     static let shared = CelebrationStore()
 
-    private static let appGroupId = "group.com.patternvault.app"
+    private static let appGroupId = "group.com.corvidcraft.app"
     private static let unlockedKey = "CelebrationStore.unlockedMilestoneIds"
     private static let pendingKey = "CelebrationStore.pendingMilestoneId"
     private static let enabledKey = "CelebrationStore.celebrationsEnabled"

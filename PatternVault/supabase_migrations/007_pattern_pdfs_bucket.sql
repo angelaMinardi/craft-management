@@ -1,4 +1,4 @@
--- Pattern Vault Migration 007: Create pattern-pdfs storage bucket
+-- Corvid Craft Migration 007: Create pattern-pdfs storage bucket
 -- Run this in Supabase Dashboard -> SQL Editor -> New query -> paste -> Run
 --
 -- Bucket for PDF files attached to patterns. Path format: user_id/pattern_id/filename.pdf

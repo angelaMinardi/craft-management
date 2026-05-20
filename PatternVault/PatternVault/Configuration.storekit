@@ -4,7 +4,21 @@
 
   ],
   "products" : [
-
+    {
+      "displayPrice" : "39.99",
+      "familyShareable" : false,
+      "internalID" : "A1C5F2D8",
+      "localizations" : [
+        {
+          "description" : "Lifetime access to Premium. One-time purchase, no subscription.",
+          "displayName" : "Premium Lifetime (Launch)",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.corvidcraft.premium.lifetime.launch",
+      "referenceName" : "Premium Lifetime (Launch)",
+      "type" : "NonConsumable"
+    }
   ],
   "settings" : {
 
@@ -36,7 +50,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.patternvault.premium.monthly",
+          "productID" : "com.corvidcraft.premium.monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Premium Monthly",
           "subscriptionGroupID" : "297B9B5E",
@@ -53,7 +67,13 @@
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "9EB87D0E",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "displayPrice" : "7.99",
+            "internalID" : "9EB87D0F",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "payUpFront",
+            "subscriptionPeriod" : "P1Y"
+          },
           "localizations" : [
             {
               "description" : "Best value — save 44%. Unlimited vault, project mode, Row Tracker widget, stash matching, and ad-free.",
@@ -61,7 +81,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.patternvault.premium.yearly",
+          "productID" : "com.corvidcraft.premium.yearly",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "Premium Yearly",
           "subscriptionGroupID" : "297B9B5E",

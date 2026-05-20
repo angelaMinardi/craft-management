@@ -778,10 +778,17 @@
 
 .tracker-eggs {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: var(--space-sm);
-  max-width: 20rem;
+  max-width: 22rem;
   margin: 0 auto var(--space-lg);
+}
+
+.tracker-cta {
+  display: inline-block;
+  margin-top: var(--space-md);
+  text-decoration: none;
+  text-align: center;
 }
 
 .tracker-egg {

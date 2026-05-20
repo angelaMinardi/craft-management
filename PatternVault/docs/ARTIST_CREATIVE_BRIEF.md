@@ -1,10 +1,10 @@
-# Artist Creative Brief: Pattern Vault Mascot and Illustration System
+# Artist Creative Brief: Corvid Craft Mascot and Illustration System
 
-Use this brief to onboard an illustrator/animator so assets ship quickly and stay consistent with Pattern Vault's existing brand.
+Use this brief to onboard an illustrator/animator so assets ship quickly and stay consistent with Corvid Craft's existing brand.
 
 ## Project Summary
 
-Pattern Vault is an iOS app for organizing craft patterns. The redesign strategy is to increase emotional stickiness and sharing by sequencing moments:
+Corvid Craft is an iOS app for organizing craft patterns. The redesign strategy is to increase emotional stickiness and sharing by sequencing moments:
 
 1. Emotion first
 2. Value framing
@@ -16,7 +16,7 @@ The mascot and supporting illustrations should make this sequence feel warm, rea
 
 ## Creative Objective
 
-Create reusable mascot expressions, poses, and scene elements that make the app feel as endearing and memorable as top-performing mascot-led apps while preserving Pattern Vault's current visual identity.
+Create reusable mascot expressions, poses, and scene elements that make the app feel as endearing and memorable as top-performing mascot-led apps while preserving Corvid Craft's current visual identity.
 
 ## Brand Guardrails (Non-Negotiable)
 

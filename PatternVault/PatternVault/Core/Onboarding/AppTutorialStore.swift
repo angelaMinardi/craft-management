@@ -83,7 +83,7 @@ final class AppTutorialStore: ObservableObject {
         ),
         AppTutorialStep(
             title: "Add to vault",
-            body: "Share a link from Safari or any app and choose \"Save to Pattern Vault\" to add patterns to your vault.",
+            body: "Share a link from Safari or any app and choose \"Save to Corvid Craft\" to add patterns to your vault.",
             tabIndex: 1,
             anchorId: .patternsAdd
         ),

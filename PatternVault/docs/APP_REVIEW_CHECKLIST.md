@@ -1,7 +1,7 @@
-# App Review Checklist (Pattern Vault)
+# App Review Checklist (Corvid Craft)
 
 Use this before every TestFlight/App Store submission to reduce rejection risk.
-This checklist is aligned to the App Review Guidelines structure (Safety, Performance, Business, Design, Legal) and adapted to Pattern Vault's actual features.
+This checklist is aligned to the App Review Guidelines structure (Safety, Performance, Business, Design, Legal) and adapted to Corvid Craft's actual features.
 
 Last reviewed against Apple guidelines update: 2026-02-06.
 
@@ -140,7 +140,7 @@ Last reviewed against Apple guidelines update: 2026-02-06.
 - Rights confirmed for all icons, mascot art, screenshots, videos, and imported content usage.
 - No Apple endorsement implication in copy or visuals.
 
-## Pattern Vault Release Evidence Pack (attach/use in Review Notes)
+## Corvid Craft Release Evidence Pack (attach/use in Review Notes)
 
 - Demo account and password (or demo mode steps)
 - Test matrix summary (device + iOS versions + key flows)

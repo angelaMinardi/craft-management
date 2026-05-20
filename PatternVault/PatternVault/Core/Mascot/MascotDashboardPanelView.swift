@@ -82,12 +82,14 @@ struct MascotDashboardPanelView: View {
                 }
 
                 mascotView
+                    .id(store.pose)
+                    .transition(.opacity)
                     .frame(width: 160, height: 160)
                     .frame(maxWidth: .infinity)
                     .padding(.bottom, 44)
                     .scaleEffect(isDropTargeted ? 1.04 : 1.0)
                     .animation(reduceMotion ? .none : .easeInOut(duration: 0.2), value: isDropTargeted)
-                    .animation(reduceMotion ? .none : .spring(response: 0.35, dampingFraction: 0.8), value: store.pose)
+                    .animation(reduceMotion ? .none : .easeInOut(duration: 0.25), value: store.pose)
 
                 utilityRow
                     .padding(.horizontal, Theme.Spacing.md)
@@ -195,10 +197,10 @@ struct MascotDashboardPanelView: View {
         switch store.pose {
         case .idle:
             SpriteMascotView.idle(size: mascotSize)
-        case .knitting:
-            SpriteMascotView.knitting(size: mascotSize)
         case .jumping:
             SpriteMascotView.jumping(size: mascotSize)
+                .scaleEffect(1.35)
+                .frame(width: mascotSize, height: mascotSize)
         case .pouty:
             SpriteMascotView.pouty(size: mascotSize)
         case .petting:

@@ -3,7 +3,7 @@
 > **Status:** Legacy/optional path. Core in-app AI flow is Gemini-based. Keep this only if you still use the Supabase Edge Function YouTube transcript pipeline.
 > **Canonical guidance:** For normal development and production setup, follow `docs/SETUP.md` and `docs/ROADMAP.md`. Do not treat this file as the primary AI architecture document.
 
-This function lets the Pattern Vault share extension turn a **YouTube URL** into pattern metadata (title, summary, tags, materials, etc.) by fetching the video’s captions and running Claude on the transcript.
+This function lets the Corvid Craft share extension turn a **YouTube URL** into pattern metadata (title, summary, tags, materials, etc.) by fetching the video’s captions and running Claude on the transcript.
 
 > If this function is disabled, the app should continue to support non-function fallback behavior for shared URLs.
 
@@ -131,7 +131,7 @@ No extra config is needed in the app: the share extension already calls this URL
 
 You can call the function with curl. You need a valid Supabase **access token** (JWT) for a signed-in user.
 
-1. Sign in to Pattern Vault (or any client that uses your Supabase project).
+1. Sign in to Corvid Craft (or any client that uses your Supabase project).
 2. Get the session’s access token (e.g. from Supabase Auth or your app’s auth state).
 3. Run:
 
@@ -176,4 +176,4 @@ Replace `YOUR_PROJECT_REF`, `YOUR_ACCESS_TOKEN`, and `VIDEO_ID`. If the video ha
 | 3 | `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...` |
 | 4 | `supabase functions deploy extract-pattern-from-video` |
 
-After that, sharing a YouTube link to Pattern Vault will use this function to extract pattern info from the video’s captions.
+After that, sharing a YouTube link to Corvid Craft will use this function to extract pattern info from the video’s captions.

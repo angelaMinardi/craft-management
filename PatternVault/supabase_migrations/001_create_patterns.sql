@@ -1,4 +1,4 @@
--- Pattern Vault: patterns table
+-- Corvid Craft: patterns table
 -- Run this in Supabase Dashboard → SQL Editor → New query → paste → Run
 
 create table if not exists public.patterns (

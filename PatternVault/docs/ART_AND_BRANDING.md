@@ -1,11 +1,11 @@
-# Pattern Vault Art and Branding Guide
+# Corvid Craft Art and Branding Guide
 
-This document defines the visual identity for Pattern Vault based on the current app implementation.
+This document defines the visual identity for Corvid Craft based on the current app implementation.
 Use it to keep in-app UI, App Store assets, social content, and website visuals consistent.
 
 ## 1) Brand personality
 
-Pattern Vault should feel:
+Corvid Craft should feel:
 
 - Warm and welcoming, never sterile.
 - Craft-forward and handmade-adjacent, but still clean and modern.
@@ -71,7 +71,7 @@ These colors come from `Theme.swift` (UIKit values used for exact references).
 
 ## 4) Typography direction
 
-Pattern Vault typography is rounded system-based to stay friendly and native.
+Corvid Craft typography is rounded system-based to stay friendly and native.
 
 - Use `.rounded` design fonts across headings, body, labels, and badges.
 - Title styles should feel soft-bold, not condensed or overly geometric.

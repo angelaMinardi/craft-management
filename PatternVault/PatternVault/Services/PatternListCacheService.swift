@@ -8,7 +8,7 @@
 import Foundation
 
 enum PatternListCacheService {
-    private static let suiteName = "group.com.patternvault.app"
+    private static let suiteName = "group.com.corvidcraft.app"
     private static let cacheFileNamePrefix = "pattern_list_cache_"
 
     static func loadCachedPatterns(userId: UUID) -> [Pattern]? {

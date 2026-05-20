@@ -1,4 +1,4 @@
--- Pattern Vault Migration 019: Create pattern-images storage bucket + RLS policies
+-- Corvid Craft Migration 019: Create pattern-images storage bucket + RLS policies
 -- The bucket was created via Dashboard but never had RLS policies applied,
 -- causing "new row violates row-level security policy" on chart image uploads.
 -- Path format: <auth.uid()>/<pattern_id>/<file>.jpg

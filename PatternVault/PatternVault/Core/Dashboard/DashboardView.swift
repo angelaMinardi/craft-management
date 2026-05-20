@@ -46,7 +46,7 @@ struct DashboardView: View {
                 .padding(.bottom, Theme.Spacing.xl)
             }
             .background(seamlessBackground)
-            .navigationTitle("Pattern Vault")
+            .navigationTitle("Corvid Craft")
             .navigationBarTitleDisplayMode(.inline)
             .refreshable {
                 if let userId = auth.currentUserId {
@@ -87,12 +87,10 @@ struct DashboardView: View {
                 if store.patterns.isEmpty, let userId = auth.currentUserId {
                     await store.load(userId: userId)
                 }
-                mascotStore.syncFallbackCounts(patterns: store.patterns)
                 lastSavedCount = store.patterns.count
                 lastCompletedCount = store.completedCount
             }
             .onChange(of: store.patterns.count) { _, _ in
-                mascotStore.syncFallbackCounts(patterns: store.patterns)
                 if store.patterns.count > lastSavedCount {
                     mascotStore.rewardForPatternSaved()
                 }
@@ -189,6 +187,9 @@ struct DashboardView: View {
                     statsSection
                         .tutorialAnchor(.homeStats, isActive: currentStepAnchor == .homeStats)
                     recentSection
+                    // Free-tier ad banner. BannerAdView self-hides for Premium users
+                    // and when the remote killswitch (app_config.ads_enabled) is off.
+                    BannerAdView()
                     if !SubscriptionStore.shared.isPremium {
                         premiumTeaserRow
                     }
@@ -266,6 +267,7 @@ struct DashboardView: View {
             }
             .padding(.vertical, Theme.Spacing.sm)
             .padding(.horizontal, Theme.Spacing.md)
+            .fullRowTapTarget()
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Theme.Premium.teaser)

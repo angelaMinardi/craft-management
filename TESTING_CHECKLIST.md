@@ -24,7 +24,7 @@ The widget source files exist (`PatternVaultWidget/`) but the **Xcode target is 
    - `Assets.xcassets`
    - `Info.plist`
 7. In the widget target's **Signing & Capabilities**:
-   - Add **App Groups** → `group.com.patternvault.app`
+   - Add **App Groups** → `group.com.corvidcraft.app`
 8. In the **main app target** (PatternVault):
    - **General → Frameworks, Libraries, and Embedded Content** → verify the widget extension is embedded
 9. Build both targets to verify

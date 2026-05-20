@@ -12,7 +12,7 @@ import ActivityKit
 #endif
 
 enum WidgetDataService {
-    private static let suiteName = "group.com.patternvault.app"
+    private static let suiteName = "group.com.corvidcraft.app"
 
     static let keyContinueTitle = "widgetContinueTitle"
     static let keyContinueProgress = "widgetContinueProgress"
@@ -170,7 +170,7 @@ enum LiveActivityService {
         }
 
         do {
-            let attributes = PatternVaultWidgetAttributes(name: "Pattern Vault")
+            let attributes = PatternVaultWidgetAttributes(name: "Corvid Craft")
             let activity = try Activity.request(
                 attributes: attributes,
                 content: ActivityContent(state: content, staleDate: nil),

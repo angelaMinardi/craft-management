@@ -1,4 +1,4 @@
--- Pattern Vault Migration 017: Make pattern-pdfs RLS UID check case-insensitive
+-- Corvid Craft Migration 017: Make pattern-pdfs RLS UID check case-insensitive
 -- Swift UUID().uuidString can produce uppercase letters, while auth.uid()::text is often lowercase.
 -- Compare lowercase text to avoid false RLS failures on storage uploads.
 

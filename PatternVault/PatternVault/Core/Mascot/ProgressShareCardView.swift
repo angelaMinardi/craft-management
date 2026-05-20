@@ -125,7 +125,7 @@ struct ProgressShareCardView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 28, height: 28)
-                Text("Pattern Vault")
+                Text("Corvid Craft")
                     .font(Theme.Typography.captionSemibold)
                     .foregroundStyle(Theme.deepPlum.opacity(0.7))
             }

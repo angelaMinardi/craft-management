@@ -59,12 +59,14 @@ struct GlossaryView: View {
                     Section(group.category.rawValue) {
                         ForEach(group.entries) { entry in
                             glossaryRow(entry)
+                                .listRowBackground(Color.clear)
                         }
                     }
                 }
             } else {
                 ForEach(filteredEntries) { entry in
                     glossaryRow(entry)
+                        .listRowBackground(Color.clear)
                 }
             }
 

@@ -10,7 +10,7 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-private let suiteName = "group.com.patternvault.app"
+private let suiteName = "group.com.corvidcraft.app"
 private let keyActivePatternId = "widgetActivePatternId"
 private let keyActivePatternTitle = "widgetActivePatternTitle"
 private let keyWidgetRowCurrent = "widgetRowCurrent"
@@ -245,7 +245,7 @@ struct RowTrackerWidgetView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .widgetURL(entry.patternId.flatMap { URL(string: "patternvault://pattern/\($0.uuidString)") })
+        .widgetURL(entry.patternId.flatMap { URL(string: "corvidcraft://pattern/\($0.uuidString)") })
     }
 
     private var rowLabel: String {

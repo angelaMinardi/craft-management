@@ -9,7 +9,7 @@
 import WidgetKit
 import SwiftUI
 
-private let suiteName = "group.com.patternvault.app"
+private let suiteName = "group.com.corvidcraft.app"
 private let keyContinueTitle = "widgetContinueTitle"
 private let keyContinueProgress = "widgetContinueProgress"
 private let keyInProgressCount = "widgetInProgressCount"
@@ -77,7 +77,7 @@ struct PatternVaultWidgetEntryView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         } else if entry.totalCount > 0 {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Pattern Vault")
+                Text("Corvid Craft")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 HStack(spacing: 12) {
@@ -89,7 +89,7 @@ struct PatternVaultWidgetEntryView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         } else {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Pattern Vault")
+                Text("Corvid Craft")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text("Open the app to see your patterns.")
@@ -119,7 +119,7 @@ struct PatternVaultWidget: Widget {
             PatternVaultWidgetEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
-        .configurationDisplayName("Pattern Vault")
+        .configurationDisplayName("Corvid Craft")
         .description("See your continue pattern or pattern counts.")
         .supportedFamilies([.systemSmall])
     }

@@ -38,6 +38,16 @@ Pods/
 # Environment
 .env
 .env.*
+!**/.env.sample
+
+# App Store Connect API private keys
+*.p8
+
+# Fastlane
+PatternVault/fastlane/report.xml
+PatternVault/fastlane/README.md
+PatternVault/build/
+PatternVault/vendor/bundle/
 
 # Firebase
 firebase-debug.log
@@ -51,3 +61,10 @@ firebase-debug.*.log
 
 # Dead code
 craft-management/
+
+# Investor / financial materials (repo is public — keep private)
+investor/
+*.investor.md
+
+# Claude Code plugin marketplaces installed locally (not part of the app)
+claude-code-apple-skills/

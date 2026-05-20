@@ -17,7 +17,7 @@ import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
       <div class="sparkle sparkle-3" aria-hidden="true"></div>
     </div>
     <h1>What's Your<br /><span class="hero-title-accent">Crafting Archetype?</span></h1>
-    <p>Answer 7 quick questions and discover the kind of crafter you truly are. Share your result and claim one of just 12 beta tester spots!</p>
+    <p>Answer 7 quick questions and discover the kind of crafter you truly are. Share your result and sign up for beta access!</p>
     <button class="pv-button-primary quiz-start-btn" id="quiz-start" type="button">Let's find out</button>
   </div>
 
@@ -65,9 +65,13 @@ import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
     <p class="quiz-result-description" id="result-description"></p>
 
     <div class="quiz-share-actions">
-      <button class="quiz-share-btn" id="share-twitter" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-        Share on X
+      <button class="quiz-share-btn" id="share-reddit" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0A12 12 0 000 12a12 12 0 0012 12 12 12 0 0012-12A12 12 0 0012 0zm5.01 13.38c.15.36.24.76.24 1.17 0 2.52-2.93 4.56-6.55 4.56-3.62 0-6.55-2.04-6.55-4.56 0-.41.09-.8.24-1.17a1.76 1.76 0 01-.73-1.43c0-.97.79-1.76 1.76-1.76.46 0 .88.18 1.2.48a9.03 9.03 0 014.08-1.23l.77-3.62a.3.3 0 01.36-.24l2.56.55a1.24 1.24 0 012.17.87 1.24 1.24 0 01-2.47.12l-2.27-.49-.68 3.22a8.98 8.98 0 014.02 1.22c.31-.29.73-.47 1.19-.47.97 0 1.76.79 1.76 1.76 0 .57-.27 1.08-.7 1.4zM9.2 13.5a1.24 1.24 0 100 2.48 1.24 1.24 0 000-2.48zm5.6 0a1.24 1.24 0 100 2.48 1.24 1.24 0 000-2.48zm-4.53 3.42c.36.36 1.08.57 1.73.57s1.37-.21 1.73-.57a.34.34 0 01.49 0 .34.34 0 010 .49c-.49.49-1.34.76-2.22.76s-1.73-.27-2.22-.76a.34.34 0 010-.49.34.34 0 01.49 0z"/></svg>
+        Share on Reddit
+      </button>
+      <button class="quiz-share-btn" id="share-tiktok" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.8.1V9.01a6.27 6.27 0 00-.8-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.98a8.18 8.18 0 004.77 1.52V7.05a4.84 4.84 0 01-1-.36z"/></svg>
+        Share on TikTok
       </button>
       <button class="quiz-share-btn" id="share-copy" type="button">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
@@ -81,9 +85,9 @@ import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
 
     <!-- Beta signup embedded in result -->
     <div class="quiz-waitlist-section" id="waitlist-section">
-      <h3>Claim Your Beta Spot</h3>
+      <h3>Join the Beta</h3>
       <p style="font-size:var(--text-small);color:var(--text-muted);margin:0 0 var(--space-md);">
-        Only 12 spots available. Help shape Pattern Vault before anyone else.
+        Sign up for early access and help shape Corvid Craft via TestFlight.
       </p>
       <form class="waitlist-form" id="waitlist-form">
         <input
@@ -94,7 +98,7 @@ import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
           aria-label="Email address"
           id="waitlist-email"
         />
-        <button type="submit" class="pv-button-primary">Claim My Spot</button>
+        <button type="submit" class="pv-button-primary">Join the Beta</button>
       </form>
       <p class="waitlist-error" id="waitlist-error" style="display:none;"></p>
     </div>
@@ -104,7 +108,7 @@ import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
       <h3>You're in! Welcome to the beta crew.</h3>
       <div class="waitlist-position" id="waitlist-position"></div>
       <p class="nest-label" id="nest-label"></p>
-      <p class="nest-sublabel">You'll be among the first 12 crafters to shape Pattern Vault. Share with a crafty friend!</p>
+      <p class="nest-sublabel">You'll get TestFlight access as we onboard testers. Share with a crafty friend!</p>
       <LaunchTracker class="quiz-inline-tracker" />
       <MascotPoll class="quiz-inline-poll" />
     </div>
@@ -254,13 +258,26 @@ import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
   }
 
   // Sharing
-  document.getElementById('share-twitter')!.addEventListener('click', () => {
+  document.getElementById('share-reddit')!.addEventListener('click', () => {
     const id = resultEl.dataset.archetype || '';
     const archetype = archetypes[id];
     const url = `${window.location.origin}/quiz/result/${id}`;
-    const text = `I'm ${archetype.name}! Take the Pattern Vault crafting archetype quiz to find yours:`;
-    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank', 'width=550,height=420');
-    trackQuiz('quiz_share', { method: 'twitter' });
+    const title = `I'm ${archetype.name}! Take the Corvid Craft crafting archetype quiz to find yours`;
+    window.open(`https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`, '_blank', 'width=650,height=500');
+    trackQuiz('quiz_share', { method: 'reddit' });
+  });
+
+  document.getElementById('share-tiktok')!.addEventListener('click', async () => {
+    const id = resultEl.dataset.archetype || '';
+    const url = `${window.location.origin}/quiz/result/${id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      const btn = document.getElementById('share-tiktok')!;
+      const original = btn.innerHTML;
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Link copied — paste in TikTok!';
+      setTimeout(() => (btn.innerHTML = original), 3000);
+    } catch (_) {}
+    trackQuiz('quiz_share', { method: 'tiktok' });
   });
 
   document.getElementById('share-copy')!.addEventListener('click', async () => {
@@ -338,14 +355,14 @@ import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
     // Branding
     ctx.fillStyle = '#5C3A52';
     ctx.font = '600 22px "DM Sans", sans-serif';
-    ctx.fillText('patternvault.app', 540, 1040);
+    ctx.fillText('corvidcraft.com', 540, 1040);
 
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `pattern-vault-${id}.png`;
+      a.download = `corvid-craft-${id}.png`;
       a.click();
       URL.revokeObjectURL(url);
     });
@@ -397,12 +414,10 @@ import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
       successEl.style.display = 'block';
       document.getElementById('waitlist-position')!.textContent = `Beta Tester #${data.position}`;
 
-      const remaining = data.remaining ?? (12 - (data.total || data.position));
       const nestLabel = document.getElementById('nest-label');
       if (nestLabel) {
-        nestLabel.textContent = remaining > 0
-          ? `${remaining} of 12 spot${remaining !== 1 ? 's' : ''} remaining`
-          : 'All 12 spots are claimed!';
+        const total = data.total || data.position || 1;
+        nestLabel.textContent = `${total} crafter${total !== 1 ? 's' : ''} signed up so far`;
       }
 
       trackQuiz('waitlist_signup', { archetype: resultEl.dataset.archetype || 'none' });
@@ -410,7 +425,7 @@ import { ARCHETYPES, ARCHETYPE_IDS } from '../config/archetypes';
       errorEl.textContent = err.message || 'Something went wrong. Please try again.';
       errorEl.style.display = 'block';
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Claim My Spot';
+      submitBtn.textContent = 'Join the Beta';
     }
   });
 </script>

@@ -350,7 +350,7 @@ struct FindPatternsView: View {
                         .font(.system(size: 18))
                         .foregroundStyle(Theme.sageGreen)
                 }
-                .accessibilityLabel("Save to Pattern Vault")
+                .accessibilityLabel("Save to Corvid Craft")
             }
         }
         .padding(Theme.Spacing.md)

@@ -27,36 +27,55 @@ struct PaywallView: View {
                             Image(systemName: "crown.fill")
                                 .font(.system(size: 28))
                                 .foregroundStyle(Theme.honey)
-                            Text("You're a Premium member")
+                            Text("You're all set — Pip's delighted")
                                 .font(Theme.Typography.title)
                                 .foregroundStyle(Theme.deepPlum)
                         }
                         .padding(.top, Theme.Spacing.lg)
-                        Text("You have unlimited patterns, project mode, stash matching, Row Tracker widget, AI analyses, note photos, and an ad-free experience.")
+                        Text("Unlimited patterns, AI analyses, Ravelry library sync, voice row counter, Row Tracker widget, and no ads. Thanks for supporting Corvid Craft.")
                             .font(Theme.Typography.body)
                             .foregroundStyle(Theme.deepPlum.opacity(0.8))
                         Spacer(minLength: 40)
                     } else {
                         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                            Text("Unlock Premium")
+                            Text(headlineForSource(source))
                                 .font(Theme.Typography.largeTitle)
                                 .foregroundStyle(Theme.deepPlum)
-                            Text(Theme.Premium.tagline)
+                            Text(subheadlineForSource(source))
                                 .font(Theme.Typography.body)
                                 .foregroundStyle(Theme.deepPlum.opacity(0.8))
                         }
                         .padding(.top, Theme.Spacing.lg)
 
-                        benefitRow(icon: "square.stack.3d.up.fill", text: "Unlimited patterns")
-                        benefitRow(icon: "hammer.fill", text: "Project mode & multiple makes per pattern")
-                        benefitRow(icon: "archivebox.fill", text: "Stash matching & yardage calculator")
-                        benefitRow(icon: "gauge.with.dots.needle.33percent", text: "Row Tracker lock screen widget")
-                        benefitRow(icon: "wand.and.stars", text: "Unlimited AI analyses per month")
-                        benefitRow(icon: "photo.stack.fill", text: "Unlimited note photos")
-                        benefitRow(icon: "nosign", text: "Ad-free experience")
+                        // Top 3 benefits reordered to lead with the Premium pillars (chart mode stays free).
+                        benefitRow(icon: "wand.and.stars", text: "200 AI analyses per month")
+                        benefitRow(icon: "arrow.triangle.2.circlepath", text: "Sync your entire Ravelry library")
+                        benefitRow(icon: "gauge.with.dots.needle.33percent", text: "Row Tracker lock screen widget + Live Activity")
+                        benefitRow(icon: "mic.fill", text: "Hands-free voice row counter")
+                        benefitRow(icon: "square.stack.3d.up.fill", text: "Unlimited patterns & note photos")
+                        benefitRow(icon: "hammer.fill", text: "Project mode & stash matching")
+                        benefitRow(icon: "nosign", text: "No ads")
                         benefitRow(icon: "lock.shield.fill", text: "Your patterns stay yours — export anytime")
 
+                        if let restoreMessage = subscriptionStore.restoreNoResultMessage {
+                            Text(restoreMessage)
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                                .multilineTextAlignment(.center)
+                                .padding(Theme.Spacing.sm)
+                                .frame(maxWidth: .infinity)
+                                .background(Theme.cardBackground.opacity(0.8))
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
+                        }
+
+                        // `displayProducts` can be empty even when `subscriptionStore.products`
+                        // has items (e.g. annualOnly mode + lifetime kill-switched leaves
+                        // nothing to show). Treat it the same as products-not-loaded so the
+                        // user always gets a retry CTA instead of a silent dead end.
                         if !displayProducts.isEmpty {
+                            if subscriptionStore.lifetimeOffer.displayAvailability {
+                                lifetimeOfferBanner
+                            }
                             VStack(spacing: Theme.Spacing.sm) {
                                 ForEach(displayProducts, id: \.id) { product in
                                     Button {
@@ -64,6 +83,14 @@ struct PaywallView: View {
                                             let success = await subscriptionStore.purchase(product)
                                             if success {
                                                 purchaseSucceeded = true
+                                                if product.id == SubscriptionStore.lifetimeProductId {
+                                                    AnalyticsService.shared.track(
+                                                        .lifetimeConverted,
+                                                        properties: [
+                                                            AnalyticsService.Property.entrySurface: source.rawValue
+                                                        ]
+                                                    )
+                                                }
                                                 dismiss()
                                             } else if subscriptionStore.purchaseError != nil {
                                                 GrowthOrchestrator.shared.registerFrictionEvent(.purchaseFailure)
@@ -72,27 +99,7 @@ struct PaywallView: View {
                                             }
                                         }
                                     } label: {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(product.displayName)
-                                                    .font(Theme.Typography.headline)
-                                                    .foregroundStyle(Theme.deepPlum)
-                                                Text(product.description)
-                                                    .font(Theme.Typography.caption2)
-                                                    .foregroundStyle(Theme.deepPlum.opacity(0.6))
-                                            }
-                                            Spacer()
-                                            Text(product.displayPrice)
-                                                .font(Theme.Typography.headline)
-                                                .foregroundStyle(Theme.sageGreen)
-                                        }
-                                        .padding(Theme.Spacing.lg)
-                                        .background(Theme.cardBackground)
-                                        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
-                                                .stroke(Theme.softCoral.opacity(0.3), lineWidth: 1)
-                                        )
+                                        productCard(for: product)
                                     }
                                     .buttonStyle(.plain)
                                     .disabled(subscriptionStore.isLoading)
@@ -163,6 +170,15 @@ struct PaywallView: View {
         .task {
             await subscriptionStore.updateSubscriptionStatus(userId: nil)
             await subscriptionStore.refreshProducts()
+            await subscriptionStore.refreshLifetimeOffer()
+            if subscriptionStore.lifetimeOffer.displayAvailability {
+                AnalyticsService.shared.track(
+                    .lifetimeShown,
+                    properties: [
+                        AnalyticsService.Property.entrySurface: source.rawValue
+                    ]
+                )
+            }
         }
         .onAppear {
             AnalyticsService.shared.track(
@@ -222,16 +238,195 @@ struct PaywallView: View {
         let sorted = subscriptionStore.products.sorted {
             rank(for: $0.id) < rank(for: $1.id)
         }
-        if GrowthOrchestrator.shared.paywallPresentationMode == .annualOnly {
-            return sorted.filter { $0.id == SubscriptionStore.yearlyProductId }
+        // Filter out the lifetime SKU when the remote kill-switch has turned it off
+        // or we're outside the launch window (May 1 → Nov 1, 2026).
+        let withLifetimeFilter = sorted.filter { product in
+            if product.id == SubscriptionStore.lifetimeProductId {
+                return subscriptionStore.lifetimeOffer.displayAvailability
+            }
+            return true
         }
-        return sorted
+        if GrowthOrchestrator.shared.paywallPresentationMode == .annualOnly {
+            return withLifetimeFilter.filter {
+                $0.id == SubscriptionStore.yearlyProductId ||
+                $0.id == SubscriptionStore.lifetimeProductId
+            }
+        }
+        return withLifetimeFilter
     }
 
+    /// Yearly (0) → Lifetime (1) → Monthly (2). Matches the paywall emphasis.
     private func rank(for productId: String) -> Int {
         if productId == SubscriptionStore.yearlyProductId { return 0 }
-        if productId == SubscriptionStore.monthlyProductId { return 1 }
-        return 2
+        if productId == SubscriptionStore.lifetimeProductId { return 1 }
+        if productId == SubscriptionStore.monthlyProductId { return 2 }
+        return 3
+    }
+
+    // MARK: - Source-specific copy
+
+    /// Pip-led warm headline per paywall source. Limited to one mascot mention per screen.
+    private func headlineForSource(_ source: GrowthOrchestrator.PaywallSource) -> String {
+        switch source {
+        case .patternLimit: return "Your vault's full"
+        case .aiLimit: return "You've been busy this month"
+        case .youtubeLimit: return "You're on a roll"
+        case .notePhotoLimit: return "Run out of photo space"
+        case .widgetSetup: return "Keep Pip on your lock screen"
+        case .ravelryConnect: return "Bring your whole library"
+        case .voiceRowCounter: return "Hands full?"
+        case .settings, .dashboard, .unknown: return "Unlock Premium"
+        }
+    }
+
+    private func subheadlineForSource(_ source: GrowthOrchestrator.PaywallSource) -> String {
+        switch source {
+        case .patternLimit:
+            return "Upgrade to keep every pattern you love. \(Theme.Premium.tagline)"
+        case .aiLimit:
+            return "Keep Pip's help flowing with 200 AI analyses every month. \(Theme.Premium.tagline)"
+        case .youtubeLimit:
+            return "Import unlimited videos and more with Premium."
+        case .notePhotoLimit:
+            return "Add unlimited photos to your project notes."
+        case .widgetSetup:
+            return "Row Tracker Live Activity + lock screen widget are a Premium perk."
+        case .ravelryConnect:
+            return "Connect Ravelry and sync your full library in one tap."
+        case .voiceRowCounter:
+            return "Just tell Pip the row. Hands-free counting is Premium."
+        case .settings, .dashboard, .unknown:
+            return Theme.Premium.tagline
+        }
+    }
+
+    // MARK: - Product card + lifetime banner
+
+    private func productCard(for product: Product) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Theme.Spacing.xs) {
+                    Text(product.displayName)
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.deepPlum)
+                    if product.id == SubscriptionStore.yearlyProductId {
+                        Text("BEST VALUE")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Theme.sageGreen)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Theme.sageGreen.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
+                Text(descriptionForProduct(product))
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                if let trialText = trialTextForProduct(product) {
+                    Text(trialText)
+                        .font(Theme.Typography.caption2)
+                        .foregroundStyle(Theme.sageGreen)
+                }
+            }
+            Spacer()
+            Text(product.displayPrice)
+                .font(Theme.Typography.headline)
+                .foregroundStyle(Theme.sageGreen)
+        }
+        .padding(Theme.Spacing.lg)
+        .background(Theme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.medium))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.CornerRadius.medium)
+                .stroke(
+                    product.id == SubscriptionStore.yearlyProductId
+                        ? Theme.sageGreen.opacity(0.45)
+                        : Theme.softCoral.opacity(0.3),
+                    lineWidth: product.id == SubscriptionStore.yearlyProductId ? 2 : 1
+                )
+        )
+    }
+
+    /// Surface the active introductory offer on the card. Eligibility is checked
+    /// up front against `SubscriptionStore.yearlyIntroEligible` so returning
+    /// monthly-trialists don't see a "first year $X" line we can't actually honor.
+    private func trialTextForProduct(_ product: Product) -> String? {
+        guard let subscription = product.subscription,
+              let intro = subscription.introductoryOffer else {
+            return nil
+        }
+        // Today only yearly is gated by a stored eligibility flag; other products
+        // would need their own equivalent before we surface intro copy.
+        if product.id == SubscriptionStore.yearlyProductId, !subscriptionStore.yearlyIntroEligible {
+            return nil
+        }
+        let label = periodLabel(subscription.subscriptionPeriod)
+        if intro.paymentMode == .freeTrial {
+            let days = daysInPeriod(intro.period)
+            return "\(days)-day free trial, then \(product.displayPrice)/\(label)"
+        }
+        if intro.paymentMode == .payAsYouGo {
+            let periods = intro.periodCount
+            return "\(intro.displayPrice)/\(periodLabel(intro.period)) for \(periods) \(label), then \(product.displayPrice)/\(label)"
+        }
+        if intro.paymentMode == .payUpFront {
+            return "\(intro.displayPrice) for the first \(label), then \(product.displayPrice)/\(label)"
+        }
+        return nil
+    }
+
+    private func descriptionForProduct(_ product: Product) -> String {
+        if product.id == SubscriptionStore.lifetimeProductId {
+            return "One-time purchase. Pay once, keep forever."
+        }
+        return product.description
+    }
+
+    private func daysInPeriod(_ period: Product.SubscriptionPeriod) -> Int {
+        switch period.unit {
+        case .day: return period.value
+        case .week: return period.value * 7
+        case .month: return period.value * 30
+        case .year: return period.value * 365
+        @unknown default: return period.value
+        }
+    }
+
+    private func periodLabel(_ period: Product.SubscriptionPeriod) -> String {
+        switch period.unit {
+        case .day: return period.value == 1 ? "day" : "\(period.value) days"
+        case .week: return period.value == 1 ? "week" : "\(period.value) weeks"
+        case .month: return period.value == 1 ? "month" : "\(period.value) months"
+        case .year: return period.value == 1 ? "year" : "\(period.value) years"
+        @unknown default: return "period"
+        }
+    }
+
+    private var lifetimeOfferBanner: some View {
+        let offer = subscriptionStore.lifetimeOffer
+        let subtitle: String = {
+            if offer.daysRemaining <= 14 && offer.daysRemaining > 0 {
+                return "Ends in \(offer.daysRemaining) day\(offer.daysRemaining == 1 ? "" : "s") — or at 1,000 founding members."
+            }
+            return "Founding member lifetime access — limited to 1,000 buyers."
+        }()
+        return HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 20))
+                .foregroundStyle(Theme.honey)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Launch Price")
+                    .font(Theme.Typography.caption.bold())
+                    .foregroundStyle(Theme.honey)
+                Text(subtitle)
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(Theme.deepPlum.opacity(0.75))
+            }
+            Spacer()
+        }
+        .padding(Theme.Spacing.md)
+        .background(Theme.honey.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
     }
 }
 

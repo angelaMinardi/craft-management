@@ -10,23 +10,28 @@ import UniformTypeIdentifiers
 
 // MARK: - Entitlement cache (reads from App Group; main app writes usage when active)
 private enum ExtensionEntitlementCache {
-    private static let appGroupId = "group.com.patternvault.app"
+    private static let appGroupId = "group.com.corvidcraft.app"
+    // Keep these in sync with EntitlementLimits in SubscriptionStore.swift — the
+    // Share Extension target can't import main-app Swift files.
     private static let freeAIPerMonth = 5
-    private static let freePatternLimit = 30
+    private static let freePatternLimit = 25
+    private static let premiumAISoftCapPerMonth = 200
 
     static var canUseAI: Bool {
         #if DEBUG
         return true
         #else
         let defaults = UserDefaults(suiteName: appGroupId)
-        if defaults?.bool(forKey: "entitlement_is_premium") == true { return true }
+        let isPremium = defaults?.bool(forKey: "entitlement_is_premium") == true
         let used = defaults?.integer(forKey: "entitlement_ai_usage_this_month") ?? 0
         let month = defaults?.string(forKey: "entitlement_usage_month") ?? ""
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM"
         let currentMonth = formatter.string(from: Date())
+        // New month since last sync: assume quota reset.
         if month != currentMonth { return true }
-        return used < freeAIPerMonth
+        let cap = isPremium ? premiumAISoftCapPerMonth : freeAIPerMonth
+        return used < cap
         #endif
     }
 
@@ -40,7 +45,7 @@ private enum ExtensionEntitlementCache {
 
 // MARK: - AI kill switch (cost cap): read from App Group; fetch from Supabase if stale)
 private enum ExtensionAIKillSwitch {
-    private static let appGroupId = "group.com.patternvault.app"
+    private static let appGroupId = "group.com.corvidcraft.app"
     private static let cacheKeyEnabled = "app_config_ai_enabled"
     private static let cacheKeyUpdated = "app_config_ai_enabled_updated"
     private static let cacheTTL: TimeInterval = 15 * 60
@@ -131,6 +136,7 @@ class ShareViewController: UIViewController {
 
     private var sharedURL: String?
     private var sharedPdfData: Data?
+    private var pdfPageImages: [Data] = []
     private var extractedContent: ExtractedContent?
     private var aiResult: AIPatternResult?
     private var videoExtractionResult: VideoExtractionResult?
@@ -225,7 +231,7 @@ class ShareViewController: UIViewController {
         navBar.addSubview(saveButton)
 
         // Title
-        titleLabel.text = "Save to Pattern Vault"
+        titleLabel.text = "Save to Corvid Craft"
         titleLabel.font = roundedFont(size: 17, weight: .semibold)
         titleLabel.textColor = .brandDeepPlum
         titleLabel.textAlignment = .center
@@ -548,7 +554,7 @@ class ShareViewController: UIViewController {
 
     private func extractSharedURL() {
         guard let items = extensionContext?.inputItems as? [NSExtensionItem] else {
-            showTerminalError("No content was shared to Pattern Vault.", retryHandler: { [weak self] in self?.extractSharedURL() })
+            showTerminalError("No content was shared to Corvid Craft.", retryHandler: { [weak self] in self?.extractSharedURL() })
             return
         }
 
@@ -560,7 +566,7 @@ class ShareViewController: UIViewController {
 
         // Prefer PDF when present.
         if let pdfProvider = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.pdf.identifier) }) {
-            let maxPdfSize = 10_000_000 // 10 MB
+            let maxPdfSize = 50_000_000 // 50 MB — covers complex pattern books and scan-heavy PDFs
             pdfProvider.loadItem(forTypeIdentifier: UTType.pdf.identifier, options: nil) { [weak self] data, _ in
                 DispatchQueue.main.async {
                     if let url = data as? URL {
@@ -569,7 +575,7 @@ class ShareViewController: UIViewController {
                             return
                         }
                         if pdfData.count > maxPdfSize {
-                            self?.showTerminalError("PDF is too large (max 10 MB). Please share a smaller file.", retryHandler: { [weak self] in self?.extractSharedURL() })
+                            self?.showTerminalError("PDF is too large (max 50 MB). Try sharing just the relevant pages, or open the pattern URL directly.", retryHandler: { [weak self] in self?.extractSharedURL() })
                             return
                         }
                         self?.sharedPdfData = pdfData
@@ -577,7 +583,7 @@ class ShareViewController: UIViewController {
                         self?.beginAnalysisForPdf()
                     } else if let pdfData = data as? Data {
                         if pdfData.count > maxPdfSize {
-                            self?.showTerminalError("PDF is too large (max 10 MB). Please share a smaller file.", retryHandler: { [weak self] in self?.extractSharedURL() })
+                            self?.showTerminalError("PDF is too large (max 50 MB). Try sharing just the relevant pages, or open the pattern URL directly.", retryHandler: { [weak self] in self?.extractSharedURL() })
                             return
                         }
                         self?.sharedPdfData = pdfData
@@ -692,10 +698,25 @@ class ShareViewController: UIViewController {
         setLoadingState(.extracting)
 
         Task {
+            // Extract text from PDF
             let pageText = PDFTextExtractor.extractText(from: pdfData)
+
+            // Render up to 5 pages as images for gallery (same as website image extraction)
+            let renderedPages = PDFPageRenderer.renderPages(
+                from: pdfData, maxPages: 5, scale: 2.0, jpegQuality: 0.8
+            )
+            let pageImages = renderedPages.map(\.imageData)
+
             let minTextLength = 50
             guard let text = pageText, text.count >= minTextLength else {
                 await MainActor.run {
+                    self.pdfPageImages = pageImages
+                    // Still show first page as thumbnail even without text
+                    if let firstImage = pageImages.first, let uiImage = UIImage(data: firstImage) {
+                        self.thumbnailImage = uiImage
+                        self.imageView.image = uiImage
+                        self.imageView.isHidden = false
+                    }
                     enterEditableFallback(
                         message: "This PDF has limited extractable text. Add a title and save, then refine later.",
                         suggestedTitle: "PDF Pattern"
@@ -717,6 +738,15 @@ class ShareViewController: UIViewController {
             self.extractedContent = content
 
             await MainActor.run {
+                self.pdfPageImages = pageImages
+
+                // Show first page as thumbnail preview
+                if let firstImage = pageImages.first, let uiImage = UIImage(data: firstImage) {
+                    self.thumbnailImage = uiImage
+                    self.imageView.image = uiImage
+                    self.imageView.isHidden = false
+                }
+
                 let inferredTitle = self.inferredPdfTitle(from: text, sourceURL: self.sharedURL)
                 let inferredSummary = self.inferredPdfSummary(from: text)
                 let fallbackTags = AIPatternAnalyzer.fallbackTags(sourceUrl: self.sharedURL ?? "file://pattern-vault/pdf")
@@ -981,7 +1011,7 @@ class ShareViewController: UIViewController {
         guard let urlString = sharedURL else { return }
 
         if SupabaseExtensionClient.authInfo() == nil {
-            enterEditableFallback(message: "Please open Pattern Vault and sign in first, then try saving again.")
+            enterEditableFallback(message: "Please open Corvid Craft and sign in first, then try saving again.")
             return
         }
 
@@ -1018,12 +1048,16 @@ class ShareViewController: UIViewController {
             sourceContentToSave = nil
         }
         let videoUrlToSave = (platform == "tiktok" ? extractedContent?.videoUrls.first : nil)
+        let isTikTok = platform == "tiktok"
 
-        let shouldEnrich = ExtensionEntitlementCache.canUseAI && !ExtensionAIKillSwitch.isAIDisabledByKillSwitch
-        let enrichmentStatus = shouldEnrich ? "pending" : "failed"
+        // TikTok videos: skip AI enrichment — captions produce poor steps/descriptions
+        if isTikTok { sourceContentToSave = nil }
+        let shouldEnrich = !isTikTok && ExtensionEntitlementCache.canUseAI && !ExtensionAIKillSwitch.isAIDisabledByKillSwitch
+        let enrichmentStatus = isTikTok ? "complete" : (shouldEnrich ? "pending" : "failed")
 
         let capturedExtractedContent = extractedContent
         let capturedPdfData = sharedPdfData
+        let capturedPdfPageImages = pdfPageImages
 
         Task {
             let saveTask = Task {
@@ -1040,6 +1074,7 @@ class ShareViewController: UIViewController {
                     pdfUrl: pdfUrlToSave,
                     pdfDataToUpload: capturedPdfData,
                     imageUrls: capturedExtractedContent?.additionalImageUrls ?? [],
+                    pdfPageImageData: capturedPdfPageImages,
                     enrichmentStatus: enrichmentStatus,
                     progressCallback: { [weak self] message in
                         DispatchQueue.main.async {
@@ -1066,7 +1101,7 @@ class ShareViewController: UIViewController {
                         await SupabaseExtensionClient.requestEnrichment(patternId: saveResult.patternId)
                     }
                 }
-                let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+                let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app")
                 defaults?.set(saveResult.patternId, forKey: "savedPatternId")
                 defaults?.set(title, forKey: "savedPatternTitle")
                 defaults?.synchronize()
@@ -1089,7 +1124,7 @@ class ShareViewController: UIViewController {
                 NSLog("[SaveToPatternVault] save failed: domain=%@ code=%ld desc=%@ failingURL=%@ diag=%@", ns.domain, ns.code, error.localizedDescription, url, connection)
                 #endif
                 // Write to app group so main app can show in Settings → Last share error
-                let defaults = UserDefaults(suiteName: "group.com.patternvault.app")
+                let defaults = UserDefaults(suiteName: "group.com.corvidcraft.app")
                 let diagnostic = "domain=\(ns.domain) code=\(ns.code) url=\(url) \(connection)"
                 defaults?.set(diagnostic, forKey: "lastShareErrorDiagnostic")
                 defaults?.set(Date(), forKey: "lastShareErrorDate")
@@ -1098,9 +1133,9 @@ class ShareViewController: UIViewController {
                 if let e = error as? SupabaseExtensionError {
                     switch e {
                     case .notAuthenticated:
-                        message = "Open Pattern Vault, sign in, and try sharing again."
+                        message = "Open Corvid Craft, sign in, and try sharing again."
                     case .missingConfig:
-                        message = "App config is missing. Open Pattern Vault once and try again."
+                        message = "App config is missing. Open Corvid Craft once and try again."
                     case .saveFailed:
                         message = SupabaseExtensionError.messageForNetworkError(error)
                     }

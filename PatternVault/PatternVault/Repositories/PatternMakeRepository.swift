@@ -30,6 +30,7 @@ final class PatternMakeRepository: ObservableObject {
         let size_name: String?
         let yardage_used: Int?
         let size_measurements: String?
+        let size_index: Int?
     }
 
     struct UpdatePayload: Encodable {
@@ -37,9 +38,10 @@ final class PatternMakeRepository: ObservableObject {
         let size_name: String?
         let yardage_used: Int?
         let size_measurements: String?
+        let size_index: Int?
     }
 
-    func add(patternId: UUID, userId: UUID, name: String, sizeName: String?, yardageUsed: Int?, sizeMeasurements: String?) async throws -> PatternMake {
+    func add(patternId: UUID, userId: UUID, name: String, sizeName: String?, yardageUsed: Int?, sizeMeasurements: String?, sizeIndex: Int? = nil) async throws -> PatternMake {
         let id = UUID()
         let payload = InsertPayload(
             id: id.uuidString,
@@ -48,7 +50,8 @@ final class PatternMakeRepository: ObservableObject {
             name: name.trimmingCharacters(in: .whitespaces),
             size_name: sizeName?.isEmpty == true ? nil : sizeName,
             yardage_used: yardageUsed,
-            size_measurements: sizeMeasurements?.isEmpty == true ? nil : sizeMeasurements
+            size_measurements: sizeMeasurements?.isEmpty == true ? nil : sizeMeasurements,
+            size_index: sizeIndex
         )
         let response: PatternMake = try await client
             .from("pattern_makes")
@@ -65,7 +68,8 @@ final class PatternMakeRepository: ObservableObject {
             name: make.name.trimmingCharacters(in: .whitespaces),
             size_name: make.sizeName?.isEmpty == true ? nil : make.sizeName,
             yardage_used: make.yardageUsed,
-            size_measurements: make.sizeMeasurements?.isEmpty == true ? nil : make.sizeMeasurements
+            size_measurements: make.sizeMeasurements?.isEmpty == true ? nil : make.sizeMeasurements,
+            size_index: make.sizeIndex
         )
         let response: PatternMake = try await client
             .from("pattern_makes")

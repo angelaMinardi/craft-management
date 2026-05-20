@@ -16,7 +16,7 @@ final class NetworkMonitor: ObservableObject {
     @Published private(set) var isConnected = true
 
     private let monitor = NWPathMonitor()
-    private let queue = DispatchQueue(label: "com.patternvault.networkmonitor")
+    private let queue = DispatchQueue(label: "com.corvidcraft.networkmonitor")
 
     private init() {
         monitor.pathUpdateHandler = { [weak self] path in

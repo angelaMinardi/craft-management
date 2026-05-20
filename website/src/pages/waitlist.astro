@@ -8,8 +8,8 @@ import '../styles/quiz.css';
 ---
 
 <BaseLayout
-  title="Become a Beta Tester | Pattern Vault"
-  description="Only 12 beta tester spots available. Help shape Pattern Vault before public launch — the craft pattern organizer made by crafters, for crafters."
+  title="Become a Beta Tester | Corvid Craft"
+  description="Join the beta and help shape Corvid Craft before public launch — the app for crafters who save more patterns than they can make."
 >
   <div class="quiz-container" style="text-align:center;">
     <div style="margin:0 auto;width:fit-content;"><AnimatedPip animation="waving" size={160} /></div>
@@ -17,7 +17,13 @@ import '../styles/quiz.css';
       Become a Beta Tester
     </h1>
     <p style="font-size:var(--text-subtitle);color:var(--text-muted);margin:0 0 var(--space-lg);max-width:28rem;margin-left:auto;margin-right:auto;line-height:var(--line-height-relaxed);">
-      Pattern Vault needs 12 crafters to test the app before public launch. Get early access, shape the features, and help build something special.
+      The TestFlight beta is open — 100 spots, first come, first served. Tap below to join directly, or fill out the form so we know who you are.
+    </p>
+
+    <p style="margin:0 0 var(--space-xl);">
+      <a href="https://testflight.apple.com/join/37Nj2UCG" target="_blank" rel="noopener" class="pv-button-primary" style="display:inline-block;text-decoration:none;">
+        Join on TestFlight
+      </a>
     </p>
 
     <LaunchTracker />
@@ -76,10 +82,14 @@ import '../styles/quiz.css';
       <h2 class="beta-success-heading">You're in! Welcome to the beta crew.</h2>
       <div class="beta-success-position" id="beta-position"></div>
       <p class="beta-success-remaining" id="beta-remaining"></p>
-      <p class="beta-success-note">We'll email you with TestFlight access soon. Get ready to find bugs and tell us what's missing.</p>
+      <p class="beta-success-note">Install the beta now via TestFlight — your spot is ready.</p>
+
+      <a href="https://testflight.apple.com/join/37Nj2UCG" target="_blank" rel="noopener" class="pv-button-primary" style="display:inline-block;text-decoration:none;margin-top:var(--space-md);">
+        Join on TestFlight
+      </a>
 
       <p style="font-size:var(--text-body);color:var(--text-muted);margin-top:var(--space-xl);">
-        While you wait — find out what kind of crafter you are:
+        Or, while you're here — find out what kind of crafter you are:
       </p>
       <a href="/quiz" class="pv-button-primary" style="display:inline-block;text-decoration:none;margin-top:var(--space-sm);">
         Take the Quiz
@@ -92,7 +102,7 @@ import '../styles/quiz.css';
 
     <div style="max-width:var(--content-wide);margin:var(--space-3xl) auto 0;">
       <h2 style="font-size:var(--text-title);font-weight:700;color:var(--deep-plum);text-align:center;margin:0 0 var(--space-lg);letter-spacing:var(--letter-tight);">
-        Sneak peek at Pattern Vault
+        What you get
       </h2>
       <p style="text-align:center;color:var(--text-muted);margin:0 0 var(--space-xl);font-size:var(--text-subtitle);">
         Tap a card to learn more.
@@ -319,12 +329,10 @@ import '../styles/quiz.css';
       successEl.style.display = 'block';
       document.getElementById('beta-position')!.textContent = `Beta Tester #${data.position}`;
 
-      const remaining = data.remaining ?? (12 - (data.total || data.position));
       const remainingEl = document.getElementById('beta-remaining');
       if (remainingEl) {
-        remainingEl.textContent = remaining > 0
-          ? `${remaining} of 12 spot${remaining !== 1 ? 's' : ''} remaining`
-          : 'All 12 spots are claimed!';
+        const total = data.total || data.position || 1;
+        remainingEl.textContent = `${total} crafter${total !== 1 ? 's' : ''} signed up so far`;
       }
     } catch (err: any) {
       errorEl.textContent = err.message || 'Something went wrong. Please try again.';

@@ -1,6 +1,6 @@
-# Pattern Vault Mascot Asset Handoff
+# Corvid Craft Mascot Asset Handoff
 
-Use this guide when commissioning professional mascot art and animation for Pattern Vault.
+Use this guide when commissioning professional mascot art and animation for Corvid Craft.
 It documents exactly what files the app currently expects, plus recommended production deliverables for future-proofing.
 
 ## 1) Required deliverables (must-have)

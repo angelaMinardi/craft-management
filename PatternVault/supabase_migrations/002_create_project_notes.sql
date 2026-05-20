@@ -1,4 +1,4 @@
--- Pattern Vault: project_notes table
+-- Corvid Craft: project_notes table
 -- Run this in Supabase Dashboard → SQL Editor → New query → paste → Run
 
 create table if not exists public.project_notes (

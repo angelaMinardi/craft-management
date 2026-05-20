@@ -1,4 +1,4 @@
-# Pattern Vault — Product Description
+# Corvid Craft — Product Description
 
 ## The Problem
 
@@ -6,15 +6,15 @@ Every crafter has the same problem. You find an amazing crochet pattern on TikTo
 
 Patterns live everywhere — Ravelry, Etsy, YouTube, TikTok, Pinterest, blogs, Instagram, group chats — and there's no single place to collect them. Crafters are drowning in scattered inspiration with no way to organize it.
 
-## What Pattern Vault Does
+## What Corvid Craft Does
 
-Pattern Vault is the personal craft library that lives on your phone. It's the one place where every pattern, tutorial, and project idea — no matter where you originally found it — gets saved, organized, and tracked from "I want to make this" to "I finished it."
+Corvid Craft is the personal craft library that lives on your phone. It's the one place where every pattern, tutorial, and project idea — no matter where you originally found it — gets saved, organized, and tracked from "I want to make this" to "I finished it."
 
 ## How It Works
 
 ### Save Anything From Anywhere
 
-When you find a pattern you love, you share the link to Pattern Vault (or paste it in). The app saves it and automatically recognizes where it came from — Ravelry, Etsy, TikTok, YouTube, Pinterest, a blog, wherever. You can add a title and your own description, or just save the link and come back to it later. The goal is zero friction: see a pattern, save it in two taps, move on with your day.
+When you find a pattern you love, you share the link to Corvid Craft (or paste it in). The app saves it and automatically recognizes where it came from — Ravelry, Etsy, TikTok, YouTube, Pinterest, a blog, wherever. You can add a title and your own description, or just save the link and come back to it later. The goal is zero friction: see a pattern, save it in two taps, move on with your day.
 
 ### Your Pattern Collection
 
@@ -32,7 +32,7 @@ You move patterns between these stages as you go. Your dashboard shows you at a 
 
 ### Project Notes
 
-This is where Pattern Vault goes beyond a simple bookmark saver. When you're actively working on a pattern, you can attach notes to it. There are four types:
+This is where Corvid Craft goes beyond a simple bookmark saver. When you're actively working on a pattern, you can attach notes to it. There are four types:
 
 - **General Notes** — Anything: "This would be a great birthday gift for Mom" or "I want to make this in sage green."
 - **Yarn Information** — What yarn you're using, what weight, what color, where you bought it, how many skeins.
@@ -54,13 +54,13 @@ You can search and filter by tags to quickly find what you're looking for. "Show
 
 ### Supplies and Inventory
 
-Pattern Vault includes craft supply tracking for your yarn stash plus needles and hooks. You can log what you have, how much, key details, and where it's stored, then use that information when deciding what to make next.
+Corvid Craft includes craft supply tracking for your yarn stash plus needles and hooks. You can log what you have, how much, key details, and where it's stored, then use that information when deciding what to make next.
 
 The app also supports stash-and-tools-driven pattern discovery, so your inventory actively helps you find projects that match what you already own.
 
 ## Who This Is For
 
-Pattern Vault is for **crafters who collect more patterns than they can make** — which is basically all of them. Specifically:
+Corvid Craft is for **crafters who collect more patterns than they can make** — which is basically all of them. Specifically:
 
 - **Knitters and crocheters** who save patterns from Ravelry, Etsy, and YouTube
 - **Craft content consumers** who screenshot TikTok tutorials and Pinterest pins
@@ -71,13 +71,13 @@ It's not a social network. It's not trying to replace Ravelry or compete with Et
 
 ## What Makes It Different
 
-**It works with the platforms crafters already use, not against them.** Pattern Vault doesn't host patterns or tutorials. It doesn't ask crafters to leave the communities they love. It's the organizational layer on top of everything else — the bookmark manager built specifically for the way crafters actually discover, save, and work on projects.
+**It works with the platforms crafters already use, not against them.** Corvid Craft doesn't host patterns or tutorials. It doesn't ask crafters to leave the communities they love. It's the organizational layer on top of everything else — the bookmark manager built specifically for the way crafters actually discover, save, and work on projects.
 
-The crafting world is fragmented across dozens of platforms. Pattern Vault is the single thread that ties them together.
+The crafting world is fragmented across dozens of platforms. Corvid Craft is the single thread that ties them together.
 
 ## The Experience
 
-Pattern Vault should feel like opening a beautiful, well-organized craft notebook. It's calm, warm, and personal. The design should feel handmade — not sterile or corporate. It's a tool made by crafters, for crafters, and it should feel like it belongs on the shelf next to your yarn and hooks.
+Corvid Craft should feel like opening a beautiful, well-organized craft notebook. It's calm, warm, and personal. The design should feel handmade — not sterile or corporate. It's a tool made by crafters, for crafters, and it should feel like it belongs on the shelf next to your yarn and hooks.
 
 The app should be fast, simple, and stay out of the way. Saving a pattern should be faster than taking a screenshot. Finding a pattern should be faster than scrolling through your camera roll. Adding a note should be faster than scribbling on a sticky note.
 
@@ -85,13 +85,13 @@ The app should be fast, simple, and stay out of the way. Saving a pattern should
 
 Users create a personal account with their email. All data is private — only you can see your patterns, notes, and supplies. Your data syncs across devices so you can save a pattern on your phone and look it up on your tablet later. If you delete your account, everything goes with it.
 
-The app collects only what it needs to function: your email (for your account), the links you save, and the notes you write. Pattern Vault does not sell your personal data. Depending on your build and environment configuration, optional third-party services (such as AdMob and Firebase Analytics/Crashlytics) may process usage or diagnostics data. See the Privacy Policy for current details.
+The app collects only what it needs to function: your email (for your account), the links you save, and the notes you write. Corvid Craft does not sell your personal data. Depending on your build and environment configuration, optional third-party services (such as AdMob and Firebase Analytics/Crashlytics) may process usage or diagnostics data. See the Privacy Policy for current details.
 
 ## Shipped Features
 
 - **Share Extension** — Save from Safari or any app through the iOS share sheet, including URL/PDF workflows and AI-assisted extraction.
 - **Widgets** — Home screen and related widget surfaces for quick progress/context.
-- **Ravelry account connect and library import** — Connect your Ravelry account and import your library into Pattern Vault.
+- **Ravelry account connect and library import** — Connect your Ravelry account and import your library into Corvid Craft.
 - **AI-assisted step parsing** — Parse pattern steps on import and on demand inside the app.
 - **Supplies workflows** — Track yarn stash and tools, then use that data to find matching patterns.
 - **Freemium model** — Free tier with limits and premium unlock path.

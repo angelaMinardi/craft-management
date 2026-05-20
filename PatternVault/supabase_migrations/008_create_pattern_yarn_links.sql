@@ -1,4 +1,4 @@
--- Pattern Vault Migration 008: Create pattern_yarn_links table
+-- Corvid Craft Migration 008: Create pattern_yarn_links table
 -- Run this in Supabase Dashboard -> SQL Editor -> New query -> paste -> Run
 --
 -- Stores AI-extracted yarn brand links (official site, store) per pattern.

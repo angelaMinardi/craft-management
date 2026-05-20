@@ -1,4 +1,4 @@
--- Pattern Vault Migration 004: Add pattern metadata columns
+-- Corvid Craft Migration 004: Add pattern metadata columns
 -- Run this in Supabase Dashboard -> SQL Editor -> New query -> paste -> Run
 --
 -- These columns store AI-extracted metadata from the share extension:

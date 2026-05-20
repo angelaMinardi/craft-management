@@ -46,9 +46,10 @@ struct PatternVaultWidgetLiveActivity: Widget {
                     }
                 }
             }
+            .foregroundStyle(Color(red: 0.290, green: 0.125, blue: 0.251)) // deepPlum
             .padding(.vertical, 6)
-            .activityBackgroundTint(Color(red: 0.22, green: 0.10, blue: 0.18))
-            .activitySystemActionForegroundColor(.white)
+            .activityBackgroundTint(Color(red: 1.0, green: 0.973, blue: 0.941)) // warmCream
+            .activitySystemActionForegroundColor(Color(red: 0.290, green: 0.125, blue: 0.251)) // deepPlum
 
         } dynamicIsland: { context in
             DynamicIsland {
@@ -86,7 +87,7 @@ struct PatternVaultWidgetLiveActivity: Widget {
                 Text("\(context.state.rowCurrent)")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
             }
-            .widgetURL(URL(string: "patternvault://row-tracker"))
+            .widgetURL(URL(string: "corvidcraft://row-tracker"))
             .keylineTint(Color(red: 0.91, green: 0.514, blue: 0.42))
         }
     }
@@ -94,7 +95,7 @@ struct PatternVaultWidgetLiveActivity: Widget {
 
 extension PatternVaultWidgetAttributes {
     fileprivate static var preview: PatternVaultWidgetAttributes {
-        PatternVaultWidgetAttributes(name: "Pattern Vault")
+        PatternVaultWidgetAttributes(name: "Corvid Craft")
     }
 }
 

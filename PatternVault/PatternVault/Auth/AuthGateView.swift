@@ -13,11 +13,7 @@ struct AuthGateView: View {
     var body: some View {
         NavigationStack {
             if showingSignUp {
-                SignUpView(
-                    isPresented: $showingSignUp,
-                    titleOverride: titleOverride ?? "Create account",
-                    subtitleOverride: subtitleOverride
-                )
+                SignupFlowView(isPresented: $showingSignUp)
             } else {
                 LoginView(
                     isPresented: $showingSignUp,

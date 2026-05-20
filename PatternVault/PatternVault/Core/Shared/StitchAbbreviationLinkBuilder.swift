@@ -36,7 +36,7 @@ enum StitchAbbreviationLinkBuilder {
 
         // Use in-app glossary URL if we have a definition
         if StitchGlossary.lookup(normalized) != nil {
-            return URL(string: "patternvault://glossary/\(normalized)")
+            return URL(string: "corvidcraft://glossary/\(normalized)")
         }
 
         // Fall back to web search for unknown abbreviations

@@ -1,4 +1,4 @@
-# Pattern Vault
+# Corvid Craft
 
 Your personal craft pattern library for iOS — save patterns from Safari or any app, organize with tags and notes, and track progress.
 
@@ -7,7 +7,7 @@ Your personal craft pattern library for iOS — save patterns from Safari or any
 - `docs/SETUP.md` — environment, auth providers, Supabase migrations, and feature key setup
 - `docs/TESTING.md` — canonical automated + manual regression checklist
 - `docs/LAUNCH.md` — release readiness, launch day operations, and weekly post-launch checks
-- `docs/APP_REVIEW_CHECKLIST.md` — Apple App Review pre-submit checklist tailored to Pattern Vault
+- `docs/APP_REVIEW_CHECKLIST.md` — Apple App Review pre-submit checklist tailored to Corvid Craft
 - `docs/APP_REVIEW_NOTES_TEMPLATE.md` — copy/paste App Store Connect Notes for Review template
 - `docs/ROADMAP.md` — shipped features, near-term roadmap, and future directions
 - `docs/ACQUISITION_KEYWORD_MAP.md` — intent-cluster keyword strategy tied to onboarding and first-session wins

@@ -68,7 +68,7 @@ enum SupabaseExtensionError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notAuthenticated: return "Please sign in to Pattern Vault first."
+        case .notAuthenticated: return "Please sign in to Corvid Craft first."
         case .missingConfig: return "Supabase configuration missing."
         case .saveFailed(let msg): return msg
         }
@@ -80,11 +80,11 @@ enum SupabaseExtensionError: Error, LocalizedError {
         if ns.domain == NSURLErrorDomain {
             switch ns.code {
             case NSURLErrorCannotFindHost, NSURLErrorDNSLookupFailed:
-                return "Could not reach the server. Open Pattern Vault once, then try saving again. If it still fails, check your internet connection."
+                return "Could not reach the server. Open Corvid Craft once, then try saving again. If it still fails, check your internet connection."
             case NSURLErrorNotConnectedToInternet, NSURLErrorNetworkConnectionLost:
                 return "No internet connection. Check Wi‑Fi or cellular and try again."
             case NSURLErrorSecureConnectionFailed, NSURLErrorServerCertificateHasBadDate:
-                return "Connection was not secure. Open Pattern Vault and try again."
+                return "Connection was not secure. Open Corvid Craft and try again."
             default:
                 break
             }
@@ -95,8 +95,8 @@ enum SupabaseExtensionError: Error, LocalizedError {
 
 enum SupabaseExtensionClient {
 
-    private static let appGroupId = "group.com.patternvault.app"
-    private static let keychainService = "com.patternvault.app.supabase"
+    private static let appGroupId = "group.com.corvidcraft.app"
+    private static let keychainService = "com.corvidcraft.app.supabase"
     private static let keychainTokenAccount = "supabase_access_token"
     private static let keychainUserIdAccount = "supabase_user_id"
 
@@ -275,6 +275,7 @@ enum SupabaseExtensionClient {
         pdfDataToUpload: Data? = nil,
         yarnLinks: [(brandName: String, officialUrl: String?, storeUrl: String?)] = [],
         imageUrls: [String] = [],
+        pdfPageImageData: [Data] = [],
         enrichmentStatus: String? = nil,
         progressCallback: ((String) -> Void)? = nil
     ) async throws -> SavePatternResult {
@@ -298,6 +299,26 @@ enum SupabaseExtensionClient {
             }
         }
 
+        // For PDF patterns without a web thumbnail, upload the first rendered page
+        // as the thumbnail image so the pattern card shows a preview.
+        var resolvedThumbnailUrl = thumbnailUrl
+        if resolvedThumbnailUrl == nil || resolvedThumbnailUrl?.isEmpty == true,
+           let firstPage = pdfPageImageData.first {
+            progressCallback?("Creating thumbnail...")
+            do {
+                let compressed = compressImage(firstPage, maxWidth: 600, quality: 0.7)
+                let thumbPath = "\(auth.userId)/\(patternId)/thumbnail.jpg"
+                let thumbUrl = try await uploadToStorage(
+                    config: config, auth: auth,
+                    bucket: "pattern-images", path: thumbPath,
+                    data: compressed ?? firstPage, contentType: "image/jpeg"
+                )
+                resolvedThumbnailUrl = thumbUrl
+            } catch {
+                // Non-fatal — pattern still saves without a thumbnail
+            }
+        }
+
         // Build pattern payload
         var payload: [String: Any] = [
             "id": patternId,
@@ -308,7 +329,7 @@ enum SupabaseExtensionClient {
         ]
         if let description, !description.isEmpty { payload["description"] = description }
         if let sourcePlatform { payload["source_platform"] = sourcePlatform }
-        if let thumbnailUrl, !thumbnailUrl.isEmpty { payload["thumbnail_url"] = thumbnailUrl }
+        if let resolvedThumbnailUrl, !resolvedThumbnailUrl.isEmpty { payload["thumbnail_url"] = resolvedThumbnailUrl }
         if let difficulty, !difficulty.isEmpty { payload["difficulty"] = difficulty }
         if let materials, !materials.isEmpty { payload["materials"] = materials }
         if let craftType, !craftType.isEmpty { payload["craft_type"] = craftType }
@@ -381,7 +402,8 @@ enum SupabaseExtensionClient {
             }
         }
 
-        // Upload pattern images (max 5, compressed)
+        // Upload pattern images (max 5, compressed) — from URL-based sources (websites)
+        var uploadedImageCount = 0
         if !imageUrls.isEmpty {
             let maxImages = min(imageUrls.count, 5)
             for (index, imageUrlString) in imageUrls.prefix(maxImages).enumerated() {
@@ -390,7 +412,7 @@ enum SupabaseExtensionClient {
                 do {
                     let (data, _) = try await URLSession.shared.data(from: imageUrl)
                     guard let compressed = compressImage(data) else { continue }
-                    let storagePath = "\(patternId)/\(UUID().uuidString).jpg"
+                    let storagePath = "\(auth.userId)/\(patternId)/\(UUID().uuidString).jpg"
                     let publicUrl = try await uploadToStorage(
                         config: config,
                         auth: auth,
@@ -404,7 +426,7 @@ enum SupabaseExtensionClient {
                         "pattern_id": patternId,
                         "user_id": auth.userId,
                         "image_url": publicUrl,
-                        "display_order": index
+                        "display_order": uploadedImageCount
                     ]
                     do {
                         try await postToSupabase(
@@ -413,11 +435,50 @@ enum SupabaseExtensionClient {
                             table: "pattern_images",
                             payload: imagePayload
                         )
+                        uploadedImageCount += 1
                     } catch {
                         warnings.append("Some images could not be saved.")
                     }
                 } catch {
                     warnings.append("Some images could not be downloaded.")
+                    continue
+                }
+            }
+        }
+
+        // Upload rendered PDF page images (same storage path as website images)
+        if !pdfPageImageData.isEmpty && uploadedImageCount < 5 {
+            let remaining = 5 - uploadedImageCount
+            let pagesToUpload = Array(pdfPageImageData.prefix(remaining))
+            for (index, pageData) in pagesToUpload.enumerated() {
+                progressCallback?("Saving page images (\(index + 1)/\(pagesToUpload.count))...")
+                do {
+                    let compressed = compressImage(pageData) ?? pageData
+                    let storagePath = "\(auth.userId)/\(patternId)/page_\(index).jpg"
+                    let publicUrl = try await uploadToStorage(
+                        config: config,
+                        auth: auth,
+                        bucket: "pattern-images",
+                        path: storagePath,
+                        data: compressed,
+                        contentType: "image/jpeg"
+                    )
+                    let imagePayload: [String: Any] = [
+                        "id": UUID().uuidString,
+                        "pattern_id": patternId,
+                        "user_id": auth.userId,
+                        "image_url": publicUrl,
+                        "display_order": uploadedImageCount
+                    ]
+                    try await postToSupabase(
+                        config: config,
+                        auth: auth,
+                        table: "pattern_images",
+                        payload: imagePayload
+                    )
+                    uploadedImageCount += 1
+                } catch {
+                    warnings.append("Some page images could not be saved.")
                     continue
                 }
             }

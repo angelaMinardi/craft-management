@@ -1,4 +1,4 @@
-# Pattern Vault Testing Guide
+# Corvid Craft Testing Guide
 
 This is the canonical testing doc for manual checks and automated tests.
 
@@ -56,16 +56,13 @@ Core coverage includes:
 ### Visibility and contrast
 
 - Run checks in all three modes: Light, Dark, and Accessibility > Increase Contrast.
-- Save extension (`Save to Pattern Vault`):
+- Save extension (`Save to Corvid Craft`):
   - Confirm title and description text are readable on warm cream surfaces.
   - Confirm section headers, metadata labels, and loading text remain readable while loading.
   - Confirm tag chip labels and remove icons are clearly visible.
   - Confirm segmented control selected/unselected labels are readable.
 - Pattern detail:
   - Confirm hero platform pill text is readable over both light and dark thumbnail images.
-- Reward and achievements:
-  - Confirm `DailyRewardOverlayView` title, subtitle, and dismiss icon are readable on honey gradient.
-  - Confirm locked achievement title/hint text is readable without zoom.
 - Chart/PDF surfaces:
   - Confirm chart thumbnail borders are visible on both light and dark source imagery.
   - Confirm chart editor handles and annotation markers remain visible against varied backgrounds.

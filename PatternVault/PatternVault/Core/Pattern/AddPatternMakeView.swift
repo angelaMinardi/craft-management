@@ -11,12 +11,16 @@ struct AddPatternMakeView: View {
 
     let patternId: UUID
     let existingCount: Int
+    /// Size labels derived from multi-size repeat instructions (e.g. ["Small", "Medium", "Large"]).
+    /// When non-empty, shows a size picker and saves the selected index to the make record.
+    var sizeOptions: [String] = []
     var onSaved: ((PatternMake) -> Void)?
 
     @State private var name = ""
     @State private var sizeName = ""
     @State private var yardageUsed = ""
     @State private var sizeMeasurements = ""
+    @State private var selectedSizeIndex: Int = 0
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -32,6 +36,16 @@ struct AddPatternMakeView: View {
                 Section("Make") {
                     TextField("Name", text: $name, prompt: Text("e.g. Gift for Mom"))
                         .textInputAutocapitalization(.words)
+                }
+                if sizeOptions.count > 1 {
+                    Section("Pattern size") {
+                        Picker("Size", selection: $selectedSizeIndex) {
+                            ForEach(sizeOptions.indices, id: \.self) { i in
+                                Text(sizeOptions[i]).tag(i)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
                 }
                 Section("Details (optional)") {
                     TextField("Size", text: $sizeName, prompt: Text("e.g. M, 36\" chest"))
@@ -88,7 +102,14 @@ struct AddPatternMakeView: View {
         errorMessage = nil
         Task {
             do {
-                let make = try await repo.add(patternId: patternId, userId: userId, name: trimmedName, sizeName: sizeName.isEmpty ? nil : sizeName.trimmingCharacters(in: .whitespaces), yardageUsed: yardage, sizeMeasurements: sizeMeasurements.isEmpty ? nil : sizeMeasurements.trimmingCharacters(in: .whitespaces))
+                let make = try await repo.add(
+                    patternId: patternId, userId: userId,
+                    name: trimmedName,
+                    sizeName: sizeName.isEmpty ? nil : sizeName.trimmingCharacters(in: .whitespaces),
+                    yardageUsed: yardage,
+                    sizeMeasurements: sizeMeasurements.isEmpty ? nil : sizeMeasurements.trimmingCharacters(in: .whitespaces),
+                    sizeIndex: sizeOptions.count > 1 ? selectedSizeIndex : nil
+                )
                 onSaved?(make)
                 isSaving = false
                 dismiss()

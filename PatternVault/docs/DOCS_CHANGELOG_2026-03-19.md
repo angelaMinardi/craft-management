@@ -62,7 +62,7 @@ This changelog records the documentation alignment pass to match implemented fea
   - Out of scope / legacy
 
 ### `docs/APP_REVIEW_CHECKLIST.md`
-- Added a Pattern Vault-specific Apple App Review checklist mapped to:
+- Added a Corvid Craft-specific Apple App Review checklist mapped to:
   - Before You Submit readiness
   - Safety, Performance, Business, Design, and Legal sections
   - Review-notes evidence pack requirements

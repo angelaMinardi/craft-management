@@ -16,7 +16,7 @@ struct AIInfoView: View {
                         icon: "doc.text.magnifyingglass",
                         iconColor: Theme.sageGreen,
                         title: "Pattern parsing — not pattern generating",
-                        body: "Pattern Vault uses AI to read and structure patterns you've already saved. It extracts steps, rows, and chart positions from your PDFs and web pages. It never writes new pattern instructions."
+                        body: "Corvid Craft uses AI to read and structure patterns you've already saved. It extracts steps, rows, and chart positions from your PDFs and web pages. It never writes new pattern instructions."
                     )
                     infoRow(
                         icon: "lock.fill",
@@ -70,7 +70,7 @@ struct AIInfoView: View {
                 }
 
                 Section {
-                    Text("AI analyses use Google Gemini 2.5 Flash. Pattern content is transmitted over HTTPS and is not stored by Gemini beyond the request. Pattern Vault's privacy policy covers how your data is handled on our end.")
+                    Text("AI analyses use Google Gemini 2.5 Flash. Pattern content is transmitted over HTTPS and is not stored by Gemini beyond the request. Corvid Craft's privacy policy covers how your data is handled on our end.")
                         .font(Theme.Typography.caption)
                         .foregroundStyle(Theme.deepPlum.opacity(0.6))
                         .padding(.vertical, 4)

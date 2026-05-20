@@ -1,6 +1,6 @@
 ---
-title: Terms & Conditions — Pattern Vault
-description: Pattern Vault terms and conditions. Use of the app, intellectual property, third-party services, and legal terms.
+title: Terms & Conditions — Corvid Craft
+description: Corvid Craft terms and conditions. Use of the app, intellectual property, third-party services, and legal terms.
 layout: ../layouts/BaseLayout.astro
 ---
 
@@ -8,7 +8,7 @@ layout: ../layouts/BaseLayout.astro
 
 # Terms & Conditions
 
-These terms and conditions apply to the Pattern Vault app ("Application"), operated by Angela Minardi ("Service Provider"), and provided as a freemium mobile service.
+These terms and conditions apply to the Corvid Craft app ("Application"), operated by Angela Minardi ("Service Provider"), and provided as a freemium mobile service.
 
 By downloading or using the Application, you agree to these Terms.
 

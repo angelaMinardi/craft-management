@@ -1,4 +1,4 @@
-# Pattern Vault Setup
+# Corvid Craft Setup
 
 Use this as the single setup checklist for local development, auth providers, and Supabase.
 
@@ -23,7 +23,7 @@ Use this as the single setup checklist for local development, auth providers, an
 - Enable Email auth in Supabase Authentication > Providers.
 - For quick local testing, optionally disable "Confirm email".
 - Add redirect URL for app OAuth:
-  - `patternvault://auth/callback` or the scheme currently configured in app Info settings.
+  - `corvidcraft://auth/callback` or the scheme currently configured in app Info settings.
 
 ### Database
 
@@ -86,7 +86,7 @@ Set:
 - `RAVELRY_OAUTH2_CLIENT_SECRET`
 
 Recommended redirect URI:
-- `patternvault://oauth/ravelry`
+- `corvidcraft://oauth/ravelry`
 
 ## 5) Quick smoke test
 

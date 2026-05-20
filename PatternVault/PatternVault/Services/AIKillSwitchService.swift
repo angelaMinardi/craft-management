@@ -17,7 +17,7 @@ private struct AppConfigRow: Decodable {
 }
 
 enum AIKillSwitchService {
-    private static let appGroupId = "group.com.patternvault.app"
+    private static let appGroupId = "group.com.corvidcraft.app"
     private static let cacheKeyEnabled = "app_config_ai_enabled"
     private static let cacheKeyUpdated = "app_config_ai_enabled_updated"
     /// Cache valid for 10 minutes; refresh on app active.

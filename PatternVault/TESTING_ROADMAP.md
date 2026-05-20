@@ -1,4 +1,4 @@
-# Pattern Vault — Complete Feature Testing Roadmap
+# Corvid Craft — Complete Feature Testing Roadmap
 
 Use this as a step-by-step walkthrough. Test on a real device where possible (camera, notifications, offline). Mark each item PASS / FAIL / PARTIAL and add notes.
 
@@ -20,7 +20,7 @@ Use this as a step-by-step walkthrough. Test on a real device where possible (ca
 ### 1.1 Multi-Source Import
 - [ ] **URL import:** Patterns tab → Add → paste a blog URL → verify title, thumbnail, description auto-populate → Save
 - [ ] **PDF import:** Add → attach a PDF from Files → verify it saves and is viewable
-- [ ] **Share Extension:** Open Safari → navigate to a pattern page → tap Share → "Save to Pattern Vault" → verify pattern appears in library
+- [ ] **Share Extension:** Open Safari → navigate to a pattern page → tap Share → "Save to Corvid Craft" → verify pattern appears in library
 - [ ] **Video URL:** Share a YouTube knitting tutorial URL → verify video_url is captured
 
 ### 1.2 Duplicate Detection
@@ -157,7 +157,7 @@ Use this as a step-by-step walkthrough. Test on a real device where possible (ca
 - [ ] Verify the counter matches what's shown in pattern detail
 
 ### 3.6 Widget & Live Activity
-- [ ] Home screen → add Pattern Vault widget → verify it shows pattern stats
+- [ ] Home screen → add Corvid Craft widget → verify it shows pattern stats
 - [ ] Lock screen → Row Tracker widget shows current row
 - [ ] Increment row in app → widget updates
 
@@ -320,7 +320,7 @@ Use this as a step-by-step walkthrough. Test on a real device where possible (ca
 - [ ] Steps parsed and available in pattern detail
 
 ### 7.3 AI Transparency
-- [ ] Settings → Help → "How AI works in Pattern Vault" → sheet opens
+- [ ] Settings → Help → "How AI works in Corvid Craft" → sheet opens
 - [ ] Three sections visible: "What the AI does", "Specific capabilities", "Technical note"
 - [ ] Content explains: parsing (not generating), privacy, user control
 - [ ] Done button dismisses
@@ -394,7 +394,7 @@ Use this as a step-by-step walkthrough. Test on a real device where possible (ca
 ### 9.2 Progress Share Card
 - [ ] Current tab → "Share" button → ProgressShareCardView opens
 - [ ] Card shows: "Work in progress", title, progress ring %, row count, step count, craft type
-- [ ] Crow mascot + "Pattern Vault" branding in corner
+- [ ] Crow mascot + "Corvid Craft" branding in corner
 - [ ] "Share Progress" → iOS share sheet with rendered image
 
 ### 9.3 Ravelry Integration (Social)
@@ -483,10 +483,6 @@ Use this as a step-by-step walkthrough. Test on a real device where possible (ca
 - [ ] Settings → Celebrations → view unlocked milestones
 - [ ] "first_pattern", "vault_10", "stash_started", "toolbox_ready", "first_note" all trackable
 - [ ] Progress milestones (progress_25/50/75/100) appear in list after being unlocked
-
-### 12.5 Daily Rewards
-- [ ] Daily reward overlay appears on first open of the day (if enabled)
-- [ ] Rewards thread points
 
 ---
 

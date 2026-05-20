@@ -1,6 +1,6 @@
-# Pattern Vault — Marketing site
+# Corvid Craft — Marketing site
 
-Static marketing site for the Pattern Vault app. Promotes the app and hosts legal pages (Privacy, Terms, Contact) at stable URLs for the App Store and in-app links.
+Static marketing site for the Corvid Craft app. Promotes the app and hosts legal pages (Privacy, Terms, Contact) at stable URLs for the App Store and in-app links.
 
 ## Setup
 
@@ -12,16 +12,16 @@ npm run build # output in dist/
 
 ## Deploy
 
-- **Vercel:** Connect this repo, set root to `website`, and deploy. Add custom domain (e.g. `patternvault.app`) in Vercel project settings.
+- **Vercel:** Connect this repo, set root to `website`, and deploy. Add custom domain (e.g. `corvidcraft.com`) in Vercel project settings.
 - **Elsewhere:** Run `npm run build` and serve the `dist/` folder.
 
 ## App Store / Info.plist
 
 The iOS app’s `Info.plist` points to:
 
-- `PrivacyPolicyURL` → `https://patternvault.app/privacy`
-- `TermsOfServiceURL` → `https://patternvault.app/terms`
-- `SupportURL` → `https://patternvault.app/contact`
+- `PrivacyPolicyURL` → `https://corvidcraft.com/privacy`
+- `TermsOfServiceURL` → `https://corvidcraft.com/terms`
+- `SupportURL` → `https://corvidcraft.com/contact`
 
 If you use a different domain, update those URLs in `PatternVault/PatternVault/Info.plist` after deploying.
 

@@ -10,8 +10,8 @@ interface Props {
 }
 
 const { title, description, frontmatter } = Astro.props;
-const pageTitle = title ?? frontmatter?.title ?? 'Pattern Vault';
-const pageDescription = description ?? frontmatter?.description ?? 'Pattern Vault — Your craft library, in your pocket. Save patterns from anywhere. Track projects. One place for every pattern.';
+const pageTitle = title ?? frontmatter?.title ?? 'Corvid Craft';
+const pageDescription = description ?? frontmatter?.description ?? 'Corvid Craft — Your craft library, in your pocket. Save patterns from anywhere. Track projects. One place for every pattern.';
 const isDev = import.meta.env.DEV;
 ---
 
@@ -53,7 +53,7 @@ const isDev = import.meta.env.DEV;
           window.dataLayer.push({ event: eventName, ...payload });
         }
 
-        window.dispatchEvent(new CustomEvent('patternvault:analytics', { detail: { event: eventName, props: payload } }));
+        window.dispatchEvent(new CustomEvent('corvidcraft:analytics', { detail: { event: eventName, props: payload } }));
       }
 
       function getCtaProps(el) {
@@ -96,10 +96,10 @@ const isDev = import.meta.env.DEV;
       }
 
       if ({isDev}) {
-        window.addEventListener('patternvault:analytics', (event) => {
+        window.addEventListener('corvidcraft:analytics', (event) => {
           if (!(event instanceof CustomEvent)) return;
           // Dev-only visibility into analytics payloads while integrating providers.
-          console.info('[PatternVault analytics]', event.detail);
+          console.info('[Corvid Craft analytics]', event.detail);
         });
       }
 

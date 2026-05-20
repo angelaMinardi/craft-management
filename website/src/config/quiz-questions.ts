@@ -42,7 +42,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
     id: 3,
     text: 'Your yarn stash is best described as...',
-    pipSays: '*glances at your yarn collection* ...impressive.',
+    pipSays: 'No judgement on stash size. I promise.',
     answers: [
       { text: 'Organized by weight, color, and fiber content', scores: { 'meticulous-maker': 2 } },
       { text: 'Overflowing and I regret nothing', scores: { 'pattern-collector': 2, 'spontaneous-stitcher': 1 } },
@@ -81,7 +81,7 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
     id: 6,
     text: 'You just finished a project. Your first instinct is to...',
-    pipSays: 'Finished?! That deserves a celebration! *happy flap*',
+    pipSays: 'Finished?! That deserves a celebration!',
     answers: [
       { text: 'Photograph it beautifully and add it to my project log', scores: { 'meticulous-maker': 2, 'pattern-collector': 1 } },
       { text: 'Immediately start something new', scores: { 'spontaneous-stitcher': 2 } },

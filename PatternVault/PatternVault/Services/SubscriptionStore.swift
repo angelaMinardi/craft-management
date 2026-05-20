@@ -10,12 +10,19 @@ import StoreKit
 import UIKit
 import FirebaseAnalytics
 
-/// Freemium limits (free tier).
+/// Freemium limits (free tier) and premium soft caps.
 enum EntitlementLimits {
-    static let freePatternLimit = 30
+    /// Free tier — patterns stored total.
+    static let freePatternLimit = 25
+    /// Free tier — AI uses per month (enrich + step-parse + chart-detect combined).
     static let freeAIPerMonth = 5
+    /// Free tier — YouTube / TikTok video imports per month.
     static let freeYouTubePerMonth = 3
+    /// Free tier — total note photos uploaded.
     static let freeNotePhotos = 20
+    /// Premium — monthly AI soft cap to keep Gemini COGS bounded.
+    /// Fair-use policy applies beyond this; users see a friendly notice, not a hard block.
+    static let premiumAISoftCapPerMonth = 200
 }
 
 @MainActor
@@ -30,21 +37,43 @@ final class SubscriptionStore: ObservableObject {
     @Published private(set) var productsDebugDetails: String?
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseError: String?
+    /// Current state of the launch-only lifetime offer (remote-config driven).
+    @Published private(set) var lifetimeOffer: LifetimeOfferState = .unavailable
+    /// Per-subscription-group intro-offer eligibility. The Premium group shares
+    /// monthly + yearly, so a returning monthly-trialist burns yearly's eligibility.
+    /// Driving copy off this flag prevents "first year $X" lies for those users.
+    @Published private(set) var yearlyIntroEligible = false
+    /// One-shot info string surfaced when Restore Purchases returns no entitlements,
+    /// so the user isn't left wondering whether anything happened.
+    @Published var restoreNoResultMessage: String?
 
     private let entitlementRepo = EntitlementRepository()
-    private static let appGroupId = "group.com.patternvault.app"
+    private static let appGroupId = "group.com.corvidcraft.app"
+    /// Lifetime-purchase idempotency. Apple replays `Transaction.updates` on
+    /// every relaunch; without this, `LifetimeOfferService.recordPurchase()`
+    /// would tick the buyer count on each restart until the cap is hit.
+    private static let recordedLifetimeTxnsKey = "recordedLifetimeTransactionIds"
     private var transactionUpdatesTask: Task<Void, Never>?
 
     /// Product IDs — configure in App Store Connect to match.
-    static let monthlyProductId = "com.patternvault.premium.monthly"
-    static let yearlyProductId = "com.patternvault.premium.yearly"
+    static let monthlyProductId = "com.corvidcraft.premium.monthly"
+    static let yearlyProductId = "com.corvidcraft.premium.yearly"
+    /// Non-consumable one-time IAP. Available May 1 → Nov 1, 2026 or first 1,000 buyers.
+    static let lifetimeProductId = "com.corvidcraft.premium.lifetime.launch"
 
     private init() {
         Task { await loadProducts() }
         Task { await updateSubscriptionStatus() }
+        Task { await refreshLifetimeOffer() }
         transactionUpdatesTask = Task { [weak self] in
             await self?.observeTransactionUpdates()
         }
+    }
+
+    /// Refresh the launch-lifetime offer state from Supabase. Safe to call on foreground.
+    func refreshLifetimeOffer() async {
+        await LifetimeOfferService.refresh()
+        lifetimeOffer = LifetimeOfferService.currentState
     }
 
     // MARK: - Limits (call these to gate features)
@@ -55,11 +84,15 @@ final class SubscriptionStore: ObservableObject {
     }
 
     func canUseAI() -> Bool {
-        #if DEBUG
+        // Bypass only in simulator DEBUG builds. Physical-device DEBUG builds
+        // (which TestFlight testers can end up with) must still respect the cap.
+        #if DEBUG && targetEnvironment(simulator)
         return true
         #else
-        if isPremium { return true }
-        guard let e = entitlement else { return false }
+        guard let e = entitlement else { return isPremium }
+        if isPremium {
+            return e.aiUsageThisMonth < EntitlementLimits.premiumAISoftCapPerMonth
+        }
         return e.aiUsageThisMonth < EntitlementLimits.freeAIPerMonth
         #endif
     }
@@ -81,6 +114,13 @@ final class SubscriptionStore: ObservableObject {
     var aiUsesRemaining: Int? {
         guard !isPremium, let e = entitlement else { return nil }
         return max(0, EntitlementLimits.freeAIPerMonth - e.aiUsageThisMonth)
+    }
+
+    /// Premium AI uses remaining this month against the soft cap (nil if not premium).
+    /// Surface only when <25 remain so casual premium users never see a counter.
+    var premiumAIUsesRemaining: Int? {
+        guard isPremium, let e = entitlement else { return nil }
+        return max(0, EntitlementLimits.premiumAISoftCapPerMonth - e.aiUsageThisMonth)
     }
     /// Free-tier YouTube imports remaining this month (nil if premium).
     var youtubeImportsRemaining: Int? {
@@ -147,7 +187,10 @@ final class SubscriptionStore: ObservableObject {
             if case .verified(let transaction) = result {
                 guard Self.premiumProductIds.contains(transaction.productID) else { continue }
                 guard transaction.revocationDate == nil else { continue }
-                if let expiration = transaction.expirationDate, expiration <= Date() {
+                // Non-consumable (lifetime) has no expirationDate — never filter it on expiry.
+                if !Self.nonConsumablePremiumIds.contains(transaction.productID),
+                   let expiration = transaction.expirationDate,
+                   expiration <= Date() {
                     continue
                 }
                 return true
@@ -158,7 +201,13 @@ final class SubscriptionStore: ObservableObject {
 
     private static let premiumProductIds: Set<String> = [
         monthlyProductId,
-        yearlyProductId
+        yearlyProductId,
+        lifetimeProductId
+    ]
+
+    /// Non-subscription premium SKUs (one-time purchases — no expiration, no revocation unless refunded).
+    private static let nonConsumablePremiumIds: Set<String> = [
+        lifetimeProductId
     ]
 
     private func loadProducts() async {
@@ -166,7 +215,7 @@ final class SubscriptionStore: ObservableObject {
         productsLoadError = nil
         productsDebugDetails = nil
         defer { productsLoading = false }
-        let requestedIds = [Self.monthlyProductId, Self.yearlyProductId]
+        let requestedIds = [Self.monthlyProductId, Self.yearlyProductId, Self.lifetimeProductId]
         let bundleId = Bundle.main.bundleIdentifier ?? "unknown"
         var debugLines: [String] = []
         debugLines.append("bundle=\(bundleId)")
@@ -209,6 +258,7 @@ final class SubscriptionStore: ObservableObject {
             }
 
             products = fetched
+            await refreshYearlyIntroEligibility()
             if fetched.isEmpty {
                 debugLines.append("result=empty")
                 productsDebugDetails = debugLines.joined(separator: "\n")
@@ -253,6 +303,23 @@ final class SubscriptionStore: ObservableObject {
         await loadProducts()
     }
 
+    /// Asks StoreKit whether the user is eligible for the yearly product's intro
+    /// offer. Eligibility is per `subscriptionGroupID`, so trying the monthly
+    /// trial burns yearly's intro eligibility (both share group `297B9B5E`).
+    /// The result drives whether we show "first year $X" copy.
+    private func refreshYearlyIntroEligibility() async {
+        guard let yearly = products.first(where: { $0.id == Self.yearlyProductId }),
+              let subscription = yearly.subscription else {
+            yearlyIntroEligible = false
+            return
+        }
+        if subscription.introductoryOffer == nil {
+            yearlyIntroEligible = false
+            return
+        }
+        yearlyIntroEligible = await subscription.isEligibleForIntroOffer
+    }
+
     func purchase(_ product: Product) async -> Bool {
         isLoading = true
         purchaseError = nil
@@ -288,10 +355,16 @@ final class SubscriptionStore: ObservableObject {
     func restorePurchases() async {
         isLoading = true
         purchaseError = nil
+        restoreNoResultMessage = nil
         defer { isLoading = false }
         do {
             try await AppStore.sync()
             await updateSubscriptionStatus()
+            if !isPremium {
+                // Sync succeeded but the Apple ID has no active entitlement.
+                // Tell the user so they aren't left wondering.
+                restoreNoResultMessage = "No active subscriptions found on this Apple ID."
+            }
         } catch {
             purchaseError = error.localizedDescription
         }
@@ -312,9 +385,37 @@ final class SubscriptionStore: ObservableObject {
     private func applyVerifiedTransaction(_ transaction: Transaction) {
         guard Self.premiumProductIds.contains(transaction.productID) else { return }
         guard transaction.revocationDate == nil else { return }
-        if let expiration = transaction.expirationDate, expiration <= Date() { return }
+        // Subscriptions have expirationDate; non-consumable lifetime does not.
+        if !Self.nonConsumablePremiumIds.contains(transaction.productID),
+           let expiration = transaction.expirationDate,
+           expiration <= Date() {
+            return
+        }
         isPremium = true
         syncToAppGroup(entitlement: entitlement, isPremium: true)
+
+        // Record the lifetime purchase server-side so the buyer-count kill switch trips at the cap.
+        // Apple replays Transaction.updates on every relaunch, so guard against
+        // double-counting by remembering the Apple transaction id locally.
+        if transaction.productID == Self.lifetimeProductId,
+           Self.markLifetimeTransactionRecorded(transaction.id) {
+            Task { [weak self] in
+                _ = await LifetimeOfferService.recordPurchase()
+                await self?.refreshLifetimeOffer()
+            }
+        }
+    }
+
+    /// Returns true if this transaction id has not been recorded yet (caller
+    /// should proceed to record). Returns false if we've already recorded it.
+    private static func markLifetimeTransactionRecorded(_ txnId: UInt64) -> Bool {
+        let defaults = UserDefaults.standard
+        var recorded = Set(defaults.stringArray(forKey: recordedLifetimeTxnsKey) ?? [])
+        let key = String(txnId)
+        if recorded.contains(key) { return false }
+        recorded.insert(key)
+        defaults.set(Array(recorded), forKey: recordedLifetimeTxnsKey)
+        return true
     }
 
     private func syncToAppGroup(entitlement: UserEntitlement?, isPremium: Bool) {
@@ -399,6 +500,12 @@ final class GrowthOrchestrator {
         case youtubeLimit
         case notePhotoLimit
         case dashboard
+        /// User tapped Row Tracker widget setup.
+        case widgetSetup
+        /// User tapped "Connect Ravelry" in Settings.
+        case ravelryConnect
+        /// User tapped the microphone on the row counter.
+        case voiceRowCounter
         case unknown
     }
 
@@ -614,6 +721,12 @@ final class AnalyticsService {
         case tutorialStepViewed = "tutorial_step_viewed"
         case tutorialSkipped = "tutorial_skipped"
         case tutorialCompleted = "tutorial_completed"
+        /// Launch-lifetime offer surfaced on the paywall (buyer count still under cap, window still open).
+        case lifetimeShown = "lifetime_shown"
+        /// User purchased the launch-lifetime SKU.
+        case lifetimeConverted = "lifetime_converted"
+        /// User redeemed a promo code from Settings.
+        case offerCodeRedeemed = "offer_code_redeemed"
     }
 
     enum Property {

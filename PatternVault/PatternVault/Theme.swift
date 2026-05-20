@@ -178,11 +178,14 @@ enum Theme {
 
     enum Premium {
         /// One-line value prop used in Settings, Paywall, and limit messages.
-        static let tagline = "Unlimited vault, project mode, Row Tracker widget, stash matching, and ad-free."
+        /// Leads with the 3 premium pillars: AI, Ravelry library, widget + ad-free.
+        static let tagline = "Unlimited AI analyses, sync your Ravelry library, Row Tracker widget, and ad-free."
         /// Short teaser for non-intrusive placements (Dashboard, list).
-        static let teaser = "Unlimited patterns, project mode, no ads & more with Premium"
+        static let teaser = "Unlimited patterns and AI, full Ravelry sync, no ads — with Premium."
         /// CTA when user hits a limit or we want to surface Premium.
         static let seePremiumTitle = "See Premium"
+        /// Warm mascot-led headline used on the paywall when Pip is appropriate.
+        static let mascotHeadline = "Pip's got more to offer"
     }
 }
 
@@ -653,5 +656,12 @@ struct CardPressStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
             .animation(reduceMotion ? .none : Theme.Motion.quickSpring, value: configuration.isPressed)
+    }
+}
+
+extension View {
+    func fullRowTapTarget() -> some View {
+        frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
     }
 }

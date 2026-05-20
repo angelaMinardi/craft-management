@@ -6,13 +6,13 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Pattern Vault</string>
+	<string>Corvid Craft</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
+	<string>Corvid Craft</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -28,6 +28,8 @@
 	</dict>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
@@ -57,11 +59,13 @@
 	<key>GEMINI_API_KEY</key>
 	<string>$(GEMINI_API_KEY)</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Pattern Vault uses the microphone so you can say your current row or round number hands-free while crafting.</string>
+	<string>Corvid Craft uses the microphone so you can say your current row or round number hands-free while crafting.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Pattern Vault uses speech recognition to hear your row or round number and update your progress automatically.</string>
+	<string>Corvid Craft uses speech recognition to hear your row or round number and update your progress automatically.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Pattern Vault uses the camera to scan yarn barcodes and quickly fill stash details.</string>
+	<string>Corvid Craft uses the camera to scan yarn barcodes and quickly fill stash details.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This lets us show you more relevant ads. You can decline — the app works exactly the same either way.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -69,7 +73,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.patternvault.app</string>
+				<string>com.corvidcraft.app</string>
 			</array>
 			<key>CFBundleURLName</key>
 			<string>auth</string>
@@ -79,7 +83,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>patternvault</string>
+				<string>corvidcraft</string>
 			</array>
 			<key>CFBundleURLName</key>
 			<string>Ravelry OAuth</string>
@@ -95,18 +99,58 @@
 	<string>$(GAD_BANNER_AD_UNIT_ID)</string>
 	<key>SKAdNetworkItems</key>
 	<array>
-		<dict>
-			<key>SKAdNetworkIdentifier</key>
-			<string>cstr6suwn9.skadnetwork</string>
-		</dict>
+		<!-- Google (AdMob) -->
+		<dict><key>SKAdNetworkIdentifier</key><string>cstr6suwn9.skadnetwork</string></dict>
+		<!-- AdColony -->
+		<dict><key>SKAdNetworkIdentifier</key><string>4PFYVQ9L8R.skadnetwork</string></dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>YCLNXRL5PM.skadnetwork</string></dict>
+		<!-- AppLovin -->
+		<dict><key>SKAdNetworkIdentifier</key><string>ludvb6z3bs.skadnetwork</string></dict>
+		<!-- Chartboost -->
+		<dict><key>SKAdNetworkIdentifier</key><string>f38h382jlk.skadnetwork</string></dict>
+		<!-- Fyber -->
+		<dict><key>SKAdNetworkIdentifier</key><string>hs6bdukanm.skadnetwork</string></dict>
+		<!-- InMobi -->
+		<dict><key>SKAdNetworkIdentifier</key><string>wzmmz9fp6w.skadnetwork</string></dict>
+		<!-- IronSource -->
+		<dict><key>SKAdNetworkIdentifier</key><string>yclnxrl5pm.skadnetwork</string></dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>su67r6k2v3.skadnetwork</string></dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>gta9lk7p23.skadnetwork</string></dict>
+		<!-- Liftoff -->
+		<dict><key>SKAdNetworkIdentifier</key><string>7ug5zh24hu.skadnetwork</string></dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>n9x2a789qt.skadnetwork</string></dict>
+		<!-- Maio -->
+		<dict><key>SKAdNetworkIdentifier</key><string>v9wttpbfk9.skadnetwork</string></dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>n38lu8286q.skadnetwork</string></dict>
+		<!-- Meta Audience Network -->
+		<dict><key>SKAdNetworkIdentifier</key><string>v72qych5uu.skadnetwork</string></dict>
+		<!-- Mintegral -->
+		<dict><key>SKAdNetworkIdentifier</key><string>kbd757ywx3.skadnetwork</string></dict>
+		<!-- Pangle -->
+		<dict><key>SKAdNetworkIdentifier</key><string>238da6jt44.skadnetwork</string></dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>22mmun2rn5.skadnetwork</string></dict>
+		<!-- Smaato -->
+		<dict><key>SKAdNetworkIdentifier</key><string>prcb7njmu6.skadnetwork</string></dict>
+		<!-- Smart AdServer -->
+		<dict><key>SKAdNetworkIdentifier</key><string>424m5254lk.skadnetwork</string></dict>
+		<!-- Tapjoy -->
+		<dict><key>SKAdNetworkIdentifier</key><string>ecpz2srf59.skadnetwork</string></dict>
+		<!-- Unity Ads -->
+		<dict><key>SKAdNetworkIdentifier</key><string>4DZT52R2T5.skadnetwork</string></dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>bvpn9ufa9b.skadnetwork</string></dict>
+		<!-- Vungle -->
+		<dict><key>SKAdNetworkIdentifier</key><string>gta9lk7p23.skadnetwork</string></dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>5lm9lj6jb7.skadnetwork</string></dict>
+		<!-- Yahoo -->
+		<dict><key>SKAdNetworkIdentifier</key><string>5a6flpkh64.skadnetwork</string></dict>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>PrivacyPolicyURL</key>
-	<string>https://patternvault.app/privacy</string>
+	<string>https://corvidcraft.com/privacy</string>
 	<key>TermsOfServiceURL</key>
-	<string>https://patternvault.app/terms</string>
+	<string>https://corvidcraft.com/terms</string>
 	<key>SupportURL</key>
-	<string>https://patternvault.app/contact</string>
+	<string>https://corvidcraft.com/contact</string>
 </dict>
 </plist>

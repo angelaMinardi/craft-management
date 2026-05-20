@@ -15,7 +15,6 @@ final class MascotInteractionStore: ObservableObject {
 
     enum Pose {
         case idle
-        case knitting
         case jumping
         case pouty
         case petting
@@ -27,7 +26,7 @@ final class MascotInteractionStore: ObservableObject {
         let iconAssetName: String
     }
 
-    private static let appGroupId = "group.com.patternvault.app"
+    private static let appGroupId = "group.com.corvidcraft.app"
     private static let nameKey = "mascot_name"
     private static let onboardingNameKey = "onboarding_companion_name"
     private static let heartsKey = "mascot_hearts_current"
@@ -101,16 +100,6 @@ final class MascotInteractionStore: ObservableObject {
         defaults.set(mascotName, forKey: Self.onboardingNameKey)
     }
 
-    func syncFallbackCounts(patterns: [Pattern]) {
-        if streakCount == 0 {
-            let fallback = patterns.filter { $0.status == .inProgress }.count
-            if fallback > 0 {
-                streakCount = fallback
-                defaults.set(streakCount, forKey: Self.streakKey)
-            }
-        }
-    }
-
     func pet() {
         let now = Date()
         if let last = defaults.object(forKey: Self.lastPetKey) as? Date,
@@ -122,7 +111,6 @@ final class MascotInteractionStore: ObservableObject {
         heartsCurrent = min(heartCap, heartsCurrent + 1)
         defaults.set(heartsCurrent, forKey: Self.heartsKey)
         addThreadPoints(1)
-        DailyRewardStore.shared.recordInteraction()
 
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
@@ -146,14 +134,12 @@ final class MascotInteractionStore: ObservableObject {
         streakCount += 1
         defaults.set(streakCount, forKey: Self.streakKey)
         addThreadPoints(2)
-        AchievementStore.shared.incrementFeedCount()
-        DailyRewardStore.shared.recordInteraction()
 
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         let bonusText = heartBonus > 1 ? " (+\(heartBonus) hearts!)" : ""
         transientMessage = "Yum! \(mascotName) feels encouraged.\(bonusText)"
-        animateTemporaryPose(.knitting)
+        animateTemporaryPose(.jumping)
     }
 
     func markExplanationsSeen() {
@@ -214,31 +200,10 @@ final class MascotInteractionStore: ObservableObject {
         addThreadPoints(1)
     }
 
-    /// Called by DailyRewardStore to apply daily check-in bonus.
-    func grantDailyReward(_ points: Int) {
-        addThreadPoints(points)
-    }
-
-    /// Called by DailyRewardStore when hearts should decay due to inactivity.
-    func applyHeartDecay(_ amount: Int) {
-        let newHearts = max(0, heartsCurrent - amount)
-        guard newHearts != heartsCurrent else { return }
-        heartsCurrent = newHearts
-        defaults.set(heartsCurrent, forKey: Self.heartsKey)
-    }
-
-    /// Called by DailyRewardStore when streak should reset due to 48h+ inactivity.
-    func resetStreak() {
-        guard streakCount > 0 else { return }
-        streakCount = 0
-        defaults.set(streakCount, forKey: Self.streakKey)
-    }
-
     private func addThreadPoints(_ delta: Int) {
         guard delta > 0 else { return }
         threadPoints = min(threadPoints + delta, 9_999)
         defaults.set(threadPoints, forKey: Self.currencyKey)
-        AchievementStore.shared.incrementTotalPointsEarned(by: delta)
     }
 
     private func displayName(for itemId: String) -> String {
@@ -278,8 +243,6 @@ final class MascotInteractionStore: ObservableObject {
             // 36 frames at ~15 FPS.
             return 2_400_000_000
         case .jumping:
-            return 2_400_000_000
-        case .knitting:
             return 2_400_000_000
         case .pouty:
             return 2_400_000_000

@@ -461,7 +461,7 @@ struct FormattedStepBodyView: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel(stepBody)
             .environment(\.openURL, OpenURLAction { url in
-                if url.scheme == "patternvault", url.host == "glossary",
+                if url.scheme == "corvidcraft", url.host == "glossary",
                    let abbr = url.pathComponents.last,
                    let entry = StitchGlossary.lookup(abbr) {
                     glossaryEntry = entry

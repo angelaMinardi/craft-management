@@ -22,7 +22,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'The Pattern Collector',
     tagline: 'Curator of the crafting world',
     description:
-      'Your bookmarks folder is a treasure trove, your Pinterest boards could fill a library, and your "patterns to make someday" list has its own gravitational pull. You don\'t have a problem — you have a collection. Pattern Vault was literally made for you.',
+      'Your bookmarks folder is a treasure trove, your Pinterest boards could fill a library, and your "patterns to make someday" list has its own gravitational pull. You don\'t have a problem — you have a collection. And honestly? Same.',
     color: 'var(--dusty-blue)',
     pipExpression: 'curious',
     ogImage: '/images/og/pattern-collector.png',
@@ -32,7 +32,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'The Spontaneous Stitcher',
     tagline: 'Life is too short for gauge swatches',
     description:
-      'You craft on impulse, powered by enthusiasm and whatever yarn is within arm\'s reach. Your WIP pile is tall, your energy is infectious, and your creativity never sleeps. Pattern Vault will help you wrangle the beautiful chaos.',
+      'You craft on impulse, powered by enthusiasm and whatever yarn is within arm\'s reach. Your WIP pile is tall, your energy is infectious, and your creativity never sleeps. We love that for you.',
     color: 'var(--soft-coral)',
     pipExpression: 'happy',
     ogImage: '/images/og/spontaneous-stitcher.png',
@@ -42,7 +42,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'The Meticulous Maker',
     tagline: 'Architect of the crafting table',
     description:
-      'Every project has a plan, every skein has a purpose, and your notes are works of art in themselves. You don\'t just make things — you engineer them. Pattern Vault\'s organization features will feel like coming home.',
+      'Every project has a plan, every skein has a purpose, and your notes are works of art in themselves. You don\'t just make things — you engineer them. We built the organization tools with you in mind.',
     color: 'var(--sage-green)',
     pipExpression: 'focused',
     ogImage: '/images/og/meticulous-maker.png',
@@ -52,7 +52,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'The Social Crafter',
     tagline: 'Crafting is your love language',
     description:
-      'You stitch with friends, share discoveries with your group chat, and your happiest moments involve yarn and laughter. Your projects carry stories of the people you made them with. Pattern Vault will help you share the joy.',
+      'You stitch with friends, share discoveries with your group chat, and your happiest moments involve yarn and laughter. Your projects carry stories of the people you made them with — and that\'s the whole point.',
     color: 'var(--honey)',
     pipExpression: 'waving',
     ogImage: '/images/og/social-crafter.png',
@@ -62,7 +62,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'The Zen Stitcher',
     tagline: 'Meditation with a tangible result',
     description:
-      'The rhythmic click of needles, the slow growth of fabric between your fingers — this is where you find peace. You don\'t rush. You don\'t scroll. You just... stitch. Pattern Vault will protect your calm.',
+      'The rhythmic click of needles, the slow growth of fabric between your fingers — this is where you find peace. You don\'t rush. You don\'t scroll. You just... stitch. Respect.',
     color: 'var(--deep-plum)',
     pipExpression: 'sleepy',
     ogImage: '/images/og/zen-stitcher.png',
@@ -72,7 +72,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'The Adventurous Artisan',
     tagline: 'Never met a technique you didn\'t want to try',
     description:
-      'Tunisian crochet? Done. Brioche knitting? Mastered it last month. Fair isle with hand-spun yarn? Why not! Your craft room is a laboratory and every project is an experiment. Pattern Vault will keep track of your explorations.',
+      'Tunisian crochet? Done. Brioche knitting? Mastered it last month. Fair isle with hand-spun yarn? Why not! Your craft room is a laboratory and every project is an experiment. Keep exploring — we\'ll keep track.',
     color: 'var(--soft-coral)',
     pipExpression: 'thinking',
     ogImage: '/images/og/adventurous-artisan.png',

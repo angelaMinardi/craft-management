@@ -69,13 +69,10 @@ struct PaywallView: View {
                         }
 
                         // `displayProducts` can be empty even when `subscriptionStore.products`
-                        // has items (e.g. annualOnly mode + lifetime kill-switched leaves
-                        // nothing to show). Treat it the same as products-not-loaded so the
-                        // user always gets a retry CTA instead of a silent dead end.
+                        // has items (e.g. annualOnly mode leaves only yearly). Treat it the
+                        // same as products-not-loaded so the user always gets a retry CTA
+                        // instead of a silent dead end.
                         if !displayProducts.isEmpty {
-                            if subscriptionStore.lifetimeOffer.displayAvailability {
-                                lifetimeOfferBanner
-                            }
                             VStack(spacing: Theme.Spacing.sm) {
                                 ForEach(displayProducts, id: \.id) { product in
                                     Button {
@@ -83,14 +80,6 @@ struct PaywallView: View {
                                             let success = await subscriptionStore.purchase(product)
                                             if success {
                                                 purchaseSucceeded = true
-                                                if product.id == SubscriptionStore.lifetimeProductId {
-                                                    AnalyticsService.shared.track(
-                                                        .lifetimeConverted,
-                                                        properties: [
-                                                            AnalyticsService.Property.entrySurface: source.rawValue
-                                                        ]
-                                                    )
-                                                }
                                                 dismiss()
                                             } else if subscriptionStore.purchaseError != nil {
                                                 GrowthOrchestrator.shared.registerFrictionEvent(.purchaseFailure)
@@ -170,15 +159,6 @@ struct PaywallView: View {
         .task {
             await subscriptionStore.updateSubscriptionStatus(userId: nil)
             await subscriptionStore.refreshProducts()
-            await subscriptionStore.refreshLifetimeOffer()
-            if subscriptionStore.lifetimeOffer.displayAvailability {
-                AnalyticsService.shared.track(
-                    .lifetimeShown,
-                    properties: [
-                        AnalyticsService.Property.entrySurface: source.rawValue
-                    ]
-                )
-            }
         }
         .onAppear {
             AnalyticsService.shared.track(
@@ -238,29 +218,17 @@ struct PaywallView: View {
         let sorted = subscriptionStore.products.sorted {
             rank(for: $0.id) < rank(for: $1.id)
         }
-        // Filter out the lifetime SKU when the remote kill-switch has turned it off
-        // or we're outside the launch window (May 1 → Nov 1, 2026).
-        let withLifetimeFilter = sorted.filter { product in
-            if product.id == SubscriptionStore.lifetimeProductId {
-                return subscriptionStore.lifetimeOffer.displayAvailability
-            }
-            return true
-        }
         if GrowthOrchestrator.shared.paywallPresentationMode == .annualOnly {
-            return withLifetimeFilter.filter {
-                $0.id == SubscriptionStore.yearlyProductId ||
-                $0.id == SubscriptionStore.lifetimeProductId
-            }
+            return sorted.filter { $0.id == SubscriptionStore.yearlyProductId }
         }
-        return withLifetimeFilter
+        return sorted
     }
 
-    /// Yearly (0) → Lifetime (1) → Monthly (2). Matches the paywall emphasis.
+    /// Yearly (0) → Monthly (1). Matches the paywall emphasis.
     private func rank(for productId: String) -> Int {
         if productId == SubscriptionStore.yearlyProductId { return 0 }
-        if productId == SubscriptionStore.lifetimeProductId { return 1 }
-        if productId == SubscriptionStore.monthlyProductId { return 2 }
-        return 3
+        if productId == SubscriptionStore.monthlyProductId { return 1 }
+        return 2
     }
 
     // MARK: - Source-specific copy
@@ -300,7 +268,7 @@ struct PaywallView: View {
         }
     }
 
-    // MARK: - Product card + lifetime banner
+    // MARK: - Product card
 
     private func productCard(for product: Product) -> some View {
         HStack {
@@ -376,10 +344,7 @@ struct PaywallView: View {
     }
 
     private func descriptionForProduct(_ product: Product) -> String {
-        if product.id == SubscriptionStore.lifetimeProductId {
-            return "One-time purchase. Pay once, keep forever."
-        }
-        return product.description
+        product.description
     }
 
     private func daysInPeriod(_ period: Product.SubscriptionPeriod) -> Int {
@@ -402,32 +367,6 @@ struct PaywallView: View {
         }
     }
 
-    private var lifetimeOfferBanner: some View {
-        let offer = subscriptionStore.lifetimeOffer
-        let subtitle: String = {
-            if offer.daysRemaining <= 14 && offer.daysRemaining > 0 {
-                return "Ends in \(offer.daysRemaining) day\(offer.daysRemaining == 1 ? "" : "s") — or at 1,000 founding members."
-            }
-            return "Founding member lifetime access — limited to 1,000 buyers."
-        }()
-        return HStack(spacing: Theme.Spacing.md) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 20))
-                .foregroundStyle(Theme.honey)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Launch Price")
-                    .font(Theme.Typography.caption.bold())
-                    .foregroundStyle(Theme.honey)
-                Text(subtitle)
-                    .font(Theme.Typography.caption2)
-                    .foregroundStyle(Theme.deepPlum.opacity(0.75))
-            }
-            Spacer()
-        }
-        .padding(Theme.Spacing.md)
-        .background(Theme.honey.opacity(0.12))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.CornerRadius.small))
-    }
 }
 
 #Preview {

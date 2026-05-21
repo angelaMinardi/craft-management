@@ -42,7 +42,6 @@
 		B0010025 /* ChartHighlightStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010025 /* ChartHighlightStore.swift */; };
 		B0010026 /* AIInfoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010026 /* AIInfoView.swift */; };
 		B0010027 /* RowReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010027 /* RowReminderService.swift */; };
-		B0010029 /* LifetimeOfferService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010029 /* LifetimeOfferService.swift */; };
 		B0010030 /* AdService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010030 /* AdService.swift */; };
 		B0010031 /* BannerAdView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010031 /* BannerAdView.swift */; };
 		B0010032 /* NativeAdCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0010032 /* NativeAdCardView.swift */; };
@@ -265,7 +264,6 @@
 		F0010025 /* ChartHighlightStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartHighlightStore.swift; sourceTree = "<group>"; };
 		F0010026 /* AIInfoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIInfoView.swift; sourceTree = "<group>"; };
 		F0010027 /* RowReminderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RowReminderService.swift; sourceTree = "<group>"; };
-		F0010029 /* LifetimeOfferService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LifetimeOfferService.swift; sourceTree = "<group>"; };
 		F0010030 /* AdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdService.swift; sourceTree = "<group>"; };
 		F0010031 /* BannerAdView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BannerAdView.swift; sourceTree = "<group>"; };
 		F0010032 /* NativeAdCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeAdCardView.swift; sourceTree = "<group>"; };
@@ -573,7 +571,6 @@
 				F00F0030 /* PDFAnnotationStore.swift */,
 				F0010011 /* AIStepParserService.swift */,
 				F0010020 /* AIKillSwitchService.swift */,
-				F0010029 /* LifetimeOfferService.swift */,
 				F0010030 /* AdService.swift */,
 				F0010012 /* ImageCacheService.swift */,
 				F0010013 /* WidgetDataService.swift */,
@@ -1053,7 +1050,6 @@
 				B0100005 /* AddSwatchView.swift in Sources */,
 				B0010011 /* AIStepParserService.swift in Sources */,
 				B0010020 /* AIKillSwitchService.swift in Sources */,
-				B0010029 /* LifetimeOfferService.swift in Sources */,
 				B0010030 /* AdService.swift in Sources */,
 				B0010031 /* BannerAdView.swift in Sources */,
 				B0010032 /* NativeAdCardView.swift in Sources */,
@@ -1242,7 +1238,7 @@
 				CODE_SIGN_ENTITLEMENTS = SaveToPatternVault/SaveToPatternVault.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
@@ -1288,7 +1284,7 @@
 				CODE_SIGN_ENTITLEMENTS = SaveToPatternVault/SaveToPatternVault.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
@@ -1326,7 +1322,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1349,7 +1345,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1374,7 +1370,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = PatternVaultWidget/PatternVaultWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PatternVaultWidget/Info.plist;
@@ -1402,7 +1398,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = PatternVaultWidget/PatternVaultWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PatternVaultWidget/Info.plist;
@@ -1546,7 +1542,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PatternVault/PatternVault.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				ENABLE_PREVIEWS = YES;
@@ -1582,7 +1578,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PatternVault/PatternVault.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				ENABLE_PREVIEWS = YES;

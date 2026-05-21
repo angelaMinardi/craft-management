@@ -97,7 +97,6 @@ struct MainTabView: View {
                 Task {
                     await AdsKillSwitchService.refresh()
                     await AdService.shared.initialize()
-                    await SubscriptionStore.shared.refreshLifetimeOffer()
                 }
                 if let userId = auth.currentUserId {
                     Task {

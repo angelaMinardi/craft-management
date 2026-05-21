@@ -37,8 +37,6 @@ final class SubscriptionStore: ObservableObject {
     @Published private(set) var productsDebugDetails: String?
     @Published private(set) var isLoading = false
     @Published private(set) var purchaseError: String?
-    /// Current state of the launch-only lifetime offer (remote-config driven).
-    @Published private(set) var lifetimeOffer: LifetimeOfferState = .unavailable
     /// Per-subscription-group intro-offer eligibility. The Premium group shares
     /// monthly + yearly, so a returning monthly-trialist burns yearly's eligibility.
     /// Driving copy off this flag prevents "first year $X" lies for those users.
@@ -49,31 +47,18 @@ final class SubscriptionStore: ObservableObject {
 
     private let entitlementRepo = EntitlementRepository()
     private static let appGroupId = "group.com.corvidcraft.app"
-    /// Lifetime-purchase idempotency. Apple replays `Transaction.updates` on
-    /// every relaunch; without this, `LifetimeOfferService.recordPurchase()`
-    /// would tick the buyer count on each restart until the cap is hit.
-    private static let recordedLifetimeTxnsKey = "recordedLifetimeTransactionIds"
     private var transactionUpdatesTask: Task<Void, Never>?
 
     /// Product IDs — configure in App Store Connect to match.
     static let monthlyProductId = "com.corvidcraft.premium.monthly"
     static let yearlyProductId = "com.corvidcraft.premium.yearly"
-    /// Non-consumable one-time IAP. Available May 1 → Nov 1, 2026 or first 1,000 buyers.
-    static let lifetimeProductId = "com.corvidcraft.premium.lifetime.launch"
 
     private init() {
         Task { await loadProducts() }
         Task { await updateSubscriptionStatus() }
-        Task { await refreshLifetimeOffer() }
         transactionUpdatesTask = Task { [weak self] in
             await self?.observeTransactionUpdates()
         }
-    }
-
-    /// Refresh the launch-lifetime offer state from Supabase. Safe to call on foreground.
-    func refreshLifetimeOffer() async {
-        await LifetimeOfferService.refresh()
-        lifetimeOffer = LifetimeOfferService.currentState
     }
 
     // MARK: - Limits (call these to gate features)
@@ -187,10 +172,7 @@ final class SubscriptionStore: ObservableObject {
             if case .verified(let transaction) = result {
                 guard Self.premiumProductIds.contains(transaction.productID) else { continue }
                 guard transaction.revocationDate == nil else { continue }
-                // Non-consumable (lifetime) has no expirationDate — never filter it on expiry.
-                if !Self.nonConsumablePremiumIds.contains(transaction.productID),
-                   let expiration = transaction.expirationDate,
-                   expiration <= Date() {
+                if let expiration = transaction.expirationDate, expiration <= Date() {
                     continue
                 }
                 return true
@@ -201,13 +183,7 @@ final class SubscriptionStore: ObservableObject {
 
     private static let premiumProductIds: Set<String> = [
         monthlyProductId,
-        yearlyProductId,
-        lifetimeProductId
-    ]
-
-    /// Non-subscription premium SKUs (one-time purchases — no expiration, no revocation unless refunded).
-    private static let nonConsumablePremiumIds: Set<String> = [
-        lifetimeProductId
+        yearlyProductId
     ]
 
     private func loadProducts() async {
@@ -215,7 +191,7 @@ final class SubscriptionStore: ObservableObject {
         productsLoadError = nil
         productsDebugDetails = nil
         defer { productsLoading = false }
-        let requestedIds = [Self.monthlyProductId, Self.yearlyProductId, Self.lifetimeProductId]
+        let requestedIds = [Self.monthlyProductId, Self.yearlyProductId]
         let bundleId = Bundle.main.bundleIdentifier ?? "unknown"
         var debugLines: [String] = []
         debugLines.append("bundle=\(bundleId)")
@@ -385,37 +361,11 @@ final class SubscriptionStore: ObservableObject {
     private func applyVerifiedTransaction(_ transaction: Transaction) {
         guard Self.premiumProductIds.contains(transaction.productID) else { return }
         guard transaction.revocationDate == nil else { return }
-        // Subscriptions have expirationDate; non-consumable lifetime does not.
-        if !Self.nonConsumablePremiumIds.contains(transaction.productID),
-           let expiration = transaction.expirationDate,
-           expiration <= Date() {
+        if let expiration = transaction.expirationDate, expiration <= Date() {
             return
         }
         isPremium = true
         syncToAppGroup(entitlement: entitlement, isPremium: true)
-
-        // Record the lifetime purchase server-side so the buyer-count kill switch trips at the cap.
-        // Apple replays Transaction.updates on every relaunch, so guard against
-        // double-counting by remembering the Apple transaction id locally.
-        if transaction.productID == Self.lifetimeProductId,
-           Self.markLifetimeTransactionRecorded(transaction.id) {
-            Task { [weak self] in
-                _ = await LifetimeOfferService.recordPurchase()
-                await self?.refreshLifetimeOffer()
-            }
-        }
-    }
-
-    /// Returns true if this transaction id has not been recorded yet (caller
-    /// should proceed to record). Returns false if we've already recorded it.
-    private static func markLifetimeTransactionRecorded(_ txnId: UInt64) -> Bool {
-        let defaults = UserDefaults.standard
-        var recorded = Set(defaults.stringArray(forKey: recordedLifetimeTxnsKey) ?? [])
-        let key = String(txnId)
-        if recorded.contains(key) { return false }
-        recorded.insert(key)
-        defaults.set(Array(recorded), forKey: recordedLifetimeTxnsKey)
-        return true
     }
 
     private func syncToAppGroup(entitlement: UserEntitlement?, isPremium: Bool) {
@@ -721,10 +671,6 @@ final class AnalyticsService {
         case tutorialStepViewed = "tutorial_step_viewed"
         case tutorialSkipped = "tutorial_skipped"
         case tutorialCompleted = "tutorial_completed"
-        /// Launch-lifetime offer surfaced on the paywall (buyer count still under cap, window still open).
-        case lifetimeShown = "lifetime_shown"
-        /// User purchased the launch-lifetime SKU.
-        case lifetimeConverted = "lifetime_converted"
         /// User redeemed a promo code from Settings.
         case offerCodeRedeemed = "offer_code_redeemed"
     }

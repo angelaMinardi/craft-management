@@ -38,7 +38,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "2.99",
+          "displayPrice" : "8.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "0BF8101F",
@@ -63,12 +63,12 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "19.99",
+          "displayPrice" : "44.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "9EB87D0E",
           "introductoryOffer" : {
-            "displayPrice" : "7.99",
+            "displayPrice" : "19.99",
             "internalID" : "9EB87D0F",
             "numberOfPeriods" : 1,
             "paymentMode" : "payUpFront",
@@ -76,7 +76,7 @@
           },
           "localizations" : [
             {
-              "description" : "Best value — save 44%. Unlimited vault, project mode, Row Tracker widget, stash matching, and ad-free.",
+              "description" : "Best value — save 58% vs monthly. Unlimited vault, project mode, Row Tracker widget, stash matching, and ad-free.",
               "displayName" : "Premium Yearly",
               "locale" : "en_US"
             }

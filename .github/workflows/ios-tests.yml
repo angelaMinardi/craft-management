@@ -24,4 +24,4 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode.app
 
       - name: Run unit tests
-        run: xcodebuild test -project PatternVault.xcodeproj -scheme PatternVault -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:PatternVaultTests
+        run: xcodebuild test -project PatternVault.xcodeproj -scheme PatternVault -destination 'platform=iOS Simulator,name=iPhone 16'

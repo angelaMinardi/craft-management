@@ -238,19 +238,23 @@ final class SubscriptionStore: ObservableObject {
             if fetched.isEmpty {
                 debugLines.append("result=empty")
                 productsDebugDetails = debugLines.joined(separator: "\n")
+                // Release builds get a friendly, user-actionable message. The dev
+                // detail (bundle id, requested IDs, scheme config hints) stays in
+                // productsDebugDetails, which PaywallView only renders under #if DEBUG.
                 #if DEBUG
-                let debugSuffix = "\n\nDebug:\n\(productsDebugDetails ?? "")"
-                #else
-                let debugSuffix = ""
-                #endif
                 productsLoadError = """
                 No subscription products were returned.
                 Requested IDs: \(requestedIds.joined(separator: ", "))
                 Bundle: \(bundleId)
                 Verify StoreKit configuration is attached to this scheme Run action.
                 If needed: Product > Scheme > Edit Scheme > Run > Options > StoreKit Configuration.
-                \(debugSuffix)
+
+                Debug:
+                \(productsDebugDetails ?? "")
                 """
+                #else
+                productsLoadError = "We couldn't load subscription options right now. Please check your connection and try again."
+                #endif
             } else {
                 debugLines.append("result=success")
                 productsDebugDetails = debugLines.joined(separator: "\n")
@@ -261,16 +265,17 @@ final class SubscriptionStore: ObservableObject {
             debugLines.append("error=\(error.localizedDescription)")
             productsDebugDetails = debugLines.joined(separator: "\n")
             #if DEBUG
-            let debugSuffix = "\n\nDebug:\n\(productsDebugDetails ?? "")"
-            #else
-            let debugSuffix = ""
-            #endif
             productsLoadError = """
             \(error.localizedDescription)
             Requested IDs: \(requestedIds.joined(separator: ", "))
             Bundle: \(bundleId)
-            \(debugSuffix)
+
+            Debug:
+            \(productsDebugDetails ?? "")
             """
+            #else
+            productsLoadError = "We couldn't load subscription options right now. Please check your connection and try again."
+            #endif
         }
     }
 

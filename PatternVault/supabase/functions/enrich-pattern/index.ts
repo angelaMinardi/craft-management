@@ -35,19 +35,78 @@ interface GeminiResult {
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
-async function fetchWebPageText(url: string): Promise<string | null> {
-  if (!url || url.startsWith("file://")) return null;
-  try {
-    const res = await fetch(url, {
+// SSRF guard: source_url is user-controlled and the fetched body is returned to
+// the user via cleaned_content, so refuse non-http(s) schemes and hosts in
+// private / loopback / link-local / cloud-metadata ranges. See AUDIT.md P1-1.
+function isBlockedHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, ""); // strip IPv6 brackets
+  if (
+    host === "localhost" ||
+    host === "metadata.google.internal" ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal")
+  ) {
+    return true;
+  }
+  // IPv6 loopback / link-local (fe80::/10) / unique-local (fc00::/7)
+  if (host === "::1" || host.startsWith("fe80:") || host.startsWith("fc") || host.startsWith("fd")) {
+    return true;
+  }
+  // IPv4 literals
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const a = Number(m[1]);
+    const b = Number(m[2]);
+    if (a === 0 || a === 10 || a === 127) return true; // this-network / 10/8 / loopback
+    if (a === 169 && b === 254) return true; // link-local incl. 169.254.169.254 metadata
+    if (a === 172 && b >= 16 && b <= 31) return true; // 172.16/12
+    if (a === 192 && b === 168) return true; // 192.168/16
+    if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT 100.64/10
+    if (a >= 224) return true; // multicast / reserved
+  }
+  return false;
+}
+
+// Follows redirects manually so every hop is validated against isBlockedHost —
+// `redirect: "follow"` would let a public URL bounce to an internal address.
+async function safeFetch(rawUrl: string, maxRedirects = 3): Promise<Response | null> {
+  let current = rawUrl;
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    let parsed: URL;
+    try {
+      parsed = new URL(current);
+    } catch {
+      return null;
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    if (isBlockedHost(parsed.hostname)) return null;
+
+    const res = await fetch(current, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
-      redirect: "follow",
+      redirect: "manual",
     });
-    if (!res.ok) return null;
+
+    if (res.status >= 300 && res.status < 400) {
+      const location = res.headers.get("location");
+      if (!location) return res;
+      current = new URL(location, current).toString(); // resolve relative redirects
+      continue;
+    }
+    return res;
+  }
+  return null; // too many redirects
+}
+
+async function fetchWebPageText(url: string): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const res = await safeFetch(url);
+    if (!res || !res.ok) return null;
     const html = await res.text();
 
     const ogTitle = html.match(

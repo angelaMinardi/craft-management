@@ -126,9 +126,11 @@ Repo also includes a separate static marketing/legal site in `website/`.
 
 ## Chart Extraction Pipeline
 
-Two-pass AI detection: (1) Full-page Gemini pass detects charts, returns chart_crop + grid_boundary + rows/cols. (2) Focused second-pass (`ChartGridDetector`) sends cropped chart image to Gemini for precise grid cell boundary (x_min/y_min/x_max/y_max). Falls back to first-pass values, then formula heuristic.
+**Solver-first hybrid:** (1) Full-page Gemini pass detects charts, returns chart_crop + grid_boundary + rows/cols hints. (2) `ChartGridSolver` — deterministic CV lattice solve on the cropped image (autocorrelation cell spacing → comb phase fit → gridline-support run detection → cell-center color sampling + deterministic k-means). Confidence is *measured* (cell coherence + line support), not asserted; ≥0.7 wins. Also auto-extracts a `ColorworkGrid` (per-cell colors) at import when confident. (3) If unconfident, `ChartGridDetector` AI second-pass (Gemini bbox, ~85-90% ceiling) provides a fresh prior and the solver retries. (4) Fallbacks: raw AI bbox → first-pass grid_boundary → formula heuristic. Same image always yields the same grid (no randomness — re-imports stable).
 
-Key files: `ChartGridDetector.swift` (AI second-pass), `PatternStore.swift:createChartHighlights` (async, priority chain), `GridAlignmentEditor.swift` (lasso + drag handles), `ChartHighlighterOverlayView.swift` (grid overlay rendering), `ChartHighlight.swift` (model, inset clamp 0.85).
+Key insight (research + git history): Gemini bounding boxes plateau at ~85-90% and per-chart pixel-threshold tuning is zero-sum; but grid spacing is periodic, so lattice consensus + known dims makes boundary = math (cell-center sampling measured at 97.7%). AI is used for semantics (find the chart, count rows/cols, exclude legend), pixels for precision.
+
+Key files: `ChartGridSolver.swift` (deterministic lattice solver, unit-tested in `ChartGridSolverTests.swift` with synthetic charts), `ChartGridDetector.swift` (AI second-pass prior), `PatternStore.swift:createChartHighlights` (async, priority chain), `GridAlignmentEditor.swift` (lasso runs solver first, AI fallback; drag handles), `ChartHighlighterOverlayView.swift` (grid overlay rendering), `ChartHighlight.swift` (model, inset clamp 0.85), `ColorworkGridDetector.swift` (legacy CV detector, kept as manual-extraction fallback).
 
 Storage: File-based in `Application Support/ChartHighlights/` — JSON metadata + PNG image + drawing data as separate files per highlight. Auto-migrates from legacy UserDefaults on first launch.
 

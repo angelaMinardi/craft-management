@@ -55,6 +55,12 @@ The Service Provider works to keep the Application available and accurate but do
 
 The Service Provider may update, modify, or discontinue the Application (or features) at any time. You may need to install updates to continue using the service.
 
+You may stop using the Application and delete your account at any time from **Settings → Delete Account** in the app, which permanently removes your account and associated data. See the [Privacy Policy](/privacy) for details on data deletion and your privacy rights.
+
+## Subscriptions
+
+Premium features are offered as auto-renewing subscriptions billed through your Apple App Store account. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period; manage or cancel them in your App Store account settings. Prices are shown in the app before purchase.
+
 ## Changes to These Terms and Conditions
 
 The Service Provider may periodically update these Terms. Updates are posted on this page with a revised effective date.
@@ -63,6 +69,6 @@ These terms and conditions are effective as of 2026-03-19.
 
 ## Contact Us
 
-If you have any questions or suggestions about the Terms and Conditions, please do not hesitate to contact the Service Provider at r.minardi.angela@gmail.com.
+If you have any questions or suggestions about the Terms and Conditions, please do not hesitate to contact the Service Provider at support@corvidcraft.com.
 
 </div>

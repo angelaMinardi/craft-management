@@ -1,0 +1,728 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Pattern Parser — Corvid Craft"
+  description="Free web tool: drop in a knitting or crochet PDF and get clean, trackable, row-by-row steps. The chart-and-step engine behind Corvid Craft, opened to everyone."
+>
+  <div class="pp-app">
+    <!-- Intro -->
+    <section class="pp-hero" aria-labelledby="pp-title">
+      <p class="pp-eyebrow">Web companion to Corvid Craft</p>
+      <h1 id="pp-title" class="pp-title">Pattern&nbsp;Parser</h1>
+      <p class="pp-subtitle">
+        Drop in a knitting or crochet pattern PDF — or paste the text — and the same
+        engine behind the app turns it into clean, <strong>trackable row-by-row steps</strong>.
+      </p>
+      <p class="pp-privacy">🔒 Parsed in memory, never stored. Nothing leaves this page except the pattern text.</p>
+    </section>
+
+    <!-- Input -->
+    <section id="pp-input" class="pp-card pp-input" aria-label="Upload a pattern">
+      <label
+        id="pp-drop"
+        class="pp-drop"
+        for="pp-file"
+        tabindex="0"
+        role="button"
+        aria-label="Choose a PDF pattern or drop one here"
+      >
+        <img src="/images/pip/curious.png" alt="" class="pp-drop-mascot" width="72" height="72" />
+        <span class="pp-drop-title">Drop a PDF here</span>
+        <span class="pp-drop-sub">or <span class="pp-drop-link">browse your files</span></span>
+        <span id="pp-filename" class="pp-filename" hidden></span>
+        <input id="pp-file" type="file" accept="application/pdf,.pdf" class="pp-file" />
+      </label>
+
+      <button type="button" id="pp-paste-toggle" class="pp-text-toggle" aria-expanded="false" aria-controls="pp-paste-wrap">
+        or paste pattern text instead
+      </button>
+      <div id="pp-paste-wrap" class="pp-paste-wrap" hidden>
+        <textarea
+          id="pp-paste"
+          class="pp-textarea"
+          rows="6"
+          placeholder="Paste the written instructions from any pattern — e.g. 'Row 1 (RS): K1, *yo, k2tog; rep from * to last st, k1…'"
+        ></textarea>
+      </div>
+
+      <div class="pp-actions">
+        <button type="button" id="pp-parse" class="pp-btn pp-btn-primary" disabled>Parse pattern</button>
+        <button type="button" id="pp-sample" class="pp-btn pp-btn-ghost">See a sample</button>
+      </div>
+      <p id="pp-error" class="pp-error" role="alert" hidden></p>
+    </section>
+
+    <!-- Loading -->
+    <section id="pp-loading" class="pp-card pp-loading" hidden aria-live="polite">
+      <img src="/images/pip/thinking.png" alt="" class="pp-loading-mascot" width="96" height="96" />
+      <p class="pp-loading-text">Reading your pattern…</p>
+      <p class="pp-loading-sub" id="pp-loading-sub">Pulling out the steps, gauge, and materials.</p>
+    </section>
+
+    <!-- Results -->
+    <section id="pp-results" class="pp-results" hidden aria-live="polite">
+      <!-- populated by script -->
+    </section>
+
+    <!-- Footer note -->
+    <section class="pp-footer-note">
+      <p>
+        This is the chart-and-step engine from <a href="/">Corvid Craft</a> — the iOS app that saves
+        patterns from anywhere and tracks every project from cast-on to bound-off.
+      </p>
+      <a href="/waitlist" class="pp-btn pp-btn-primary pp-btn-cta">Get the app →</a>
+    </section>
+  </div>
+
+  <!-- Sample data for the live demo (no API call needed) -->
+  <script type="application/json" id="pp-sample-data" set:html={JSON.stringify({
+    title: 'Cozy Ribbed Beanie',
+    summary: 'A snug, stretchy beanie worked in the round from the brim up, finishing with a gathered crown. Beginner-friendly: only knits, purls, and simple decreases.',
+    craft_type: 'knitting',
+    difficulty: 'beginner',
+    materials: '1 skein worsted-weight yarn (~120 yd), set of US 7 DPNs or 16" circular, stitch marker, tapestry needle.',
+    gauge: '20 sts × 28 rows = 4 in (10 cm) in stockinette',
+    needle_hook_sizes: 'US 7 (4.5 mm) and US 8 (5.0 mm)',
+    yarn_weight_yardage: 'Worsted (#4); ~120 yd / 110 m',
+    techniques: 'knitting in the round, k2tog decreases, ribbing',
+    tags: ['knitting', 'hat', 'beanie', 'in the round', 'beginner'],
+    steps: [
+      { section: 'Brim', start_row: 0, end_row: 0, instruction: 'With smaller needles, cast on 88 sts. Place marker and join to work in the round, being careful not to twist.', stitch_count: 88, note: 'A long-tail cast-on gives a stretchy edge.' },
+      { section: 'Brim', start_row: 1, end_row: 12, instruction: 'Work K2, P2 ribbing every round until the brim measures 2 in (5 cm) from the cast-on edge.', stitch_count: 88, note: null },
+      { section: 'Body', start_row: 13, end_row: 13, instruction: 'Switch to larger needles. Knit every stitch.', stitch_count: 88, note: null },
+      { section: 'Body', start_row: 14, end_row: 40, instruction: 'Continue in stockinette (knit every round) until the hat measures 6 in (15 cm) from the cast-on edge.', stitch_count: 88, note: 'Try it on — stop ~2 in short of your desired total length before crown shaping.' },
+      { section: 'Crown', start_row: 41, end_row: 41, instruction: '*K9, k2tog; repeat from * to end of round.', stitch_count: 80, note: null },
+      { section: 'Crown', start_row: 42, end_row: 42, instruction: 'Knit one round even.', stitch_count: 80, note: null },
+      { section: 'Crown', start_row: 43, end_row: 43, instruction: '*K8, k2tog; repeat from * to end of round.', stitch_count: 72, note: null },
+      { section: 'Crown', start_row: 44, end_row: 44, instruction: 'Continue decreasing 8 sts every other round (one fewer knit st before each k2tog) until 16 sts remain.', stitch_count: 16, note: 'Switch to DPNs when the circular gets too tight.' },
+      { section: 'Finishing', start_row: 0, end_row: 0, instruction: 'Cut yarn leaving a 10 in tail. Thread through remaining sts, pull tight to close the crown, and weave in all ends.', stitch_count: null, note: null }
+    ],
+    meta: { source: 'sample', chars: 0 }
+  })} />
+</BaseLayout>
+
+<style is:global>
+  /* ---- Pattern Parser (namespaced under .pp-app; global so JS-built nodes get styled) ---- */
+  .pp-app {
+    max-width: var(--content-max);
+    margin: 0 auto;
+  }
+
+  .pp-hero {
+    text-align: center;
+    margin-bottom: var(--space-2xl);
+  }
+
+  .pp-eyebrow {
+    font-size: var(--text-small);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--soft-coral);
+    margin: 0 0 var(--space-sm);
+  }
+
+  .pp-title {
+    font-size: var(--text-hero);
+    font-weight: 800;
+    letter-spacing: var(--letter-tighter);
+    line-height: var(--line-height-tight);
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-md);
+  }
+
+  .pp-subtitle {
+    font-size: var(--text-subtitle);
+    line-height: var(--line-height-body);
+    color: var(--text-muted);
+    max-width: 36rem;
+    margin: 0 auto var(--space-md);
+  }
+
+  .pp-subtitle strong { color: var(--deep-plum); }
+
+  .pp-privacy {
+    font-size: var(--text-small);
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* Input card */
+  .pp-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-xl);
+  }
+
+  .pp-input { margin-bottom: var(--space-xl); }
+
+  .pp-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-2xl) var(--space-lg);
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--radius-lg);
+    background: var(--surface-subtle);
+    cursor: pointer;
+    text-align: center;
+    transition: border-color var(--duration-fast), background var(--duration-fast), transform var(--duration-fast);
+  }
+
+  .pp-drop:hover,
+  .pp-drop:focus-visible {
+    border-color: var(--soft-coral);
+    background: #FFFDFB;
+    outline: none;
+  }
+
+  .pp-drop.is-dragover {
+    border-color: var(--soft-coral);
+    background: #FFF4EF;
+    transform: scale(1.01);
+  }
+
+  .pp-drop-mascot {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    margin-bottom: var(--space-xs);
+    pointer-events: none;
+  }
+
+  .pp-drop-title {
+    font-size: var(--text-subtitle);
+    font-weight: 700;
+    color: var(--deep-plum);
+  }
+
+  .pp-drop-sub { font-size: var(--text-small); color: var(--text-muted); }
+  .pp-drop-link { color: var(--soft-coral); font-weight: 600; text-decoration: underline; }
+
+  .pp-filename {
+    margin-top: var(--space-sm);
+    font-size: var(--text-small);
+    font-weight: 600;
+    color: var(--sage-green-ink, #5a7a52);
+    background: rgba(168, 197, 160, 0.18);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+  }
+
+  .pp-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+  .pp-text-toggle {
+    display: block;
+    margin: var(--space-md) auto 0;
+    background: none;
+    border: none;
+    color: var(--dusty-blue);
+    font-size: var(--text-small);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .pp-text-toggle:hover { color: var(--soft-coral); }
+
+  .pp-paste-wrap { margin-top: var(--space-md); }
+
+  .pp-textarea {
+    width: 100%;
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--line-height-body);
+    color: var(--deep-plum);
+    background: var(--surface-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    resize: vertical;
+  }
+  .pp-textarea:focus-visible { outline: 2px solid var(--soft-coral); border-color: transparent; }
+
+  .pp-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    justify-content: center;
+    margin-top: var(--space-lg);
+  }
+
+  .pp-btn {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    font-weight: 700;
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform var(--duration-fast), box-shadow var(--duration-fast), background var(--duration-fast);
+  }
+  .pp-btn:active { transform: translateY(1px); }
+  .pp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .pp-btn-primary {
+    background: var(--sage-green);
+    color: var(--deep-plum);
+    box-shadow: var(--shadow-soft);
+  }
+  .pp-btn-primary:not(:disabled):hover { box-shadow: var(--shadow-glow-sage); transform: translateY(-1px); }
+
+  .pp-btn-ghost {
+    background: transparent;
+    color: var(--deep-plum);
+    border-color: var(--border-strong);
+  }
+  .pp-btn-ghost:hover { border-color: var(--soft-coral); color: var(--soft-coral); }
+
+  .pp-error {
+    margin: var(--space-md) 0 0;
+    text-align: center;
+    color: var(--soft-coral);
+    font-size: var(--text-small);
+    font-weight: 600;
+  }
+
+  /* Loading */
+  .pp-loading {
+    text-align: center;
+    margin-bottom: var(--space-xl);
+  }
+  .pp-loading-mascot {
+    width: 96px; height: 96px; object-fit: contain;
+    animation: pp-float 2.4s ease-in-out infinite;
+  }
+  .pp-loading-text { font-size: var(--text-subtitle); font-weight: 700; color: var(--deep-plum); margin: var(--space-sm) 0 var(--space-xs); }
+  .pp-loading-sub { font-size: var(--text-small); color: var(--text-muted); margin: 0; }
+  @keyframes pp-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @media (prefers-reduced-motion: reduce) { .pp-loading-mascot { animation: none; } }
+
+  /* Results */
+  .pp-results { animation: pp-fade var(--duration-normal) var(--ease-out-quint); }
+  @keyframes pp-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .pp-result-head {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-lg);
+  }
+
+  .pp-result-title {
+    font-size: var(--text-title);
+    font-weight: 800;
+    letter-spacing: var(--letter-tight);
+    color: var(--deep-plum);
+    margin: 0 0 var(--space-sm);
+  }
+  .pp-result-summary { color: var(--text-muted); line-height: var(--line-height-body); margin: 0 0 var(--space-lg); }
+
+  .pp-chips { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-bottom: var(--space-lg); }
+  .pp-chip {
+    font-size: var(--text-small); font-weight: 600;
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-full);
+    background: rgba(143, 170, 189, 0.16);
+    color: var(--deep-plum);
+  }
+  .pp-chip.is-craft { background: rgba(232, 131, 107, 0.16); }
+  .pp-chip.is-difficulty { background: rgba(232, 184, 75, 0.2); }
+
+  .pp-specs { display: grid; grid-template-columns: 1fr; gap: var(--space-sm); border-top: 1px solid var(--border); padding-top: var(--space-lg); }
+  @media (min-width: 560px) { .pp-specs { grid-template-columns: 1fr 1fr; } }
+  .pp-spec { font-size: var(--text-small); }
+  .pp-spec dt { font-weight: 700; color: var(--deep-plum); text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.72rem; margin-bottom: 2px; }
+  .pp-spec dd { margin: 0; color: var(--text-muted); line-height: 1.45; }
+
+  /* Progress */
+  .pp-progress-wrap {
+    position: sticky; top: calc(var(--header-height) + var(--space-sm));
+    z-index: 5;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-lg);
+  }
+  .pp-progress-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm); }
+  .pp-progress-label { font-size: var(--text-small); font-weight: 700; color: var(--deep-plum); }
+  .pp-progress-count { font-size: var(--text-small); color: var(--text-muted); }
+  .pp-progress-track { height: 8px; border-radius: var(--radius-full); background: rgba(74, 32, 64, 0.08); overflow: hidden; }
+  .pp-progress-bar { height: 100%; width: 0%; border-radius: var(--radius-full); background: var(--sage-green); transition: width var(--duration-normal) var(--ease-out-quint); }
+
+  /* Sections + steps */
+  .pp-section { margin-bottom: var(--space-lg); }
+  .pp-section-head {
+    display: flex; align-items: baseline; gap: var(--space-sm);
+    font-size: var(--text-subtitle); font-weight: 800; color: var(--deep-plum);
+    margin: 0 0 var(--space-sm);
+  }
+  .pp-section-count { font-size: var(--text-small); font-weight: 600; color: var(--text-muted); }
+
+  .pp-step {
+    display: flex; gap: var(--space-md);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-sm);
+    cursor: pointer;
+    transition: border-color var(--duration-fast), background var(--duration-fast);
+  }
+  .pp-step:hover { border-color: var(--border-strong); }
+  .pp-step.is-done { background: rgba(168, 197, 160, 0.1); border-color: rgba(168, 197, 160, 0.5); }
+  .pp-step.is-done .pp-step-text { color: var(--text-muted); text-decoration: line-through; text-decoration-color: rgba(74,32,64,0.3); }
+
+  .pp-step-check {
+    flex-shrink: 0;
+    width: 1.4rem; height: 1.4rem; margin-top: 2px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border-strong);
+    display: grid; place-items: center;
+    color: #fff; font-size: 0.85rem; line-height: 1;
+    transition: background var(--duration-fast), border-color var(--duration-fast);
+  }
+  .pp-step.is-done .pp-step-check { background: var(--sage-green); border-color: var(--sage-green); }
+
+  .pp-step-body { flex: 1; min-width: 0; }
+  .pp-step-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: 2px; }
+  .pp-row-badge {
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.03em;
+    color: var(--deep-plum); background: rgba(232, 184, 75, 0.22);
+    padding: 1px var(--space-sm); border-radius: var(--radius-full);
+  }
+  .pp-st-badge {
+    font-size: 0.72rem; font-weight: 700;
+    color: var(--text-muted); background: rgba(143,170,189,0.16);
+    padding: 1px var(--space-sm); border-radius: var(--radius-full);
+  }
+  .pp-step-text { color: var(--deep-plum); line-height: var(--line-height-body); }
+  .pp-step-note { margin-top: var(--space-xs); font-size: var(--text-small); color: var(--text-muted); font-style: italic; }
+
+  .pp-result-actions { display: flex; flex-wrap: wrap; gap: var(--space-md); justify-content: center; margin: var(--space-xl) 0; }
+
+  .pp-footer-note {
+    text-align: center;
+    margin-top: var(--space-2xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid var(--border);
+  }
+  .pp-footer-note p { color: var(--text-muted); max-width: 34rem; margin: 0 auto var(--space-lg); line-height: var(--line-height-body); }
+  .pp-btn-cta { display: inline-block; text-decoration: none; }
+</style>
+
+<script>
+  type Step = {
+    section: string;
+    start_row: number;
+    end_row: number;
+    instruction: string;
+    stitch_count: number | null;
+    note: string | null;
+  };
+  type ParseResult = {
+    title: string;
+    summary: string | null;
+    craft_type: string | null;
+    difficulty: string | null;
+    materials: string | null;
+    gauge: string | null;
+    needle_hook_sizes: string | null;
+    yarn_weight_yardage: string | null;
+    techniques: string | null;
+    tags: string[];
+    steps: Step[];
+    meta?: { source: string; chars: number };
+  };
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  const fileInput = $('pp-file') as HTMLInputElement;
+  const drop = $('pp-drop');
+  const dropName = $('pp-filename');
+  const parseBtn = $('pp-parse') as HTMLButtonElement;
+  const sampleBtn = $('pp-sample') as HTMLButtonElement;
+  const pasteToggle = $('pp-paste-toggle') as HTMLButtonElement;
+  const pasteWrap = $('pp-paste-wrap');
+  const pasteArea = $('pp-paste') as HTMLTextAreaElement;
+  const errorEl = $('pp-error');
+  const inputCard = $('pp-input');
+  const loadingEl = $('pp-loading');
+  const loadingSub = $('pp-loading-sub');
+  const resultsEl = $('pp-results');
+
+  let selectedFile: File | null = null;
+
+  function showError(msg: string) {
+    errorEl.textContent = msg;
+    errorEl.hidden = false;
+  }
+  function clearError() {
+    errorEl.hidden = true;
+    errorEl.textContent = '';
+  }
+
+  function syncParseEnabled() {
+    const hasText = pasteArea.value.trim().length > 0;
+    parseBtn.disabled = !selectedFile && !hasText;
+  }
+
+  function setFile(file: File | null) {
+    if (file && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      showError('Please choose a PDF file.');
+      return;
+    }
+    clearError();
+    selectedFile = file;
+    if (file) {
+      dropName.textContent = file.name;
+      dropName.hidden = false;
+    } else {
+      dropName.hidden = true;
+    }
+    syncParseEnabled();
+  }
+
+  // ----- File selection + drag/drop -----
+  fileInput.addEventListener('change', () => setFile(fileInput.files?.[0] ?? null));
+
+  ['dragenter', 'dragover'].forEach((evt) =>
+    drop.addEventListener(evt, (e) => {
+      e.preventDefault();
+      drop.classList.add('is-dragover');
+    })
+  );
+  ['dragleave', 'dragend', 'drop'].forEach((evt) =>
+    drop.addEventListener(evt, () => drop.classList.remove('is-dragover'))
+  );
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    const file = (e as DragEvent).dataTransfer?.files?.[0];
+    if (file) setFile(file);
+  });
+  drop.addEventListener('keydown', (e) => {
+    const key = (e as KeyboardEvent).key;
+    if (key === 'Enter' || key === ' ') {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+
+  // ----- Paste toggle -----
+  pasteToggle.addEventListener('click', () => {
+    const open = pasteWrap.hidden;
+    pasteWrap.hidden = !open;
+    pasteToggle.setAttribute('aria-expanded', String(open));
+    pasteToggle.textContent = open ? 'hide text box' : 'or paste pattern text instead';
+    if (open) pasteArea.focus();
+  });
+  pasteArea.addEventListener('input', syncParseEnabled);
+
+  // ----- Parse flow -----
+  function setLoading(on: boolean, sub?: string) {
+    inputCard.hidden = on;
+    loadingEl.hidden = !on;
+    if (on) {
+      resultsEl.hidden = true;
+      if (sub) loadingSub.textContent = sub;
+      loadingEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  async function callApi(): Promise<void> {
+    clearError();
+    const pasteText = pasteArea.value.trim();
+    try {
+      let res: Response;
+      if (selectedFile) {
+        setLoading(true, 'Extracting text from your PDF…');
+        res = await fetch('/api/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/pdf' },
+          body: selectedFile,
+        });
+      } else if (pasteText) {
+        setLoading(true, 'Reading the instructions you pasted…');
+        res = await fetch('/api/parse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: pasteText }),
+        });
+      } else {
+        return;
+      }
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) {
+        setLoading(false);
+        showError((data && data.error) || 'Something went wrong parsing that. Try again or use a different pattern.');
+        return;
+      }
+      render(data as ParseResult);
+    } catch (err) {
+      setLoading(false);
+      showError('Network error — check your connection and try again.');
+    }
+  }
+
+  parseBtn.addEventListener('click', callApi);
+
+  // ----- Sample (no API) -----
+  sampleBtn.addEventListener('click', () => {
+    const raw = $('pp-sample-data').textContent || '{}';
+    setLoading(true, 'Loading a sample pattern…');
+    window.setTimeout(() => render(JSON.parse(raw) as ParseResult), 450);
+  });
+
+  // ----- Rendering -----
+  function esc(s: string): string {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function rowBadge(step: Step): string {
+    const { start_row: s, end_row: e } = step;
+    if (s > 0 && e > s) return `Rows ${s}–${e}`;
+    if (s > 0) return `Row ${s}`;
+    return 'Setup';
+  }
+
+  function render(data: ParseResult) {
+    const steps = Array.isArray(data.steps) ? data.steps : [];
+    const total = steps.length;
+
+    // Group consecutive steps by section
+    const groups: { section: string; steps: Step[] }[] = [];
+    for (const step of steps) {
+      const last = groups[groups.length - 1];
+      if (last && last.section === step.section) last.steps.push(step);
+      else groups.push({ section: step.section, steps: [step] });
+    }
+
+    const chips: string[] = [];
+    if (data.craft_type) chips.push(`<span class="pp-chip is-craft">${esc(data.craft_type)}</span>`);
+    if (data.difficulty) chips.push(`<span class="pp-chip is-difficulty">${esc(data.difficulty)}</span>`);
+    for (const t of (data.tags || []).slice(0, 6)) chips.push(`<span class="pp-chip">${esc(t)}</span>`);
+
+    const specs: string[] = [];
+    const addSpec = (label: string, val: string | null) => {
+      if (val) specs.push(`<div class="pp-spec"><dt>${label}</dt><dd>${esc(val)}</dd></div>`);
+    };
+    addSpec('Materials', data.materials);
+    addSpec('Gauge', data.gauge);
+    addSpec('Needles / Hook', data.needle_hook_sizes);
+    addSpec('Yarn', data.yarn_weight_yardage);
+    addSpec('Techniques', data.techniques);
+
+    const sectionsHtml = groups
+      .map((g) => {
+        const stepsHtml = g.steps
+          .map((step) => {
+            const stBadge =
+              step.stitch_count != null ? `<span class="pp-st-badge">${step.stitch_count} sts</span>` : '';
+            const note = step.note ? `<p class="pp-step-note">💡 ${esc(step.note)}</p>` : '';
+            return `
+              <div class="pp-step" role="checkbox" aria-checked="false" tabindex="0">
+                <span class="pp-step-check" aria-hidden="true">✓</span>
+                <div class="pp-step-body">
+                  <div class="pp-step-meta">
+                    <span class="pp-row-badge">${rowBadge(step)}</span>
+                    ${stBadge}
+                  </div>
+                  <div class="pp-step-text">${esc(step.instruction)}</div>
+                  ${note}
+                </div>
+              </div>`;
+          })
+          .join('');
+        return `
+          <div class="pp-section">
+            <h3 class="pp-section-head">${esc(g.section)} <span class="pp-section-count">${g.steps.length} step${g.steps.length === 1 ? '' : 's'}</span></h3>
+            ${stepsHtml}
+          </div>`;
+      })
+      .join('');
+
+    resultsEl.innerHTML = `
+      <div class="pp-result-head">
+        <h2 class="pp-result-title">${esc(data.title || 'Your pattern')}</h2>
+        ${data.summary ? `<p class="pp-result-summary">${esc(data.summary)}</p>` : ''}
+        ${chips.length ? `<div class="pp-chips">${chips.join('')}</div>` : ''}
+        ${specs.length ? `<dl class="pp-specs">${specs.join('')}</dl>` : ''}
+      </div>
+
+      ${total > 0 ? `
+      <div class="pp-progress-wrap">
+        <div class="pp-progress-row">
+          <span class="pp-progress-label">Project progress</span>
+          <span class="pp-progress-count" id="pp-progress-count">0 / ${total} steps</span>
+        </div>
+        <div class="pp-progress-track"><div class="pp-progress-bar" id="pp-progress-bar"></div></div>
+      </div>
+      ${sectionsHtml}
+      ` : `<p class="pp-error" style="text-align:center">No working steps were found in this one — but the details above were still pulled out.</p>`}
+
+      <div class="pp-result-actions">
+        <button type="button" class="pp-btn pp-btn-ghost" id="pp-reset">← Parse another pattern</button>
+      </div>
+    `;
+
+    loadingEl.hidden = true;
+    inputCard.hidden = true;
+    resultsEl.hidden = false;
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    wireSteps(total);
+    $('pp-reset').addEventListener('click', reset);
+  }
+
+  function wireSteps(total: number) {
+    const stepEls = Array.from(resultsEl.querySelectorAll<HTMLElement>('.pp-step'));
+    const countEl = document.getElementById('pp-progress-count');
+    const barEl = document.getElementById('pp-progress-bar');
+
+    function refresh() {
+      const done = stepEls.filter((el) => el.classList.contains('is-done')).length;
+      if (countEl) countEl.textContent = `${done} / ${total} steps`;
+      if (barEl) barEl.style.width = total ? `${(done / total) * 100}%` : '0%';
+    }
+    function toggle(el: HTMLElement) {
+      const done = el.classList.toggle('is-done');
+      el.setAttribute('aria-checked', String(done));
+      refresh();
+    }
+    stepEls.forEach((el) => {
+      el.addEventListener('click', () => toggle(el));
+      el.addEventListener('keydown', (e) => {
+        const key = (e as KeyboardEvent).key;
+        if (key === 'Enter' || key === ' ') {
+          e.preventDefault();
+          toggle(el);
+        }
+      });
+    });
+  }
+
+  function reset() {
+    resultsEl.hidden = true;
+    resultsEl.innerHTML = '';
+    inputCard.hidden = false;
+    setFile(null);
+    fileInput.value = '';
+    pasteArea.value = '';
+    syncParseEnabled();
+    inputCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  syncParseEnabled();
+</script>

@@ -97,6 +97,8 @@
 	<string>$(GAD_APPLICATION_ID)</string>
 	<key>GADBannerAdUnitID</key>
 	<string>$(GAD_BANNER_AD_UNIT_ID)</string>
+	<key>GADNativeAdUnitID</key>
+	<string>$(GAD_NATIVE_AD_UNIT_ID)</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<!-- Google (AdMob) -->

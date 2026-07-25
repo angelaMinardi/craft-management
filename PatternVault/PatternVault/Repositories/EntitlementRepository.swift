@@ -71,20 +71,18 @@ final class EntitlementRepository: ObservableObject {
         return count >= 0 ? count : nil
     }
 
-    /// Updates is_premium for the user (e.g. from StoreKit subscription status). Ensures row exists first.
+    /// Updates is_premium for the user (e.g. from StoreKit subscription status).
+    ///
+    /// Goes through the `set_premium` SECURITY DEFINER RPC, which scopes to
+    /// `auth.uid()` server-side. is_premium is locked from direct client writes
+    /// (migration 034), so this RPC is the only sanctioned path. `userId` is kept
+    /// for call-site compatibility; the server derives the user from the JWT.
     func setPremium(userId: UUID, isPremium: Bool) async throws {
-        _ = try await getOrCreateUsage(userId: userId)
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        struct SetPremiumPayload: Encodable {
-            let is_premium: Bool
-            let updated_at: String
+        struct Params: Encodable {
+            let p_is_premium: Bool
         }
-        let payload = SetPremiumPayload(is_premium: isPremium, updated_at: formatter.string(from: Date()))
         try await client
-            .from("user_entitlements")
-            .update(payload)
-            .eq("user_id", value: userId.uuidString)
+            .rpc("set_premium", params: Params(p_is_premium: isPremium))
             .execute()
     }
 }

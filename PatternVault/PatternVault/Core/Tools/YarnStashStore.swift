@@ -27,11 +27,11 @@ final class YarnStashStore: ObservableObject {
         }
     }
 
-    func add(userId: UUID, brandName: String, colorName: String?, weight: String?, yardagePerSkein: Int?, skeinsOwned: Double, location: String?, notes: String?) async {
+    func add(userId: UUID, brandName: String, colorName: String?, weight: String?, yardagePerSkein: Int?, skeinsOwned: Double, location: String?, notes: String?, barcode: String? = nil, dyeLot: String? = nil, fiberContent: String? = nil) async {
         errorMessage = nil
         guard !brandName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         do {
-            let item = try await repo.add(userId: userId, brandName: brandName.trimmingCharacters(in: .whitespaces), colorName: colorName?.trimmingCharacters(in: .whitespaces), weight: weight?.trimmingCharacters(in: .whitespaces), yardagePerSkein: yardagePerSkein, skeinsOwned: max(0, skeinsOwned), location: location?.trimmingCharacters(in: .whitespaces), notes: notes?.trimmingCharacters(in: .whitespaces))
+            let item = try await repo.add(userId: userId, brandName: brandName.trimmingCharacters(in: .whitespaces), colorName: colorName?.trimmingCharacters(in: .whitespaces), weight: weight?.trimmingCharacters(in: .whitespaces), yardagePerSkein: yardagePerSkein, skeinsOwned: max(0, skeinsOwned), location: location?.trimmingCharacters(in: .whitespaces), notes: notes?.trimmingCharacters(in: .whitespaces), barcode: barcode?.trimmingCharacters(in: .whitespaces), dyeLot: dyeLot?.trimmingCharacters(in: .whitespaces), fiberContent: fiberContent?.trimmingCharacters(in: .whitespaces))
             items.insert(item, at: 0)
         } catch {
             #if DEBUG

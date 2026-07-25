@@ -139,8 +139,9 @@ final class NativeAdLoader: ObservableObject {
     func loadIfNeeded() {
         guard loadedAd == nil, adLoader == nil else { return }
         guard let root = Self.rootViewController() else { return }
+        guard let adUnitId = AdService.nativeAdUnitId else { return }
         let loader = GADAdLoader(
-            adUnitID: AdService.nativeAdUnitId,
+            adUnitID: adUnitId,
             rootViewController: root,
             adTypes: [.native],
             options: nil

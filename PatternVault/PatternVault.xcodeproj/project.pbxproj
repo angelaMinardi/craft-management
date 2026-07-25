@@ -103,6 +103,7 @@
 		B0040030 /* ColorworkGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040030 /* ColorworkGrid.swift */; };
 		B0040031 /* ChartProgressState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040031 /* ChartProgressState.swift */; };
 		B0040032 /* ColorworkGridDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040032 /* ColorworkGridDetector.swift */; };
+		B0040034 /* ChartGridSolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040034 /* ChartGridSolver.swift */; };
 		B0040033 /* InteractiveChartGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0040033 /* InteractiveChartGridView.swift */; };
 		B0050001 /* OnboardingMascotFrames in Resources */ = {isa = PBXBuildFile; fileRef = F0050001 /* OnboardingMascotFrames */; };
 		B0050002 /* SpriteMascotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0050002 /* SpriteMascotView.swift */; };
@@ -136,6 +137,7 @@
 		B0090004 /* AdBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0090004 /* AdBannerView.swift */; };
 		B00A0001 /* PatternDiscoveryResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0001 /* PatternDiscoveryResult.swift */; };
 		B00A0002 /* RavelryPatternSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0002 /* RavelryPatternSearchService.swift */; };
+		B00A0006 /* BarcodeLookupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0006 /* BarcodeLookupService.swift */; };
 		B00A0003 /* FindPatternsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0003 /* FindPatternsView.swift */; };
 		B00A0004 /* StashMatchPatternsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0004 /* StashMatchPatternsView.swift */; };
 		B00A0005 /* FinishedProjectShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0005 /* FinishedProjectShareCardView.swift */; };
@@ -165,6 +167,8 @@
 		B00F0002 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0002 /* NetworkMonitor.swift */; };
 		B00F0003 /* PDFCacheService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0003 /* PDFCacheService.swift */; };
 		B00F0004 /* BarcodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0004 /* BarcodeScannerView.swift */; };
+		B00F0007 /* LabelCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0007 /* LabelCameraView.swift */; };
+		B00A0007 /* YarnLabelAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00A0007 /* YarnLabelAnalyzer.swift */; };
 		B00F0005 /* StitchGlossary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0005 /* StitchGlossary.swift */; };
 		B00F0006 /* GlossaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0006 /* GlossaryView.swift */; };
 		B00F0030 /* PDFAnnotationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00F0030 /* PDFAnnotationStore.swift */; };
@@ -174,6 +178,7 @@
 		B0100004 /* SwatchListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0100004 /* SwatchListView.swift */; };
 		B0100005 /* AddSwatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0100005 /* AddSwatchView.swift */; };
 		B0TEST01 /* PatternStepParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST01 /* PatternStepParserTests.swift */; };
+		B0TEST08 /* ChartGridSolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST08 /* ChartGridSolverTests.swift */; };
 		B0TEST02 /* ContentBlockParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST02 /* ContentBlockParserTests.swift */; };
 		B0TEST03 /* SourcePlatformHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST03 /* SourcePlatformHelperTests.swift */; };
 		B0TEST04 /* PatternModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST04 /* PatternModelTests.swift */; };
@@ -181,6 +186,8 @@
 		B0TEST06 /* PDFTextExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST06 /* PDFTextExtractorTests.swift */; };
 		B0TEST07 /* ShareURLExtractorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0TEST07 /* ShareURLExtractorTests.swift */; };
 		BVPRIV01 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PVPRIV01 /* PrivacyInfo.xcprivacy */; };
+		BVPRIV02 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PVPRIV01 /* PrivacyInfo.xcprivacy */; };
+		BVPRIV03 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = PVPRIV01 /* PrivacyInfo.xcprivacy */; };
 		WBF00001 /* CorvidCraftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = WFR00001 /* CorvidCraftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		WBF10001 /* AppIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00002 /* AppIntent.swift */; };
 		WBF10002 /* PatternVaultWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = WFR00003 /* PatternVaultWidgetBundle.swift */; };
@@ -325,6 +332,7 @@
 		F0040030 /* ColorworkGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorworkGrid.swift; sourceTree = "<group>"; };
 		F0040031 /* ChartProgressState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartProgressState.swift; sourceTree = "<group>"; };
 		F0040032 /* ColorworkGridDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorworkGridDetector.swift; sourceTree = "<group>"; };
+		F0040034 /* ChartGridSolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartGridSolver.swift; sourceTree = "<group>"; };
 		F0040033 /* InteractiveChartGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveChartGridView.swift; sourceTree = "<group>"; };
 		F0050001 /* OnboardingMascotFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = OnboardingMascotFrames; sourceTree = "<group>"; };
 		F0050002 /* SpriteMascotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteMascotView.swift; sourceTree = "<group>"; };
@@ -358,6 +366,7 @@
 		F0090004 /* AdBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdBannerView.swift; sourceTree = "<group>"; };
 		F00A0001 /* PatternDiscoveryResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternDiscoveryResult.swift; sourceTree = "<group>"; };
 		F00A0002 /* RavelryPatternSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RavelryPatternSearchService.swift; sourceTree = "<group>"; };
+		F00A0006 /* BarcodeLookupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeLookupService.swift; sourceTree = "<group>"; };
 		F00A0003 /* FindPatternsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindPatternsView.swift; sourceTree = "<group>"; };
 		F00A0004 /* StashMatchPatternsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StashMatchPatternsView.swift; sourceTree = "<group>"; };
 		F00A0005 /* FinishedProjectShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinishedProjectShareCardView.swift; sourceTree = "<group>"; };
@@ -387,6 +396,8 @@
 		F00F0002 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		F00F0003 /* PDFCacheService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFCacheService.swift; sourceTree = "<group>"; };
 		F00F0004 /* BarcodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarcodeScannerView.swift; sourceTree = "<group>"; };
+		F00F0007 /* LabelCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabelCameraView.swift; sourceTree = "<group>"; };
+		F00A0007 /* YarnLabelAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YarnLabelAnalyzer.swift; sourceTree = "<group>"; };
 		F00F0005 /* StitchGlossary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchGlossary.swift; sourceTree = "<group>"; };
 		F00F0006 /* GlossaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlossaryView.swift; sourceTree = "<group>"; };
 		F00F0030 /* PDFAnnotationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFAnnotationStore.swift; sourceTree = "<group>"; };
@@ -396,6 +407,7 @@
 		F0100004 /* SwatchListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwatchListView.swift; sourceTree = "<group>"; };
 		F0100005 /* AddSwatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSwatchView.swift; sourceTree = "<group>"; };
 		F0TEST01 /* PatternStepParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternStepParserTests.swift; sourceTree = "<group>"; };
+		F0TEST08 /* ChartGridSolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartGridSolverTests.swift; sourceTree = "<group>"; };
 		F0TEST02 /* ContentBlockParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentBlockParserTests.swift; sourceTree = "<group>"; };
 		F0TEST03 /* SourcePlatformHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcePlatformHelperTests.swift; sourceTree = "<group>"; };
 		F0TEST04 /* PatternModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternModelTests.swift; sourceTree = "<group>"; };
@@ -584,10 +596,13 @@
 				F0010025 /* ChartHighlightStore.swift */,
 				F0030025 /* ChartGridDetector.swift */,
 				F0040032 /* ColorworkGridDetector.swift */,
+				F0040034 /* ChartGridSolver.swift */,
 				F0020005 /* SourcePlatformHelper.swift */,
 				F0020013 /* MetadataService.swift */,
 				F0090002 /* SubscriptionStore.swift */,
 				F00A0002 /* RavelryPatternSearchService.swift */,
+				F00A0006 /* BarcodeLookupService.swift */,
+				F00A0007 /* YarnLabelAnalyzer.swift */,
 				F00B0001 /* KeychainHelper.swift */,
 				F00B0002 /* OAuth1Signer.swift */,
 				F00B0003 /* RavelryOAuthService.swift */,
@@ -663,6 +678,7 @@
 				F0TEST05 /* RavelryPatternDetailsParsingTests.swift */,
 				F0TEST06 /* PDFTextExtractorTests.swift */,
 				F0TEST07 /* ShareURLExtractorTests.swift */,
+				F0TEST08 /* ChartGridSolverTests.swift */,
 			);
 			path = PatternVaultTests;
 			sourceTree = "<group>";
@@ -814,6 +830,7 @@
 				F0100005 /* AddSwatchView.swift */,
 				F00A0004 /* StashMatchPatternsView.swift */,
 				F00F0004 /* BarcodeScannerView.swift */,
+				F00F0007 /* LabelCameraView.swift */,
 				F00F0006 /* GlossaryView.swift */,
 			);
 			path = Tools;
@@ -978,6 +995,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BVPRIV02 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1012,6 +1030,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				WBF10006 /* Assets.xcassets in Resources */,
+				BVPRIV03 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1041,6 +1060,8 @@
 				B00F0003 /* PDFCacheService.swift in Sources */,
 				B00F0030 /* PDFAnnotationStore.swift in Sources */,
 				B00F0004 /* BarcodeScannerView.swift in Sources */,
+				B00F0007 /* LabelCameraView.swift in Sources */,
+				B00A0007 /* YarnLabelAnalyzer.swift in Sources */,
 				B00F0005 /* StitchGlossary.swift in Sources */,
 				B00F0006 /* GlossaryView.swift in Sources */,
 				B0100001 /* Swatch.swift in Sources */,
@@ -1134,6 +1155,7 @@
 				B0040030 /* ColorworkGrid.swift in Sources */,
 				B0040031 /* ChartProgressState.swift in Sources */,
 				B0040032 /* ColorworkGridDetector.swift in Sources */,
+				B0040034 /* ChartGridSolver.swift in Sources */,
 				B0040033 /* InteractiveChartGridView.swift in Sources */,
 				B0040002 /* LottieAnimationView.swift in Sources */,
 				B0040003 /* AnimatedCrowView.swift in Sources */,
@@ -1160,6 +1182,7 @@
 				B0090004 /* AdBannerView.swift in Sources */,
 				B00A0001 /* PatternDiscoveryResult.swift in Sources */,
 				B00A0002 /* RavelryPatternSearchService.swift in Sources */,
+				B00A0006 /* BarcodeLookupService.swift in Sources */,
 				B00A0003 /* FindPatternsView.swift in Sources */,
 				B00A0004 /* StashMatchPatternsView.swift in Sources */,
 				B00A0005 /* FinishedProjectShareCardView.swift in Sources */,
@@ -1184,6 +1207,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B0TEST01 /* PatternStepParserTests.swift in Sources */,
+				B0TEST08 /* ChartGridSolverTests.swift in Sources */,
 				B0TEST02 /* ContentBlockParserTests.swift in Sources */,
 				B0TEST03 /* SourcePlatformHelperTests.swift in Sources */,
 				B0TEST04 /* PatternModelTests.swift in Sources */,
@@ -1238,7 +1262,7 @@
 				CODE_SIGN_ENTITLEMENTS = SaveToPatternVault/SaveToPatternVault.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
@@ -1284,7 +1308,7 @@
 				CODE_SIGN_ENTITLEMENTS = SaveToPatternVault/SaveToPatternVault.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
@@ -1322,7 +1346,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1345,7 +1369,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1370,7 +1394,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = PatternVaultWidget/PatternVaultWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PatternVaultWidget/Info.plist;
@@ -1398,7 +1422,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = PatternVaultWidget/PatternVaultWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = PatternVaultWidget/Info.plist;
@@ -1542,7 +1566,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PatternVault/PatternVault.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				ENABLE_PREVIEWS = YES;
@@ -1578,7 +1602,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = PatternVault/PatternVault.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = AN7ZH3YS3A;
 				ENABLE_PREVIEWS = YES;

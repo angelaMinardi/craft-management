@@ -31,6 +31,9 @@ final class YarnStashRepository: ObservableObject {
         let skeins_owned: Double
         let location: String?
         let notes: String?
+        let barcode: String?
+        let dye_lot: String?
+        let fiber_content: String?
     }
 
     struct UpdatePayload: Encodable {
@@ -41,9 +44,12 @@ final class YarnStashRepository: ObservableObject {
         let skeins_owned: Double
         let location: String?
         let notes: String?
+        let barcode: String?
+        let dye_lot: String?
+        let fiber_content: String?
     }
 
-    func add(userId: UUID, brandName: String, colorName: String?, weight: String?, yardagePerSkein: Int?, skeinsOwned: Double, location: String?, notes: String?) async throws -> YarnStashItem {
+    func add(userId: UUID, brandName: String, colorName: String?, weight: String?, yardagePerSkein: Int?, skeinsOwned: Double, location: String?, notes: String?, barcode: String?, dyeLot: String?, fiberContent: String?) async throws -> YarnStashItem {
         let id = UUID()
         let payload = InsertPayload(
             id: id.uuidString,
@@ -54,7 +60,10 @@ final class YarnStashRepository: ObservableObject {
             yardage_per_skein: yardagePerSkein,
             skeins_owned: max(0, skeinsOwned),
             location: location?.isEmpty == true ? nil : location,
-            notes: notes?.isEmpty == true ? nil : notes
+            notes: notes?.isEmpty == true ? nil : notes,
+            barcode: barcode?.isEmpty == true ? nil : barcode,
+            dye_lot: dyeLot?.isEmpty == true ? nil : dyeLot,
+            fiber_content: fiberContent?.isEmpty == true ? nil : fiberContent
         )
         let response: YarnStashItem = try await client
             .from("yarn_stash")
@@ -74,7 +83,10 @@ final class YarnStashRepository: ObservableObject {
             yardage_per_skein: item.yardagePerSkein,
             skeins_owned: max(0, item.skeinsOwned),
             location: item.location?.isEmpty == true ? nil : item.location,
-            notes: item.notes?.isEmpty == true ? nil : item.notes
+            notes: item.notes?.isEmpty == true ? nil : item.notes,
+            barcode: item.barcode?.isEmpty == true ? nil : item.barcode,
+            dye_lot: item.dyeLot?.isEmpty == true ? nil : item.dyeLot,
+            fiber_content: item.fiberContent?.isEmpty == true ? nil : item.fiberContent
         )
         let response: YarnStashItem = try await client
             .from("yarn_stash")

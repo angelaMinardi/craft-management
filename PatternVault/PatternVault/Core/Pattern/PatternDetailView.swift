@@ -188,24 +188,21 @@ struct PatternDetailView: View {
             )
         }
         .sheet(isPresented: $showWebView) {
-            NavigationStack {
-                if let url = URL(string: current.sourceUrl) {
-                    InAppWebView(url: url)
+            if let url = URL(string: current.sourceUrl), SafariView.canOpen(url) {
+                SafariView(url: url)
+                    .ignoresSafeArea()
+            } else {
+                NavigationStack {
+                    Text("This pattern doesn't have a valid web link.")
+                        .foregroundColor(.secondary)
+                        .padding()
                         .navigationTitle("Pattern Page")
                         .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("Done") { showWebView = false }
                             }
-                            ToolbarItem(placement: .primaryAction) {
-                                Link(destination: url) {
-                                    Image(systemName: "safari")
-                                }
-                            }
                         }
-                } else {
-                    Text("Invalid URL")
-                        .foregroundColor(.secondary)
                 }
             }
         }

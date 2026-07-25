@@ -735,39 +735,69 @@ struct InteractiveChartGridView: View {
         guard let data = highlight.extractedChartPNGData,
               let image = UIImage(data: data) else { return }
 
+        let current = chartStore.highlights.first(where: { $0.id == highlight.id }) ?? highlight
+
         isExtracting = true
         Task.detached {
-            let result = ColorworkGridDetector.detect(
-                image: image,
-                expectedRows: highlight.rows,
-                expectedCols: highlight.columns
+            // Current insets (from import-time detection or manual alignment)
+            // seed the solver's search region.
+            let prior = ChartGridSolver.PriorRegion(
+                xMin: current.gridInsetLeft,
+                yMin: current.gridInsetTop,
+                xMax: 1 - current.gridInsetRight,
+                yMax: 1 - current.gridInsetBottom
             )
+            let solution = ChartGridSolver.solve(
+                image: image,
+                expectedRows: current.rows,
+                expectedColumns: current.columns,
+                prior: prior
+            )
+
+            // Solver result with measured per-cell colors, or legacy detector fallback.
+            let grid: ColorworkGrid?
+            let insets: (left: Double, top: Double, right: Double, bottom: Double)?
+            let dims: (rows: Int, cols: Int)?
+            if let solved = solution, solved.confidence >= 0.6, let colorwork = solved.colorwork {
+                grid = colorwork
+                insets = (solved.insetLeft, solved.insetTop, solved.insetRight, solved.insetBottom)
+                dims = (solved.rows, solved.columns)
+            } else if let legacy = ColorworkGridDetector.detect(
+                image: image, expectedRows: current.rows, expectedCols: current.columns
+            ) {
+                grid = legacy.grid
+                let hasExistingInsets = current.gridInsetLeft > 0.01 || current.gridInsetTop > 0.01
+                    || current.gridInsetRight > 0.01 || current.gridInsetBottom > 0.01
+                insets = hasExistingInsets ? nil : legacy.gridInsets
+                dims = (legacy.detectedRows, legacy.detectedColumns)
+            } else {
+                grid = nil
+                insets = nil
+                dims = nil
+            }
 
             await MainActor.run {
                 isExtracting = false
-                if let result {
-                    colorworkGrid = result.grid
-                    chartStore.saveColorworkGrid(result.grid, for: highlight.id)
+                guard let grid else { return }
+                colorworkGrid = grid
+                chartStore.saveColorworkGrid(grid, for: highlight.id)
 
-                    // Only update grid insets if the existing ones are defaults (all near zero).
-                    // If the border line detector or user already set good insets, keep them.
-                    var updated = chartStore.highlights.first(where: { $0.id == highlight.id }) ?? highlight
-                    let hasExistingInsets = updated.gridInsetLeft > 0.01 || updated.gridInsetTop > 0.01
-                        || updated.gridInsetRight > 0.01 || updated.gridInsetBottom > 0.01
-                    if !hasExistingInsets {
-                        updated.gridInsetLeft = result.gridInsets.left
-                        updated.gridInsetTop = result.gridInsets.top
-                        updated.gridInsetRight = result.gridInsets.right
-                        updated.gridInsetBottom = result.gridInsets.bottom
-                    }
-                    updated.rows = result.detectedRows
-                    updated.columns = result.detectedColumns
-                    updated.isColorwork = true
-                    chartStore.save(updated)
-
-                    showCleanGrid = true
-                    HapticService.success()
+                var updated = chartStore.highlights.first(where: { $0.id == highlight.id }) ?? highlight
+                if let insets {
+                    updated.gridInsetLeft = insets.left
+                    updated.gridInsetTop = insets.top
+                    updated.gridInsetRight = insets.right
+                    updated.gridInsetBottom = insets.bottom
                 }
+                if let dims {
+                    updated.rows = dims.rows
+                    updated.columns = dims.cols
+                }
+                updated.isColorwork = true
+                chartStore.save(updated)
+
+                showCleanGrid = true
+                HapticService.success()
             }
         }
     }

@@ -3,7 +3,7 @@
 //  PatternVault
 //
 //  Caches downloaded PDF files locally for offline access.
-//  Max cache: 500MB with LRU eviction.
+//  Max cache: 500MB with TTL + LRU eviction.
 //
 
 import Foundation
@@ -11,6 +11,7 @@ import Foundation
 enum PDFCacheService {
     private static let cacheDir = "PatternPDFs"
     private static let maxCacheBytes: UInt64 = 500_000_000 // 500 MB
+    private static let cacheTTL: TimeInterval = 30 * 24 * 60 * 60
     private static let accessIndexFilename = "access-index.json"
 
     private static var cacheDirectory: URL? {
@@ -81,6 +82,13 @@ enum PDFCacheService {
             touchAccess(for: file.lastPathComponent, in: dir)
         }
         guard FileManager.default.fileExists(atPath: file.path) else { return nil }
+        let accessIndex = loadAccessIndex(in: dir)
+        let lastAccess = accessIndex[file.lastPathComponent] ?? fileTimestamp(file) ?? 0
+        if Date().timeIntervalSince1970 - lastAccess > cacheTTL {
+            try? FileManager.default.removeItem(at: file)
+            removeAccessEntry(for: file.lastPathComponent, in: dir)
+            return nil
+        }
         touchAccess(for: file.lastPathComponent, in: dir)
         return try? Data(contentsOf: file)
     }
@@ -126,14 +134,20 @@ enum PDFCacheService {
         guard !pdfFiles.isEmpty else { return }
 
         let accessIndex = loadAccessIndex(in: dir)
+        let now = Date().timeIntervalSince1970
 
         var totalSize: UInt64 = 0
         var fileInfos: [(url: URL, size: UInt64, lastAccess: TimeInterval)] = []
         for file in pdfFiles {
-            guard let data = try? Data(contentsOf: file, options: .mappedIfSafe) else { continue }
-            let size = UInt64(data.count)
+            let lastAccess = accessIndex[file.lastPathComponent] ?? fileTimestamp(file) ?? 0
+            if now - lastAccess > cacheTTL {
+                try? fm.removeItem(at: file)
+                removeAccessEntry(for: file.lastPathComponent, in: dir)
+                continue
+            }
+            guard let size = fileSize(file) else { continue }
             totalSize += size
-            fileInfos.append((file, size, accessIndex[file.lastPathComponent] ?? 0))
+            fileInfos.append((file, size, lastAccess))
         }
 
         guard totalSize > maxCacheBytes else { return }
@@ -145,5 +159,15 @@ enum PDFCacheService {
             totalSize -= info.size
             if totalSize <= maxCacheBytes { break }
         }
+    }
+
+    private static func fileTimestamp(_ file: URL) -> TimeInterval? {
+        guard let values = try? file.resourceValues(forKeys: [.contentAccessDateKey, .contentModificationDateKey]) else { return nil }
+        return (values.contentAccessDate ?? values.contentModificationDate)?.timeIntervalSince1970
+    }
+
+    private static func fileSize(_ file: URL) -> UInt64? {
+        guard let size = try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return nil }
+        return UInt64(size)
     }
 }

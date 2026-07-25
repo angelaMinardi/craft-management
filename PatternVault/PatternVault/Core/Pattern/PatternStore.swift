@@ -505,21 +505,73 @@ final class PatternStore: ObservableObject {
                 chartImageData = pageImageData
             }
 
-            let rows = max(1, chart.chartRows)
-            let cols = max(1, chart.chartColumns)
+            let hintRows = max(1, chart.chartRows)
+            let hintCols = max(1, chart.chartColumns)
+            var rows = hintRows
+            var cols = hintCols
 
             // Derive per-side insets using a priority chain:
-            // 1. Focused AI second-pass on the cropped chart image (most accurate)
-            // 2. First-pass AI grid_boundary (if valid — approximate but available)
-            // 3. Formula heuristic (last resort)
+            // 1. Deterministic lattice solver (measured confidence; no network,
+            //    same image always produces the same grid) seeded by the
+            //    first-pass grid_boundary when available
+            // 2. Lattice solver re-run with the AI second-pass boundary as prior
+            // 3. Raw AI second-pass boundary
+            // 4. First-pass AI grid_boundary (if valid)
+            // 5. Formula heuristic (last resort)
             let rawInsets: (left: Double, top: Double, right: Double, bottom: Double)
-            if let chartImage = UIImage(data: chartImageData),
-               let detected = await ChartGridDetector.detectGridBoundary(
-                   image: chartImage, expectedRows: rows, expectedCols: cols),
-               detected.confidence > 0.3 {
+            var solution: ChartGridSolver.Solution?
+            var aiBoundary: ChartGridDetector.DetectedBoundary?
+
+            if let chartImage = UIImage(data: chartImageData) {
+                var prior: ChartGridSolver.PriorRegion?
+                if let gb = chart.gridBoundary,
+                   AIStepParserService.isGridBoundaryValid(chartCrop: chart.chartCrop, gridBoundary: gb) {
+                    let i = AIStepParserService.computeGridInsets(chartCrop: chart.chartCrop, gridBoundary: gb)
+                    prior = ChartGridSolver.PriorRegion(
+                        xMin: i.left, yMin: i.top, xMax: 1 - i.right, yMax: 1 - i.bottom
+                    )
+                }
+                let firstPrior = prior
+                solution = await Task.detached(priority: .utility) {
+                    ChartGridSolver.solve(
+                        image: chartImage, expectedRows: hintRows, expectedColumns: hintCols, prior: firstPrior
+                    )
+                }.value
+
+                // Below the confidence gate: fetch a fresh semantic prior from the
+                // AI second pass and give the solver one retry with it.
+                if (solution?.confidence ?? 0) < 0.7 {
+                    aiBoundary = await ChartGridDetector.detectGridBoundary(
+                        image: chartImage, expectedRows: hintRows, expectedCols: hintCols
+                    )
+                    if let detected = aiBoundary,
+                       let aiPrior = ChartGridSolver.PriorRegion(
+                           xMin: detected.left, yMin: detected.top,
+                           xMax: 1 - detected.right, yMax: 1 - detected.bottom
+                       ) {
+                        let retry = await Task.detached(priority: .utility) {
+                            ChartGridSolver.solve(
+                                image: chartImage, expectedRows: hintRows, expectedColumns: hintCols, prior: aiPrior
+                            )
+                        }.value
+                        if (retry?.confidence ?? 0) > (solution?.confidence ?? 0) {
+                            solution = retry
+                        }
+                    }
+                }
+            }
+
+            if let solved = solution, solved.confidence >= 0.7 {
+                rawInsets = (solved.insetLeft, solved.insetTop, solved.insetRight, solved.insetBottom)
+                rows = solved.rows
+                cols = solved.columns
+                #if DEBUG
+                print("[ChartExtraction] \(chart.chartLabel): using lattice solver (confidence: \(String(format:"%.2f",solved.confidence)))")
+                #endif
+            } else if let detected = aiBoundary, detected.confidence > 0.3 {
                 rawInsets = (detected.left, detected.top, detected.right, detected.bottom)
                 #if DEBUG
-                print("[ChartExtraction] \(chart.chartLabel): using AI second-pass detection (confidence: \(String(format:"%.2f",detected.confidence)))")
+                print("[ChartExtraction] \(chart.chartLabel): using AI second-pass detection (solver unconfident)")
                 #endif
             } else if let gb = chart.gridBoundary,
                       AIStepParserService.isGridBoundaryValid(chartCrop: chart.chartCrop, gridBoundary: gb) {
@@ -586,9 +638,15 @@ final class PatternStore: ObservableObject {
                 gridInsetRight: insets.right,
                 gridInsetBottom: insets.bottom,
                 chartLabel: chart.chartLabel,
-                isAIExtracted: true
+                isAIExtracted: true,
+                isColorwork: (solution?.confidence ?? 0) >= 0.7 && solution?.colorwork != nil
             )
             store.save(highlight)
+            // Persist per-cell colors so knitting mode offers the clean colorwork
+            // grid immediately — no manual "Extract Colors" step needed.
+            if let solved = solution, solved.confidence >= 0.7, let colorwork = solved.colorwork {
+                store.saveColorworkGrid(colorwork, for: highlight.id)
+            }
             created += 1
         }
         #if DEBUG

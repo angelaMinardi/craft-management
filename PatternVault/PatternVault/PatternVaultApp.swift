@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import GoogleMobileAds
 import FirebaseCore
 import FirebaseCrashlytics
 
@@ -17,11 +16,8 @@ struct PatternVaultApp: App {
         if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
             FirebaseApp.configure()
         }
-        if Self.hasValidAdMobAppId {
-            DispatchQueue.main.async {
-                GADMobileAds.sharedInstance().start(completionHandler: nil)
-            }
-        }
+        // Google Mobile Ads is started by AdService.initialize() after the ATT
+        // prompt and UMP consent flow — never at launch.
     }
     @StateObject private var auth = AuthService.shared
     @State private var sharedURL: String?
@@ -83,11 +79,6 @@ struct PatternVaultApp: App {
         }
     }
 
-    private static var hasValidAdMobAppId: Bool {
-        let raw = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
-        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return !trimmed.isEmpty && !trimmed.contains("$(")
-    }
 }
 
 extension Notification.Name {

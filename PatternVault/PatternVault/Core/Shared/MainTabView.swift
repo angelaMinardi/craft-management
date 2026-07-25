@@ -79,6 +79,14 @@ struct MainTabView: View {
             }
         }
         .onPreferenceChange(TutorialAnchorPreferenceKey.self) { anchorFrames = $0 }
+        .task {
+            // scenePhase is already .active when this view first appears right
+            // after sign-in, so the onChange path below wouldn't run until the
+            // next foreground — this covers the first session (ATT before ads).
+            await AdService.shared.requestTrackingAuthorizationIfNeeded()
+            await AdsKillSwitchService.refresh()
+            await AdService.shared.initialize()
+        }
         .onChange(of: tutorialStore.currentStep) { _, _ in
             if tutorialStore.isActive {
                 selectedTab = tutorialStore.tabForCurrentStep
@@ -95,6 +103,9 @@ struct MainTabView: View {
                     await AIKillSwitchService.refresh()
                 }
                 Task {
+                    // ATT first: no ad request may precede the tracking choice
+                    // (5.1.2; PrivacyInfo declares NSPrivacyTracking).
+                    await AdService.shared.requestTrackingAuthorizationIfNeeded()
                     await AdsKillSwitchService.refresh()
                     await AdService.shared.initialize()
                 }

@@ -189,13 +189,30 @@ struct GridAlignmentEditor: View {
                             highlight.gridInsetRight = min(0.85, roughRight)
                             highlight.gridInsetTop = min(0.85, roughTop)
                             highlight.gridInsetBottom = min(0.85, roughBottom)
-                            // Then refine with AI in the background
+                            // Then refine in the background: lattice solver first
+                            // (instant, deterministic), AI region refinement as fallback.
                             let img = chartUIImage
                             let rows = highlight.rows
                             let cols = highlight.columns
                             Task {
                                 guard let img else { return }
-                                if let refined = await ChartGridDetector.refineWithinRegion(
+                                let prior = ChartGridSolver.PriorRegion(
+                                    xMin: roughLeft, yMin: roughTop,
+                                    xMax: 1 - roughRight, yMax: 1 - roughBottom
+                                )
+                                let solved = await Task.detached(priority: .userInitiated) {
+                                    ChartGridSolver.solve(
+                                        image: img, expectedRows: rows, expectedColumns: cols, prior: prior
+                                    )
+                                }.value
+                                if let solved, solved.confidence >= 0.6 {
+                                    highlight.gridInsetLeft = min(0.85, solved.insetLeft)
+                                    highlight.gridInsetRight = min(0.85, solved.insetRight)
+                                    highlight.gridInsetTop = min(0.85, solved.insetTop)
+                                    highlight.gridInsetBottom = min(0.85, solved.insetBottom)
+                                    highlight.rows = solved.rows
+                                    highlight.columns = solved.columns
+                                } else if let refined = await ChartGridDetector.refineWithinRegion(
                                     image: img,
                                     regionLeft: roughLeft,
                                     regionTop: roughTop,

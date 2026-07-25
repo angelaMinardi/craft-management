@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import PatternVault
+@testable import CorvidCraft
 
 @MainActor
 final class RavelryPatternDetailsParsingTests: XCTestCase {

@@ -31,12 +31,37 @@ final class AdService: ObservableObject {
     @Published private(set) var consentRequestFailed: Bool = false
 
     // MARK: - Ad Unit IDs
-    // Google's official TEST IDs. Replace with real AdMob IDs before production release.
-    // Docs: https://developers.google.com/admob/ios/test-ads
-    static let bannerAdUnitId = "ca-app-pub-3940256099942544/2934735716"
-    static let nativeAdUnitId = "ca-app-pub-3940256099942544/3986624511"
+
+    static var bannerAdUnitId: String? {
+        adUnitId(forInfoKey: "GADBannerAdUnitID", debugFallback: "ca-app-pub-3940256099942544/2934735716")
+    }
+
+    static var nativeAdUnitId: String? {
+        adUnitId(forInfoKey: "GADNativeAdUnitID", debugFallback: "ca-app-pub-3940256099942544/3986624511")
+    }
 
     private init() {}
+
+    /// The SDK raises (GADInvalidInitializationException) when started without a
+    /// real app ID — e.g. an empty or unsubstituted `$(GAD_APPLICATION_ID)`.
+    static var hasValidAdMobAppId: Bool {
+        let raw = Bundle.main.object(forInfoDictionaryKey: "GADApplicationIdentifier") as? String
+        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !trimmed.isEmpty && !trimmed.contains("$(")
+    }
+
+    private static func adUnitId(forInfoKey key: String, debugFallback: String) -> String? {
+        let raw = Bundle.main.object(forInfoDictionaryKey: key) as? String
+        let trimmed = raw?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmed.isEmpty, !trimmed.contains("$(") {
+            return trimmed
+        }
+        #if DEBUG
+        return debugFallback
+        #else
+        return nil
+        #endif
+    }
 
     /// Initializes the Google Mobile Ads SDK and requests consent. Idempotent.
     func initialize() async {
@@ -44,6 +69,7 @@ final class AdService: ObservableObject {
             recomputeCanShowAds()
             return
         }
+        guard Self.hasValidAdMobAppId else { return }
         await requestConsentIfNeeded()
 
         // Start the SDK whenever consent is satisfied OR the UMP fetch itself

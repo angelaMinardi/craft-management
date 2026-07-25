@@ -103,6 +103,7 @@ struct PaywallView: View {
                             }
 
                             restorePurchasesButton
+                            subscriptionTermsDisclosure
                         } else {
                             // Products didn't load: show error + retry, never leave user stuck
                             if subscriptionStore.productsLoading {
@@ -140,6 +141,7 @@ struct PaywallView: View {
                                 .padding(.vertical, Theme.Spacing.md)
                             }
                             restorePurchasesButton
+                            subscriptionTermsDisclosure
                         }
                     }
                 }
@@ -195,6 +197,39 @@ struct PaywallView: View {
         }
         .disabled(subscriptionStore.isLoading)
         .padding(.top, Theme.Spacing.sm)
+    }
+
+    private var subscriptionTermsDisclosure: some View {
+        VStack(spacing: Theme.Spacing.xs) {
+            Text("Subscriptions auto-renew until canceled at least 24 hours before the end of the current period. Manage or cancel in your App Store account settings.")
+                .font(Theme.Typography.caption2)
+                .foregroundStyle(Theme.deepPlum.opacity(0.6))
+                .multilineTextAlignment(.center)
+            HStack(spacing: Theme.Spacing.sm) {
+                if let termsURL = legalURL(for: "TermsOfServiceURL") {
+                    Link("Terms", destination: termsURL)
+                }
+                if legalURL(for: "TermsOfServiceURL") != nil, legalURL(for: "PrivacyPolicyURL") != nil {
+                    Text("•")
+                }
+                if let privacyURL = legalURL(for: "PrivacyPolicyURL") {
+                    Link("Privacy", destination: privacyURL)
+                }
+            }
+            .font(Theme.Typography.caption2)
+            .foregroundStyle(Theme.sageGreen)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, Theme.Spacing.sm)
+    }
+
+    private func legalURL(for key: String) -> URL? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,
+              !value.isEmpty,
+              !value.contains("$(") else {
+            return nil
+        }
+        return URL(string: value)
     }
 
     private func benefitRow(icon: String, text: String) -> some View {

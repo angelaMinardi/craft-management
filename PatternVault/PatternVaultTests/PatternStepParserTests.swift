@@ -4,7 +4,7 @@
 //
 
 import XCTest
-@testable import PatternVault
+@testable import CorvidCraft
 
 final class PatternStepParserTests: XCTestCase {
 

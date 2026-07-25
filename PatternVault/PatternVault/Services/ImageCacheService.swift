@@ -12,7 +12,7 @@ import SwiftUI
 
 /// Loads images from local cache when available; otherwise downloads from URL and caches for next time.
 /// Cache is stored in Caches/PatternImageCache/{userId}/ so it can be purged by the system and is per-user.
-/// Enforces a 200 MB size limit with LRU eviction.
+/// Enforces a 200 MB size limit with TTL + LRU eviction.
 final class ImageCacheService {
     static let shared = ImageCacheService()
 
@@ -25,6 +25,7 @@ final class ImageCacheService {
 
     /// Maximum total cache size in bytes (200 MB).
     private let maxCacheSize: Int64 = 200_000_000
+    private let cacheTTL: TimeInterval = 30 * 24 * 60 * 60
 
     /// Running total of bytes stored on disk across all user directories.
     private var totalCacheSize: Int64 = 0
@@ -50,9 +51,14 @@ final class ImageCacheService {
             var isDirectory: ObjCBool = false
             guard fileManager.fileExists(atPath: fileURL.path, isDirectory: &isDirectory),
                   !isDirectory.boolValue else { continue }
-            guard let data = try? Data(contentsOf: fileURL, options: .mappedIfSafe) else { continue }
-            size += Int64(data.count)
-            times[fileURL.path] = Date.distantPast
+            guard let fileSize = fileSize(fileURL) else { continue }
+            let timestamp = fileTimestamp(fileURL) ?? .distantPast
+            if Date().timeIntervalSince(timestamp) > cacheTTL {
+                try? fileManager.removeItem(at: fileURL)
+                continue
+            }
+            size += fileSize
+            times[fileURL.path] = timestamp
         }
         lock.lock()
         totalCacheSize = size
@@ -82,6 +88,12 @@ final class ImageCacheService {
     func cachedData(for url: URL, userId: UUID) -> Data? {
         guard let dir = cacheDirectory(userId: userId) else { return nil }
         let fileURL = dir.appendingPathComponent(cacheFilename(for: url))
+        guard fileManager.fileExists(atPath: fileURL.path) else { return nil }
+        let timestamp = fileTimestamp(fileURL) ?? .distantPast
+        if Date().timeIntervalSince(timestamp) > cacheTTL {
+            removeCachedFile(at: fileURL)
+            return nil
+        }
         guard let data = try? Data(contentsOf: fileURL) else { return nil }
         // Update LRU access time
         let path = fileURL.path
@@ -132,6 +144,8 @@ final class ImageCacheService {
 
     /// Remove least recently accessed files until total cache size is within the limit.
     private func evictIfNeeded() {
+        evictExpiredFiles()
+
         lock.lock()
         guard totalCacheSize > maxCacheSize else {
             lock.unlock()
@@ -148,18 +162,44 @@ final class ImageCacheService {
             if currentSize <= maxCacheSize { break }
 
             let fileURL = URL(fileURLWithPath: path)
-            guard let fileData = try? Data(contentsOf: fileURL, options: .mappedIfSafe) else { continue }
-            let fileSize = fileData.count
-            do {
-                try fileManager.removeItem(at: fileURL)
-                lock.lock()
-                totalCacheSize -= Int64(fileSize)
-                accessTimes.removeValue(forKey: path)
-                lock.unlock()
-            } catch {
-                // File may already be gone; skip
+            removeCachedFile(at: fileURL)
+        }
+    }
+
+    private func evictExpiredFiles() {
+        let cutoff = Date().addingTimeInterval(-cacheTTL)
+        lock.lock()
+        let expired = accessTimes.filter { $0.value < cutoff }.map(\.key)
+        lock.unlock()
+        for path in expired {
+            removeCachedFile(at: URL(fileURLWithPath: path))
+        }
+    }
+
+    private func removeCachedFile(at fileURL: URL) {
+        let path = fileURL.path
+        let removedSize = fileSize(fileURL) ?? 0
+        do {
+            try fileManager.removeItem(at: fileURL)
+        } catch {
+            if fileManager.fileExists(atPath: path) {
+                return
             }
         }
+        lock.lock()
+        totalCacheSize = max(0, totalCacheSize - removedSize)
+        accessTimes.removeValue(forKey: path)
+        lock.unlock()
+    }
+
+    private func fileTimestamp(_ fileURL: URL) -> Date? {
+        let values = try? fileURL.resourceValues(forKeys: [.contentAccessDateKey, .contentModificationDateKey])
+        return values?.contentAccessDate ?? values?.contentModificationDate
+    }
+
+    private func fileSize(_ fileURL: URL) -> Int64? {
+        guard let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize else { return nil }
+        return Int64(size)
     }
 
     /// Remove all cached images for a user (e.g. on logout). Optional.

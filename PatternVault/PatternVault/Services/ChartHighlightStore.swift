@@ -238,14 +238,18 @@ final class ChartHighlightStore: ObservableObject {
         var loadedBySurface: [String: (highlight: ChartHighlight, fileURL: URL)] = [:]
         let decoder = JSONDecoder()
         for file in jsonFiles.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
-            guard let data = try? Data(contentsOf: file) else { continue }
+            let data: Data
+            do {
+                data = try Data(contentsOf: file)
+            } catch {
+                NSLog("[ChartHighlightStore] Failed to read \(file.lastPathComponent): \(error)")
+                continue
+            }
             var highlight: ChartHighlight
             do {
                 highlight = try decoder.decode(ChartHighlight.self, from: data)
             } catch {
-                #if DEBUG
-                print("[ChartHighlightStore] Failed to decode \(file.lastPathComponent): \(error)")
-                #endif
+                NSLog("[ChartHighlightStore] Failed to decode \(file.lastPathComponent): \(error)")
                 continue
             }
 
@@ -291,16 +295,27 @@ final class ChartHighlightStore: ObservableObject {
         let drawingData = stripped.annotationDrawingData
         stripped.annotationDrawingData = nil
 
-        if let json = try? JSONEncoder().encode(stripped) {
-            try? json.write(to: jsonURL(for: highlight.id))
+        do {
+            let json = try JSONEncoder().encode(stripped)
+            try json.write(to: jsonURL(for: highlight.id), options: .atomic)
+        } catch {
+            NSLog("[ChartHighlightStore] Failed to save \(highlight.id): \(error)")
         }
         if let imageData {
-            try? imageData.write(to: imageURL(for: highlight.id))
+            do {
+                try imageData.write(to: imageURL(for: highlight.id), options: .atomic)
+            } catch {
+                NSLog("[ChartHighlightStore] Failed to save image for \(highlight.id): \(error)")
+            }
         } else {
             try? FileManager.default.removeItem(at: imageURL(for: highlight.id))
         }
         if let drawingData {
-            try? drawingData.write(to: drawingURL(for: highlight.id))
+            do {
+                try drawingData.write(to: drawingURL(for: highlight.id), options: .atomic)
+            } catch {
+                NSLog("[ChartHighlightStore] Failed to save drawing for \(highlight.id): \(error)")
+            }
         } else {
             try? FileManager.default.removeItem(at: drawingURL(for: highlight.id))
         }

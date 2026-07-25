@@ -278,7 +278,7 @@ The paywall error is two problems layered:
 - ATT prompt wired ahead of every ads-init path (MainTabView `.task` for the first session + the scenePhase re-foreground path); GMA SDK start removed from `PatternVaultApp.init` and consent-gated inside `AdService.initialize()` behind `hasValidAdMobAppId`.
 - `PrivacyInfo.xcprivacy`: added `NSPrivacyCollectedDataTypePhotosorVideos` (linked, non-tracking, app functionality).
 - Privacy policy: Gemini row now covers yarn-label photos; UPCitemdb row + note added; last-updated date stamped. **Deployed to production** (corvidcraft.com/privacy verified serving both).
-- `website/api/parse.ts`: raw NUL byte inside the NUL-stripping regex replaced with ` ` — file was being classified as binary ("data"); now clean UTF-8. `website/api/` committed to git.
+- `website/api/parse.ts`: raw NUL byte inside the NUL-stripping regex replaced with `\u0000` — file was being classified as binary ("data"); now clean UTF-8. `website/api/` committed to git.
 - Build bumped 9 → 10 across all 4 targets; **104/104 tests pass post-change**; Release archive succeeds with real AdMob app ID and all config substituted (verified in the archived Info.plist).
 - Migration **034 applied to production** (`lock_entitlement_columns`, version 20260725182209) — P0-2 closed end-to-end.
 - All working-tree changes committed and pushed: `4258249` (iOS), `4022854` (backend), `315ca49` (website+docs).

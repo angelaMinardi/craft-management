@@ -271,3 +271,19 @@ The paywall error is two problems layered:
 - [ ] App Privacy label matches the ATT decision (tracking declared ⟺ prompt shown)
 - [ ] App Review notes: SIWA/demo account + "IAPs now submitted" reply in Resolution Center
 - [ ] iPhone **and iPad** screenshot sets current (review ran on iPad Air 11")
+
+### Remediation log (2026-07-25, same day)
+
+**Applied and verified:**
+- ATT prompt wired ahead of every ads-init path (MainTabView `.task` for the first session + the scenePhase re-foreground path); GMA SDK start removed from `PatternVaultApp.init` and consent-gated inside `AdService.initialize()` behind `hasValidAdMobAppId`.
+- `PrivacyInfo.xcprivacy`: added `NSPrivacyCollectedDataTypePhotosorVideos` (linked, non-tracking, app functionality).
+- Privacy policy: Gemini row now covers yarn-label photos; UPCitemdb row + note added; last-updated date stamped. **Deployed to production** (corvidcraft.com/privacy verified serving both).
+- `website/api/parse.ts`: raw NUL byte inside the NUL-stripping regex replaced with ` ` — file was being classified as binary ("data"); now clean UTF-8. `website/api/` committed to git.
+- Build bumped 9 → 10 across all 4 targets; **104/104 tests pass post-change**; Release archive succeeds with real AdMob app ID and all config substituted (verified in the archived Info.plist).
+- Migration **034 applied to production** (`lock_entitlement_columns`, version 20260725182209) — P0-2 closed end-to-end.
+- All working-tree changes committed and pushed: `4258249` (iOS), `4022854` (backend), `315ca49` (website+docs).
+- Archive copied to `~/Library/Developer/Xcode/Archives/2026-07-25/` so it appears in Xcode Organizer.
+
+**Root cause confirmed by the upload attempt:** `xcodebuild -exportArchive` (destination: upload) failed with **"You do not have required contracts to perform an operation."** — an App Store Connect **agreements block**. This is the same underlying condition that makes `Product.products(for:)` return empty in Apple's review environment. Until the Account Holder accepts the pending agreement(s) (Paid Applications Agreement with banking + tax, and any pending Program License Agreement update), the paywall cannot work in review and the binary cannot be uploaded. Only the Account Holder can do this: **App Store Connect → Business / Agreements, Tax, and Banking**.
+
+**Remaining (user, in order):** accept agreements → complete banking/tax → upload build 10 (Organizer "Distribute App", or rerun the exportArchive command) → complete both subscriptions' metadata + review screenshots → attach them to the 1.0 version → sandbox-test the paywall on device → resubmit with a Resolution Center reply. Optional before archiving a future build: add `GAD_NATIVE_AD_UNIT_ID` and `RAVELRY_ACCESS_KEY`/`RAVELRY_PERSONAL_KEY` to Config.xcconfig (native ads and Ravelry "Find patterns" are silently disabled in build 10 without them); enable Supabase leaked-password protection (dashboard toggle).
